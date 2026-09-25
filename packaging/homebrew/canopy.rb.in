@@ -1,0 +1,22 @@
+# Template: the release workflow fills in @URL@ and @SHA256@ and pushes the
+# result to shankar-sachin/homebrew-canopy as Formula/canopy.rb.
+class Canopy < Formula
+  desc "Beautiful, powerful git dashboard for your terminal"
+  homepage "https://github.com/shankar-sachin/canopy"
+  url "@URL@"
+  sha256 "@SHA256@"
+  license "MIT"
+  head "https://github.com/shankar-sachin/canopy.git", branch: "main"
+
+  depends_on "rust" => :build
+  depends_on "git"
+
+  def install
+    system "cargo", "install", *std_cargo_args(path: "crates/canopy")
+  end
+
+  test do
+    assert_match version.to_s, shell_output("#{bin}/canopy --version")
+    assert_match "not inside a git repository", shell_output("#{bin}/canopy #{testpath}/nope 2>&1", 1)
+  end
+end

@@ -1,0 +1,123 @@
+use std::path::PathBuf;
+
+use serde::Deserialize;
+
+/// `~/.config/canopy/config.toml`
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct Config {
+    /// canopy | catppuccin | gruvbox | nord | light
+    pub theme: String,
+    /// Use Nerd Font glyphs. Set false for plain ASCII/Unicode.
+    pub nerd_font: bool,
+    /// Show the git command behind every action.
+    pub teach_mode: bool,
+    /// Ask before destructive actions (discard, hard reset, force delete...).
+    pub confirm_destructive: bool,
+    /// Directories scanned for repositories in the Workspace view.
+    pub workspace_dirs: Vec<String>,
+    /// How deep to look for repositories under each workspace dir.
+    pub workspace_depth: usize,
+    /// User-defined commands bound to keys.
+    pub custom_commands: Vec<CustomCommand>,
+    /// Number of commits loaded per log page.
+    pub log_page_size: usize,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CustomCommand {
+    /// Single character key, e.g. "X".
+    pub key: String,
+    /// Shell command; runs in the repository root via `sh -c`.
+    pub cmd: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub confirm: bool,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            theme: "canopy".into(),
+            nerd_font: false,
+            teach_mode: true,
+            confirm_destructive: true,
+            workspace_dirs: Vec::new(),
+            workspace_depth: 3,
+            custom_commands: Vec::new(),
+            log_page_size: 300,
+        }
+    }
+}
+
+impl Config {
+    pub fn path() -> Option<PathBuf> {
+        if let Ok(p) = std::env::var("CANOPY_CONFIG") {
+            return Some(PathBuf::from(p));
+        }
+        let home = directories::BaseDirs::new()?.home_dir().to_path_buf();
+        // Prefer XDG-style ~/.config on every platform: that's what terminal users expect.
+        let xdg = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from).unwrap_or_else(|| home.join(".config"));
+        Some(xdg.join("canopy").join("config.toml"))
+    }
+
+    /// Load the config, returning a warning message if it was invalid.
+    pub fn load() -> (Config, Option<String>) {
+        let Some(path) = Self::path() else { return (Config::default(), None) };
+        match std::fs::read_to_string(&path) {
+            Ok(text) => match toml::from_str(&text) {
+                Ok(c) => (c, None),
+                Err(e) => (Config::default(), Some(format!("{}: {e}", path.display()))),
+            },
+            Err(_) => (Config::default(), None),
+        }
+    }
+
+    pub fn first_run() -> bool {
+        Self::path().map(|p| !p.exists()).unwrap_or(false)
+    }
+
+    pub const EXAMPLE: &'static str = r#"# Canopy configuration
+theme = "canopy"            # canopy | catppuccin | gruvbox | nord | light
+nerd_font = false           # true if your terminal font has Nerd Font glyphs
+teach_mode = true           # show the git command behind every action
+confirm_destructive = true
+workspace_dirs = ["~/code"] # scanned by the Workspace view (tab 6)
+workspace_depth = 3
+
+# [[custom_commands]]
+# key = "X"
+# cmd = "git push --force-with-lease"
+# description = "force push (safely)"
+# confirm = true
+"#;
+}
+
+pub fn expand_tilde(p: &str) -> PathBuf {
+    if let Some(rest) = p.strip_prefix("~/") {
+        if let Some(b) = directories::BaseDirs::new() {
+            return b.home_dir().join(rest);
+        }
+    }
+    PathBuf::from(p)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn example_config_parses() {
+        let c: Config = toml::from_str(Config::EXAMPLE).unwrap();
+        assert_eq!(c.theme, "canopy");
+        assert_eq!(c.workspace_dirs, vec!["~/code"]);
+    }
+
+    #[test]
+    fn custom_commands_parse() {
+        let c: Config = toml::from_str("[[custom_commands]]\nkey = \"X\"\ncmd = \"echo hi\"\n").unwrap();
+        assert_eq!(c.custom_commands[0].key, "X");
+        assert!(c.teach_mode);
+    }
+}

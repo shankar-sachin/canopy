@@ -1,0 +1,88 @@
+name: Release
+
+# Push a tag like v0.1.0 to publish a GitHub release and update the
+# Homebrew tap (shankar-sachin/homebrew-canopy).
+#
+# Requires a repository secret HOMEBREW_TAP_TOKEN: a fine-grained token with
+# "Contents: read and write" on the homebrew-canopy repository.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - run: cargo build --release --locked --target ${{ matrix.target }} -p canopy-git-tui
+      - name: Package
+        run: |
+          name=canopy-${{ github.ref_name }}-${{ matrix.target }}
+          mkdir "$name"
+          cp target/${{ matrix.target }}/release/canopy README.md LICENSE "$name/"
+          tar czf "$name.tar.gz" "$name"
+          shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: canopy-*.tar.gz*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" canopy-*.tar.gz* \
+            --repo "${{ github.repository }}" --generate-notes --title "Canopy ${{ github.ref_name }}"
+
+  homebrew:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compute source tarball checksum
+        id: src
+        run: |
+          url="https://github.com/${{ github.repository }}/archive/refs/tags/${{ github.ref_name }}.tar.gz"
+          sha=$(curl -sL "$url" | shasum -a 256 | cut -d' ' -f1)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: shankar-sachin/homebrew-canopy
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+      - name: Update formula
+        run: |
+          mkdir -p tap/Formula
+          sed -e "s|@URL@|${{ steps.src.outputs.url }}|" \
+              -e "s|@SHA256@|${{ steps.src.outputs.sha }}|" \
+              packaging/homebrew/canopy.rb.in > tap/Formula/canopy.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/canopy.rb
+          git commit -m "canopy ${{ github.ref_name }}"
+          git push
