@@ -1,0 +1,21 @@
+[workspace]
+resolver = "2"
+members = ["crates/canopy", "crates/canopy-git"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/shankar-sachin/canopy"
+authors = ["Sachin Shankar"]
+
+[workspace.dependencies]
+anyhow = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "process", "sync", "time", "io-util"] }
+tempfile = "3"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
