@@ -252,6 +252,8 @@ pub fn clean_log(log: &str) -> String {
 }
 
 fn strip_ansi(s: &str) -> String {
+    // gh writes the color codes out as text ("^[[1m"), not as escapes.
+    let s = &strip_caret_codes(s);
     let mut out = String::with_capacity(s.len());
     let mut chars = s.chars().peekable();
     while let Some(c) = chars.next() {
@@ -269,6 +271,25 @@ fn strip_ansi(s: &str) -> String {
         }
         out.push(c);
     }
+    out
+}
+
+/// Remove `^[[…m`-style color codes written as plain text.
+fn strip_caret_codes(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(i) = rest.find("^[[") {
+        out.push_str(&rest[..i]);
+        let after = &rest[i + 3..];
+        match after.find(|c: char| c.is_ascii_alphabetic()) {
+            Some(j) if after[..j].chars().all(|c| c.is_ascii_digit() || c == ';') => rest = &after[j + 1..],
+            _ => {
+                out.push_str("^[[");
+                rest = after;
+            }
+        }
+    }
+    out.push_str(rest);
     out
 }
 
@@ -524,6 +545,8 @@ mod tests {
             "test\tRun cargo test\t\u{feff}2026-09-26T16:10:15.8330051Z \u{1b}[1m\u{1b}[92mCompiling\u{1b}[0m x\n\
                    test\tRun cargo test\t2026-09-26T16:10:16.0000000Z thread 'a' panicked at src/lib.rs:3";
         assert_eq!(clean_log(log), "--- Run cargo test ---\nCompiling x\nthread 'a' panicked at src/lib.rs:3\n");
+        // gh writes codes out as text too.
+        assert_eq!(strip_ansi("^[[1m^[[92m   Compiling^[[0m canopy (^[[x kept)"), "   Compiling canopy (^[[x kept)");
     }
 
     #[test]
