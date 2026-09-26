@@ -1,7 +1,8 @@
 name: Release
 
 # Push a tag like v0.1.0 to publish a GitHub release and update the
-# Homebrew tap (shankar-sachin/homebrew-canopy).
+# Homebrew tap (shankar-sachin/homebrew-canopy). Create the release yourself
+# right after pushing the tag so it's credited to you (see the release job).
 #
 # Requires the repository secret HOMEBREW_TAP_DEPLOY_KEY: the private half of
 # an SSH deploy key that has write access to homebrew-canopy only.
@@ -68,14 +69,24 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
-      - name: Create GitHub release
+      # The release is normally created by the maintainer right after pushing
+      # the tag (`gh release create vX.Y.Z --generate-notes --title "Canopy
+      # vX.Y.Z"`), so it's credited to them rather than github-actions. This
+      # step then just attaches the builds, or creates the release if nobody
+      # did.
+      - name: Attach builds to the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           shopt -s nullglob
           files=(canopy-*.tar.gz* canopy-*.zip*)
-          gh release create "${{ github.ref_name }}" "${files[@]}" \
-            --repo "${{ github.repository }}" --generate-notes --title "Canopy ${{ github.ref_name }}"
+          repo="${{ github.repository }}"
+          tag="${{ github.ref_name }}"
+          if gh release view "$tag" --repo "$repo" >/dev/null 2>&1; then
+            gh release upload "$tag" "${files[@]}" --repo "$repo" --clobber
+          else
+            gh release create "$tag" "${files[@]}" --repo "$repo" --generate-notes --title "Canopy $tag"
+          fi
 
   homebrew:
     needs: release
