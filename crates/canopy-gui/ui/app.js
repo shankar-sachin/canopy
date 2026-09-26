@@ -9,6 +9,8 @@ const state = {
   overview: null,
   page: "home",
   busy: false,
+  // Replaced by the saved settings at start (see settings.js).
+  settings: { theme: "system", show_commands: true, refresh_secs: 5, pull_mode: "default", check_updates: true },
 };
 
 // ---------------------------------------------------------------- helpers
@@ -60,6 +62,7 @@ function applyTheme(choice) {
   if (choice === "light" || choice === "dark") document.documentElement.dataset.theme = choice;
   else delete document.documentElement.dataset.theme;
   for (const b of document.querySelectorAll("[data-theme-choice]")) b.classList.toggle("on", b.dataset.themeChoice === choice);
+  // Also kept here so the first paint already has the right colors.
   try { localStorage.setItem("canopy-theme", choice); } catch {}
 }
 
@@ -257,7 +260,7 @@ async function run(label, cmd, args) {
   document.body.classList.add("busy");
   try {
     const res = await invoke(cmd, args);
-    toast(label, { detail: res?.cmd });
+    toast(label, { detail: state.settings.show_commands ? res?.cmd : "" });
     return res;
   } catch (e) {
     toast(label + " failed", { error: true, detail: String(e) });
@@ -419,6 +422,7 @@ async function sync(kind) {
     toast("This branch isn't on the remote yet, so there's nothing to pull. Push it first.");
     return;
   }
+  if (kind === "pull" && state.settings.pull_mode !== "default") kind = `pull-${state.settings.pull_mode}`;
   const bar = $("#progress");
   bar.hidden = false;
   bar.querySelector("b").textContent = SYNC_LABELS[kind] + "…";
@@ -492,7 +496,7 @@ document.addEventListener("click", (e) => {
   } else if (t.dataset.path) openRepo(t.dataset.path);
   else if (t.dataset.page) go(t.dataset.page);
   else if (t.dataset.action) ACTIONS[t.dataset.action]?.run();
-  else if (t.dataset.themeChoice) applyTheme(t.dataset.themeChoice);
+  else if (t.dataset.themeChoice) setTheme(t.dataset.themeChoice);
 });
 
 $("#open-btn").addEventListener("click", chooseRepo);
@@ -516,6 +520,7 @@ document.addEventListener("keydown", (e) => {
   if (mod && e.key === "o") { e.preventDefault(); chooseRepo(); }
   else if (mod && e.key === "r") { e.preventDefault(); refresh(); }
   else if (mod && e.key === "z" && !typing && state.overview) { e.preventDefault(); undo(); }
+  else if (mod && e.key === ",") { e.preventDefault(); openSettings(); }
   else if (mod && /^[1-9]$/.test(e.key)) {
     const ids = NAV.flatMap((g) => g.items);
     const id = ids[Number(e.key) - 1];
@@ -525,7 +530,12 @@ document.addEventListener("keydown", (e) => {
 
 // Pick up changes made elsewhere (an editor, a terminal).
 window.addEventListener("focus", () => refresh({ quiet: true }));
-setInterval(() => { if (document.visibilityState === "visible") refresh({ quiet: true }); }, 5000);
+let refreshTimer = null;
+function scheduleRefresh() {
+  clearInterval(refreshTimer);
+  const secs = state.settings.refresh_secs;
+  if (secs > 0) refreshTimer = setInterval(() => { if (document.visibilityState === "visible") refresh({ quiet: true }); }, secs * 1000);
+}
 
 // ---------------------------------------------------------------- start
 
@@ -535,6 +545,7 @@ async function start() {
   if (/Mac/.test(navigator.platform)) document.documentElement.classList.add("mac");
   else for (const k of document.querySelectorAll(".k")) k.textContent = k.textContent.replace("⌘", "Ctrl+");
   applyTheme(savedTheme());
+  await loadSettings();
   $("#version").textContent = "Canopy " + (await invoke("app_version"));
   const initial = await invoke("initial_path");
   if (await invoke("smoke_mode")) return smoke(initial);

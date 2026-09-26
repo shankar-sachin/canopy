@@ -13,6 +13,7 @@ mod graph;
 mod history;
 mod overview;
 mod recent;
+mod settings;
 
 use canopy_git::Git;
 use tauri::State;
@@ -204,6 +205,11 @@ fn main() {
             github::gh_failed_log,
             github::gh_op,
             github::open_url,
+            settings::get_settings,
+            settings::set_settings,
+            settings::clear_recent,
+            settings::check_update,
+            settings::environment,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Canopy");
