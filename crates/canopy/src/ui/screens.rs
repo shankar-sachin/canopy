@@ -64,6 +64,7 @@ pub fn draw(f: &mut Frame, area: Rect, app: &mut App) {
         Screen::Workspace => workspace(f, area, app),
         Screen::Reflog => reflog(f, area, app),
         Screen::Pulls => pulls(f, area, app),
+        Screen::Issues => issues(f, area, app),
     }
 }
 
@@ -1111,6 +1112,70 @@ fn pulls(f: &mut Frame, area: Rect, app: &mut App) {
     let mut st = TableState::default().with_offset(app.list(Screen::Pulls).offset()).with_selected(Some(sel));
     f.render_stateful_widget(table, la, &mut st);
     *app.list(Screen::Pulls).offset_mut() = st.offset();
+    diff::draw(f, da, app);
+}
+
+fn issues(f: &mut Frame, area: Rect, app: &mut App) {
+    let theme = app.theme.clone();
+    if github_setup(f, area, app, "Issues") {
+        return;
+    }
+    let filter = app.github.issue_filter.label();
+    if app.github.issues.is_empty() {
+        let msg = if app.github.issues_loading || !app.github.issues_loaded {
+            vec!["Loading issues…".to_string()]
+        } else {
+            vec![format!("No issues ({filter})"), "f changes the filter · n opens a new issue".to_string()]
+        };
+        let refs: Vec<&str> = msg.iter().map(String::as_str).collect();
+        empty(f, area, &theme, "Issues", &refs);
+        return;
+    }
+    let (la, da) = split(area, 50);
+    let rows: Vec<Row> = app
+        .github
+        .issues
+        .iter()
+        .map(|i| {
+            let color = if i.state == "OPEN" { theme.added } else { theme.hash };
+            let mut title = vec![Span::raw(i.title.clone())];
+            for l in i.labels.iter().take(3) {
+                title.push(Span::styled(format!(" {}", l.name), theme.fg(theme.tag)));
+            }
+            let comments = if i.comments.is_empty() { String::new() } else { format!("💬 {}", i.comments.len()) };
+            Row::new(vec![
+                Cell::from(Span::styled(
+                    format!("#{}", i.number),
+                    Style::default().fg(color).add_modifier(Modifier::BOLD),
+                )),
+                Cell::from(Line::from(title)),
+                Cell::from(Span::styled(trunc(&i.author.login, 14), theme.muted())),
+                Cell::from(Span::styled(comments, theme.muted())),
+                Cell::from(Span::styled(ago(i.updated_at), theme.muted())),
+            ])
+        })
+        .collect();
+    let focused = app.focus == Focus::List;
+    let loading = if app.github.issues_loading { " · refreshing…" } else { "" };
+    let repo = app.github.repo_name().unwrap_or_default();
+    let title = format!(" Issues · {repo} · {filter} · {}{loading} ", app.github.issues.len());
+    let table = Table::new(
+        rows,
+        [
+            Constraint::Length(6),
+            Constraint::Fill(1),
+            Constraint::Length(14),
+            Constraint::Length(5),
+            Constraint::Length(4),
+        ],
+    )
+    .column_spacing(1)
+    .block(panel(&theme, title, focused))
+    .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
+    let sel = app.selected(Screen::Issues);
+    let mut st = TableState::default().with_offset(app.list(Screen::Issues).offset()).with_selected(Some(sel));
+    f.render_stateful_widget(table, la, &mut st);
+    *app.list(Screen::Issues).offset_mut() = st.offset();
     diff::draw(f, da, app);
 }
 

@@ -149,8 +149,10 @@ pub fn do_action(app: &mut App, action: Action) {
         }
         Refresh => {
             app.refresh();
-            if app.screen == Screen::Pulls {
-                crate::github::load_prs(app);
+            match app.screen {
+                Screen::Pulls => crate::github::load_prs(app),
+                Screen::Issues => crate::github::load_issues(app),
+                _ => {}
             }
             if app.screen == Screen::Workspace {
                 app.scan_workspace();
@@ -668,9 +670,8 @@ fn repo_action(app: &mut App, action: Action) {
             app.run_op(format!("Fetch {}", r.name), Then::Refresh, async move { git.fetch(Some(&r.name), p).await });
         }
         Bisect => bisect(app),
-        PrCheckout | PrCreate | PrReview | PrComment | PrMerge | PrClose | OpenInBrowser | CycleFilter | ToggleDiff => {
-            github_action(app, action)
-        }
+        PrCheckout | PrCreate | PrReview | Comment | PrMerge | CloseItem | IssueCreate | OpenInBrowser
+        | CycleFilter | ToggleDiff => github_action(app, action),
         FileHistory => {
             let Some((path, _)) = target_file(app) else { return };
             app.set_log_path(Some(path));
@@ -936,6 +937,7 @@ fn push(app: &mut App) {
 }
 
 fn github_action(app: &mut App, action: Action) {
+    use crate::github::Target;
     use crate::modal::{Compose, ComposeFor};
     use canopy_gh::{MergeMethod, ReviewKind};
     if !app.github.ready() {
@@ -943,8 +945,23 @@ fn github_action(app: &mut App, action: Action) {
         return;
     }
     let Some(gh) = app.github.gh.clone() else { return };
-    let pr = crate::github::selected_pr(app).cloned();
+    let on_issues = app.screen == Screen::Issues;
+    let pr = crate::github::selected_pr(app).cloned().filter(|_| app.screen == Screen::Pulls);
+    let issue = crate::github::selected_issue(app).cloned().filter(|_| on_issues);
+    // The selected item on this tab, with its title, URL and state.
+    let target = match (&pr, &issue) {
+        (Some(p), _) => Some((Target::Pr(p.number), p.title.clone(), p.url.clone(), p.state.clone())),
+        (_, Some(i)) => Some((Target::Issue(i.number), i.title.clone(), i.url.clone(), i.state.clone())),
+        _ => None,
+    };
     match action {
+        Action::CycleFilter if on_issues => {
+            app.github.issue_filter = app.github.issue_filter.next();
+            app.set_selected(Screen::Issues, 0);
+            *app.list(Screen::Issues).offset_mut() = 0;
+            app.toast(Level::Info, format!("Showing {} issues", app.github.issue_filter.label()));
+            crate::github::load_issues(app);
+        }
         Action::CycleFilter => {
             app.github.pr_filter = app.github.pr_filter.next();
             app.set_selected(Screen::Pulls, 0);
@@ -957,14 +974,19 @@ fn github_action(app: &mut App, action: Action) {
             diff::load_for_selection(app);
         }
         Action::OpenInBrowser => {
-            let url = match (&pr, app.github.status.as_ref()) {
-                (Some(p), _) => p.url.clone(),
-                (None, Some(canopy_gh::GhStatus::Ready(info))) => format!("{}/pulls", info.url),
+            let url = match (&target, app.github.status.as_ref()) {
+                (Some((_, _, url, _)), _) => url.clone(),
+                (None, Some(canopy_gh::GhStatus::Ready(info))) => {
+                    format!("{}/{}", info.url, if on_issues { "issues" } else { "pulls" })
+                }
                 _ => return,
             };
             if crate::terminal::open_url(&url) {
                 app.toast(Level::Info, format!("Opened {url}"));
             }
+        }
+        Action::IssueCreate => {
+            app.modal = Modal::Compose(Compose::new("New issue", true, ComposeFor::NewIssue));
         }
         Action::PrCreate => {
             let Some(branch) = app.current_branch().map(String::from) else {
@@ -988,15 +1010,30 @@ fn github_action(app: &mut App, action: Action) {
             let heading = format!("New pull request: {branch} → {base}");
             app.modal = Modal::Compose(Compose::new(heading, true, ComposeFor::NewPullRequest { base }));
         }
+        Action::Comment => {
+            let Some((t, ..)) = target else { return };
+            app.modal =
+                Modal::Compose(Compose::new(format!("Comment on {}", t.label()), false, ComposeFor::Comment(t)));
+        }
+        Action::CloseItem => {
+            let Some((t, title, _, state)) = target else { return };
+            if state == "MERGED" {
+                app.toast(Level::Info, format!("{} is already merged", t.label()));
+            } else if state == "CLOSED" && matches!(t, Target::Issue(_)) {
+                confirm(app, &format!("Reopen {}?", t.label()), vec![title], Pending::Reopen(t), false);
+            } else if state == "CLOSED" {
+                app.toast(Level::Info, format!("{} is already closed", t.label()));
+            } else {
+                let lines = vec![title, "It can be reopened later.".into()];
+                confirm(app, &format!("Close {}?", t.label()), lines, Pending::Close(t), true);
+            }
+        }
         _ => {
             let Some(pr) = pr else { return };
             let n = pr.number;
             match action {
                 Action::PrCheckout => {
                     app.run_op(format!("Check out #{n}"), Then::Refresh, async move { gh.pr_checkout(n).await });
-                }
-                Action::PrComment => {
-                    app.modal = Modal::Compose(Compose::new(format!("Comment on #{n}"), false, ComposeFor::Comment(n)));
                 }
                 Action::PrReview => {
                     let item = |key, label: &str, detail: &str, kind| MenuItem {
@@ -1042,15 +1079,6 @@ fn github_action(app: &mut App, action: Action) {
                         sel: 0,
                     };
                 }
-                Action::PrClose => {
-                    confirm(
-                        app,
-                        &format!("Close #{n}?"),
-                        vec![pr.title.clone(), "It can be reopened on GitHub later.".into()],
-                        Pending::PrClose(n),
-                        true,
-                    );
-                }
                 _ => {}
             }
         }
@@ -1059,6 +1087,7 @@ fn github_action(app: &mut App, action: Action) {
 
 /// Validate and send a compose dialog. `Err` keeps the dialog open.
 fn submit_compose(app: &mut App, c: &crate::modal::Compose) -> Result<(), String> {
+    use crate::github::Target;
     use crate::modal::ComposeFor;
     use canopy_gh::ReviewKind;
     let Some(gh) = app.github.gh.clone() else { return Err("GitHub isn't ready".into()) };
@@ -1073,11 +1102,22 @@ fn submit_compose(app: &mut App, c: &crate::modal::Compose) -> Result<(), String
                 gh.pr_create(&title, &body, Some(&base), false).await
             });
         }
-        ComposeFor::Comment(n) => {
+        ComposeFor::NewIssue => {
+            if title.is_empty() {
+                return Err("Give the issue a title".into());
+            }
+            app.run_op("Create issue", Then::GitHub, async move { gh.issue_create(&title, &body).await });
+        }
+        ComposeFor::Comment(t) => {
             if body.is_empty() {
                 return Err("Write a comment first".into());
             }
-            app.run_op(format!("Comment on #{n}"), Then::GitHub, async move { gh.pr_comment(n, &body).await });
+            app.run_op(format!("Comment on {}", t.label()), Then::GitHub, async move {
+                match t {
+                    Target::Pr(n) => gh.pr_comment(n, &body).await,
+                    Target::Issue(n) => gh.issue_comment(n, &body).await,
+                }
+            });
         }
         ComposeFor::Review(n, kind) => {
             if body.is_empty() && kind != ReviewKind::Approve {
@@ -1769,9 +1809,21 @@ pub fn execute(app: &mut App, pending: Pending) {
                 async move { gh.pr_merge(number, method, true).await },
             );
         }
-        Pending::PrClose(number) => {
+        Pending::Close(t) => {
+            use crate::github::Target;
             let Some(gh) = app.github.gh.clone() else { return };
-            app.run_op(format!("Close #{number}"), Then::GitHub, async move { gh.pr_close(number).await });
+            app.run_op(format!("Close {}", t.label()), Then::GitHub, async move {
+                match t {
+                    Target::Pr(n) => gh.pr_close(n).await,
+                    Target::Issue(n) => gh.issue_close(n).await,
+                }
+            });
+        }
+        Pending::Reopen(t) => {
+            use crate::github::Target;
+            let Some(gh) = app.github.gh.clone() else { return };
+            let Target::Issue(n) = t else { return };
+            app.run_op(format!("Reopen {}", t.label()), Then::GitHub, async move { gh.issue_reopen(n).await });
         }
         Pending::PrReview(number, kind) => {
             use canopy_gh::ReviewKind;

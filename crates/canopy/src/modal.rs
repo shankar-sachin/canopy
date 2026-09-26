@@ -62,7 +62,8 @@ pub enum Pending {
         number: u64,
         method: canopy_gh::MergeMethod,
     },
-    PrClose(u64),
+    Close(crate::github::Target),
+    Reopen(crate::github::Target),
     /// Open the compose dialog for a review of this kind.
     PrReview(u64, canopy_gh::ReviewKind),
 }
@@ -174,11 +175,9 @@ pub enum Modal {
 
 #[derive(Debug, Clone)]
 pub enum ComposeFor {
-    NewPullRequest {
-        base: String,
-    },
-    /// Comment on this PR number.
-    Comment(u64),
+    NewPullRequest { base: String },
+    NewIssue,
+    Comment(crate::github::Target),
     Review(u64, canopy_gh::ReviewKind),
 }
 

@@ -632,6 +632,8 @@ case "$1 $2" in
   "api user") echo ada ;;
   "pr list") cat "{f}/pr_list.json" ;;
   "pr view") cat "{f}/pr_view.json" ;;
+  "issue list") case "$*" in *"--state all"*) sed 's/"OPEN"/"CLOSED"/' "{f}/issue_list.json" ;; *) cat "{f}/issue_list.json" ;; esac ;;
+  "issue view") cat "{f}/issue_view.json" ;;
   "pr diff") printf 'diff --git a/csv.rs b/csv.rs\n--- a/csv.rs\n+++ b/csv.rs\n@@ -0,0 +1 @@\n+fn parse() {{}}\n' ;;
   *) : ;;
 esac
@@ -765,4 +767,49 @@ async fn github_setup_card_when_logged_out() {
     assert!(app.toast.as_ref().unwrap().text.contains("isn't set up"));
     // Nothing but detection was run.
     assert_eq!(gh_calls(bin.path()), vec!["auth status"]);
+}
+
+#[tokio::test]
+async fn issues_tab() {
+    let dir = demo_repo();
+    let bin = TempDir::new().unwrap();
+    let gh = fake_gh(bin.path(), true);
+    let mut app = github_app(dir.path(), &gh).await;
+    press(&mut app, KeyCode::Char('9')).await;
+    let s = render(&mut app, 140, 30);
+    assert!(s.contains("Issues · o/r · open · 1") && s.contains("#7") && s.contains("Crash on empty repo"), "{s}");
+    assert!(s.contains("bug") && s.contains("crashes when you press 3") && s.contains("ada commented"), "{s}");
+
+    // New issue: title required.
+    press(&mut app, KeyCode::Char('n')).await;
+    crate::input::handle_key(&mut app, KeyEvent::new(KeyCode::Char('s'), KeyModifiers::CONTROL));
+    assert!(matches!(app.modal, Modal::Compose(_)), "no title -> stays open");
+    chars(&mut app, "Dark mode").await;
+    press(&mut app, KeyCode::Enter).await;
+    assert!(
+        gh_calls(bin.path()).contains(&"issue create --title Dark mode --body ".to_string()),
+        "{:?}",
+        gh_calls(bin.path())
+    );
+
+    // Comment, then close (confirmed).
+    press(&mut app, KeyCode::Char('C')).await;
+    chars(&mut app, "Same here").await;
+    crate::input::handle_key(&mut app, KeyEvent::new(KeyCode::Char('s'), KeyModifiers::CONTROL));
+    app.settle().await;
+    press(&mut app, KeyCode::Char('X')).await;
+    press(&mut app, KeyCode::Char('y')).await;
+    let calls = gh_calls(bin.path());
+    assert!(calls.contains(&"issue comment 7 --body Same here".to_string()), "{calls:?}");
+    assert!(calls.contains(&"issue close 7".to_string()), "{calls:?}");
+
+    // "all" shows it closed; X then offers to reopen.
+    press(&mut app, KeyCode::Char('f')).await; // assigned to me
+    press(&mut app, KeyCode::Char('f')).await; // all
+    assert_eq!(app.github.issues[0].state, "CLOSED");
+    press(&mut app, KeyCode::Char('X')).await;
+    let s = render(&mut app, 140, 30);
+    assert!(s.contains("Reopen #7?"), "{s}");
+    press(&mut app, KeyCode::Char('y')).await;
+    assert!(gh_calls(bin.path()).contains(&"issue reopen 7".to_string()));
 }
