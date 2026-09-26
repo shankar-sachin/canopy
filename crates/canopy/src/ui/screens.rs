@@ -571,14 +571,26 @@ fn log(f: &mut Frame, area: Rect, app: &mut App) {
 // -------------------------------------------------------------- branches
 
 /// Panel title with a Branches · Tags · Remotes switcher and a summary.
-fn refs_title<'a>(app: &App, theme: &Theme, summary: String) -> Line<'a> {
+/// Panel title with a view switcher and a summary. Shows every view name
+/// when it fits in `width`, otherwise a compact `‹ Tags 2/5 ›`.
+fn refs_title<'a>(app: &App, theme: &Theme, summary: String, width: u16) -> Line<'a> {
+    let names: usize = RefsView::ALL.iter().map(|v| v.title().len() + 3).sum();
+    let full = names + summary.chars().count() + 6 <= width as usize;
     let mut spans = vec![Span::raw(" ")];
-    for (i, v) in RefsView::ALL.iter().enumerate() {
-        if i > 0 {
-            spans.push(Span::styled(" · ", theme.muted()));
+    if full {
+        for (i, v) in RefsView::ALL.iter().enumerate() {
+            if i > 0 {
+                spans.push(Span::styled(" · ", theme.muted()));
+            }
+            let style =
+                if *v == app.refs_view { theme.accent().add_modifier(Modifier::UNDERLINED) } else { theme.muted() };
+            spans.push(Span::styled(v.title(), style));
         }
-        let style = if *v == app.refs_view { theme.accent().add_modifier(Modifier::UNDERLINED) } else { theme.muted() };
-        spans.push(Span::styled(v.title(), style));
+    } else {
+        let i = RefsView::ALL.iter().position(|v| *v == app.refs_view).unwrap_or(0);
+        spans.push(Span::styled("‹ ", theme.muted()));
+        spans.push(Span::styled(app.refs_view.title(), theme.accent()));
+        spans.push(Span::styled(format!(" {}/{} ›", i + 1, RefsView::ALL.len()), theme.muted()));
     }
     spans.push(Span::styled(format!("  {summary} "), theme.muted()));
     Line::from(spans)
@@ -599,7 +611,7 @@ fn submodules(f: &mut Frame, area: Rect, app: &mut App) {
     let theme = app.theme.clone();
     let (la, da) = split(area, 50);
     let focused = app.focus == Focus::List;
-    let title = refs_title(app, &theme, format!("{} submodules", app.data.submodules.len()));
+    let title = refs_title(app, &theme, format!("{} submodules", app.data.submodules.len()), la.width);
     if app.data.submodules.is_empty() {
         let lines = vec![
             Line::styled("No submodules.", theme.muted()),
@@ -646,7 +658,7 @@ fn worktrees(f: &mut Frame, area: Rect, app: &mut App) {
     let theme = app.theme.clone();
     let (la, da) = split(area, 50);
     let focused = app.focus == Focus::List;
-    let title = refs_title(app, &theme, format!("{} worktrees", app.data.worktrees.len()));
+    let title = refs_title(app, &theme, format!("{} worktrees", app.data.worktrees.len()), la.width);
     let current = app.git.as_ref().map(|g| g.repo.root.clone());
     let rows: Vec<Row> = app
         .data
@@ -696,7 +708,7 @@ fn tags(f: &mut Frame, area: Rect, app: &mut App) {
     let vis = app.visible_tags();
     let (la, da) = split(area, 50);
     let focused = app.focus == Focus::List;
-    let title = refs_title(app, &theme, format!("{} tags", app.data.tags.len()));
+    let title = refs_title(app, &theme, format!("{} tags", app.data.tags.len()), la.width);
     if vis.is_empty() {
         let msg = if app.data.tags.is_empty() {
             "No tags yet. Tags mark releases: press n to tag HEAD."
@@ -737,7 +749,7 @@ fn remotes(f: &mut Frame, area: Rect, app: &mut App) {
     let theme = app.theme.clone();
     let (la, da) = split(area, 50);
     let focused = app.focus == Focus::List;
-    let title = refs_title(app, &theme, format!("{} remotes", app.data.remotes.len()));
+    let title = refs_title(app, &theme, format!("{} remotes", app.data.remotes.len()), la.width);
     if app.data.remotes.is_empty() {
         let lines = vec![
             Line::styled("No remotes yet.", theme.muted()),
@@ -841,7 +853,7 @@ fn branch_list(f: &mut Frame, area: Rect, app: &mut App) {
     .column_spacing(1)
     .block(panel(
         &theme,
-        refs_title(app, &theme, format!("{nl} local · {} remote", app.data.branches.len() - nl)),
+        refs_title(app, &theme, format!("{nl} local · {} remote", app.data.branches.len() - nl), la.width),
         focused,
     ))
     .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
