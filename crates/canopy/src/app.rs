@@ -77,6 +77,12 @@ pub enum Msg {
     Prs(Result<Vec<canopy_gh::PullRequest>, String>),
     Issues(Result<Vec<canopy_gh::Issue>, String>),
     Runs(Result<Vec<canopy_gh::Run>, String>),
+    GhHome {
+        /// The branch this was fetched for (ignored if we've switched since).
+        branch: Option<String>,
+        pr: Option<Box<canopy_gh::PullRequest>>,
+        reviews: Option<usize>,
+    },
     RunDetail {
         gen: u64,
         run: Box<canopy_gh::Run>,
@@ -540,6 +546,7 @@ impl App {
             Msg::Resize => {}
             Msg::Loaded(Ok(snap)) => {
                 let status_changed = snap.status != self.data.status;
+                let branch_changed = snap.status.branch.head != self.data.status.branch.head && self.loaded;
                 self.data = *snap;
                 self.loaded = true;
                 self.clamp_selections();
@@ -550,6 +557,11 @@ impl App {
                 }
                 if self.data.state != Some(RepoState::Bisecting) {
                     self.bisect = None;
+                }
+                if branch_changed {
+                    // The Home card is about the current branch.
+                    self.github.branch_pr = None;
+                    crate::github::load_home(self);
                 }
             }
             Msg::Loaded(Err(e)) => self.toast(Level::Error, e),
@@ -702,6 +714,13 @@ impl App {
                 self.github.status = Some(status);
                 self.github.viewer = viewer;
                 crate::github::on_enter(self, self.screen);
+                crate::github::load_home(self);
+            }
+            Msg::GhHome { branch, pr, reviews } => {
+                if branch.as_deref() == self.current_branch() {
+                    self.github.branch_pr = Some(pr.map(|p| *p));
+                    self.github.review_requests = reviews;
+                }
             }
             Msg::Prs(result) => {
                 self.github.prs_loading = false;

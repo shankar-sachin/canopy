@@ -31,6 +31,10 @@ pub struct GithubState {
     pub runs_all: bool,
     pub runs_loading: bool,
     pub runs_loaded: bool,
+    /// Home card: the open PR for the current branch (`Some(None)` = none).
+    pub branch_pr: Option<Option<PullRequest>>,
+    /// Home card: PRs waiting for the viewer's review.
+    pub review_requests: Option<usize>,
 }
 
 /// A GitHub item that can be commented on or closed.
@@ -245,6 +249,23 @@ pub fn run_view(run: &Run, jobs: &[Job], log: Option<&str>, width: usize) -> Dif
     )
 }
 
+/// Fetch what the Home card needs: this branch's PR and review requests.
+pub fn load_home(app: &mut App) {
+    if !app.github.ready() {
+        return;
+    }
+    let Some(gh) = app.github.gh.clone() else { return };
+    let branch = app.current_branch().map(String::from);
+    app.spawn(async move {
+        let pr = match &branch {
+            Some(b) => gh.pr_for_branch(b).await.ok().flatten(),
+            None => None,
+        };
+        let reviews = gh.pr_list(PrFilter::ReviewRequested, 50).await.ok().map(|v| v.len());
+        Msg::GhHome { branch, pr: pr.map(Box::new), reviews }
+    });
+}
+
 /// Reload whichever GitHub lists have been opened (after an action).
 pub fn reload_loaded(app: &mut App) {
     if app.github.prs_loaded {
@@ -256,6 +277,7 @@ pub fn reload_loaded(app: &mut App) {
     if app.github.runs_loaded {
         load_runs(app);
     }
+    load_home(app);
 }
 
 /// Called when a GitHub tab becomes visible: load it the first time.
