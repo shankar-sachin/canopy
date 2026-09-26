@@ -15,7 +15,12 @@ pub enum BisectStep {
 pub fn parse(out: &str) -> Option<BisectStep> {
     let lines: Vec<&str> = out.lines().collect();
     for (i, line) in lines.iter().enumerate() {
-        if let Some(oid) = line.strip_suffix(" is the first bad commit") {
+        // Older git: "<oid> is the first bad commit"; newer quotes the term
+        // ("first 'bad' commit") and custom terms can replace "bad".
+        let found = line
+            .split_once(" is the first ")
+            .filter(|(oid, rest)| rest.ends_with(" commit") && oid.bytes().all(|b| b.is_ascii_hexdigit()));
+        if let Some((oid, _)) = found {
             // `commit <oid>` header follows, then author/date, then the indented subject.
             let subject = lines[i + 1..]
                 .iter()
@@ -72,6 +77,12 @@ mod tests {
     fn found() {
         let out = "abc123 is the first bad commit\ncommit abc123\nAuthor: A <a@x>\nDate:   now\n\n    Break the build\n\n f.txt | 2 +-\n";
         assert_eq!(parse(out), Some(BisectStep::Found { oid: "abc123".into(), subject: "Break the build".into() }));
+    }
+
+    #[test]
+    fn found_newer_git_quotes_the_term() {
+        let out = "abc123 is the first 'bad' commit\ncommit abc123\nAuthor: A <a@x>\nDate:   now\n\n    c5\n";
+        assert_eq!(parse(out), Some(BisectStep::Found { oid: "abc123".into(), subject: "c5".into() }));
     }
 
     #[test]
