@@ -287,13 +287,25 @@ mod tests {
     }
 
     /// Writes this repo's overview as JSON for the UI preview harness:
-    /// `CANOPY_OVERVIEW_OUT=/tmp/o.json cargo test -p canopy-desktop dump_overview -- --ignored`
+    /// `CANOPY_OVERVIEW_OUT=/tmp/o.json [CANOPY_REPO=path] cargo test -p canopy-desktop dump_overview -- --ignored`
     #[tokio::test]
     #[ignore]
     async fn dump_overview() {
         let out = std::env::var("CANOPY_OVERVIEW_OUT").expect("set CANOPY_OVERVIEW_OUT");
-        let git = Git::open(env!("CARGO_MANIFEST_DIR")).await.unwrap();
+        let repo = std::env::var("CANOPY_REPO").unwrap_or_else(|_| env!("CARGO_MANIFEST_DIR").into());
+        let git = Git::open(repo).await.unwrap();
         let o = load(&git).await.unwrap();
-        std::fs::write(out, serde_json::to_string_pretty(&o).unwrap()).unwrap();
+        // Every file's diffs too, keyed "path|staged|untracked", like file_diff.
+        let mut diffs = serde_json::Map::new();
+        for f in &o.status.files {
+            let untracked = f.kind == FileKind::Untracked;
+            for staged in [false, true] {
+                let d =
+                    if untracked { git.diff_untracked(&f.path).await } else { git.diff_file(&f.path, staged, 3).await };
+                diffs.insert(format!("{}|{staged}|{untracked}", f.path), serde_json::to_value(d.unwrap()).unwrap());
+            }
+        }
+        let all = serde_json::json!({ "overview": o, "diffs": diffs });
+        std::fs::write(out, serde_json::to_string_pretty(&all).unwrap()).unwrap();
     }
 }
