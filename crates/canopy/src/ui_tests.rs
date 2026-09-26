@@ -21,8 +21,14 @@ fn sh(dir: &Path, script: &str) {
 
 fn demo_repo() -> TempDir {
     let dir = TempDir::new().unwrap();
+    demo_repo_at(dir.path());
+    dir
+}
+
+/// Build the demo repository in `path` (which must exist).
+fn demo_repo_at(path: &Path) {
     sh(
-        dir.path(),
+        path,
         r#"
 set -e
 git init -q -b main
@@ -44,7 +50,6 @@ git add lib.rs
 echo "TODO" > TODO.md
 "#,
     );
-    dir
 }
 
 async fn app_for(dir: &Path) -> App {
@@ -890,7 +895,11 @@ fn frame_html(app: &mut App, w: u16, h: u16) -> String {
     let mut term = Terminal::new(TestBackend::new(w, h)).unwrap();
     term.draw(|f| crate::ui::draw(f, app)).unwrap();
     let buf = term.backend().buffer().clone();
+    // Panel borders use a subtle color that reads fine in a terminal but
+    // fades in a scaled-down screenshot; lift it a little for the web.
+    let border = app.theme.border;
     let hex = |c: Color| match c {
+        c if c == border => Some("#43604a".to_string()),
         Color::Rgb(r, g, b) => Some(format!("#{r:02x}{g:02x}{b:02x}")),
         _ => None,
     };
@@ -903,7 +912,9 @@ fn frame_html(app: &mut App, w: u16, h: u16) -> String {
                 '&' => out.push_str("&amp;"),
                 '<' => out.push_str("&lt;"),
                 '>' => out.push_str("&gt;"),
-                c if c.is_ascii() => out.push(c),
+                // Box drawing and block elements are exact in the web font;
+                // pinning them would clip vertical lines into dashes.
+                c if c.is_ascii() || ('\u{2500}'..='\u{259F}').contains(&c) => out.push(c),
                 c => out.push_str(&format!("<i class=\"g\">{c}</i>")),
             }
         }
@@ -970,13 +981,19 @@ fn frame_html(app: &mut App, w: u16, h: u16) -> String {
 async fn export_site_screens() {
     use std::collections::BTreeMap;
     let (w, h) = (118, 32);
-    let dir = demo_repo();
-    let bare = TempDir::new().unwrap();
-    sh(bare.path(), "git init -q --bare -b main");
-    sh(dir.path(), &format!("git remote add origin {} && git push -q -u origin main 2>/dev/null; git -c user.name='Grace Hopper' -c user.email=g@h.io commit -q --allow-empty -m 'Document the parser API'", bare.path().display()));
+    // Fixed, friendly paths so the screenshots read well and are stable.
+    let base = Path::new("/tmp/canopy-demo");
+    let _ = std::fs::remove_dir_all(base);
+    let dir = base.join("acme-app");
+    let bare = base.join("origin.git");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::create_dir_all(&bare).unwrap();
+    demo_repo_at(&dir);
+    sh(&bare, "git init -q --bare -b main");
+    sh(&dir, &format!("git remote add origin {} && git push -q -u origin main 2>/dev/null; git -c user.name='Grace Hopper' -c user.email=g@h.io commit -q --allow-empty -m 'Document the parser API'", bare.display()));
     let bin = TempDir::new().unwrap();
     let gh = fake_gh(bin.path(), true);
-    let mut app = github_app(dir.path(), &gh).await;
+    let mut app = github_app(&dir, &gh).await;
     let mut shots: BTreeMap<&str, (&str, String)> = BTreeMap::new();
 
     shots.insert("home", ("Home", frame_html(&mut app, w, h)));
@@ -1023,9 +1040,11 @@ async fn export_site_screens() {
     press(&mut app, KeyCode::Esc).await;
 
     // Conflicts need their own repository mid-merge.
-    let cdir = demo_repo();
+    let cdir = base.join("merge").join("acme-app");
+    std::fs::create_dir_all(&cdir).unwrap();
+    demo_repo_at(&cdir);
     sh(
-        cdir.path(),
+        &cdir,
         r#"
 set -e
 git stash -q -u
@@ -1035,7 +1054,7 @@ git switch -q main; printf 'fn greet() {\n    println!("Hey there");\n}\n\nfn ma
 git merge polite >/dev/null 2>&1 || true
 "#,
     );
-    let mut capp = app_for(cdir.path()).await;
+    let mut capp = app_for(&cdir).await;
     press(&mut capp, KeyCode::Char('2')).await;
     press(&mut capp, KeyCode::Enter).await;
     shots.insert("conflicts", ("Conflicts", frame_html(&mut capp, w, h)));
@@ -1083,6 +1102,7 @@ git merge polite >/dev/null 2>&1 || true
         assert!(missing.is_empty(), "{}: unknown screens {missing:?}", path.display());
         std::fs::write(&path, page).unwrap();
     }
+    let _ = std::fs::remove_dir_all(base);
     println!("filled {filled} screenshots and the key reference");
 }
 

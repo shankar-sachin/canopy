@@ -123,7 +123,7 @@
   }
   pre.frame[hidden] { display: none; }
   /* Each non-ASCII glyph occupies exactly one cell, like in a terminal. */
-  pre.frame i.g { font-style: normal; display: inline-block; width: 1ch; text-align: center; overflow: hidden; vertical-align: top; }
+  pre.frame i.g { font-style: normal; display: inline-block; width: 1ch; text-align: center; vertical-align: top; }
   .shot-tabs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 18px; }
   .shot-tabs button {
     font: 500 14px var(--sans); color: var(--muted); background: var(--surface); cursor: pointer;
