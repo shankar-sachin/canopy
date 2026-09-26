@@ -244,6 +244,27 @@ impl Gh {
         self.run(&["issue", "reopen", &n]).await
     }
 
+    // --------------------------------------------------------- notifications
+
+    /// Notification threads for this repository, or for all your repos.
+    /// `all` also includes ones you've already read.
+    pub async fn notifications(&self, this_repo: bool, all: bool) -> Result<Vec<Notification>> {
+        let path = if this_repo { "repos/{owner}/{repo}/notifications" } else { "notifications" };
+        let all = if all { "all=true" } else { "all=false" };
+        self.json(&["api", "--method", "GET", path, "-f", all, "-F", "per_page=50"]).await
+    }
+
+    pub async fn notification_read(&self, id: &str) -> Result<Output> {
+        let path = format!("notifications/threads/{id}");
+        self.run(&["api", "--method", "PATCH", &path]).await
+    }
+
+    /// Mark every notification read, for this repository or everywhere.
+    pub async fn notifications_read_all(&self, this_repo: bool) -> Result<Output> {
+        let path = if this_repo { "repos/{owner}/{repo}/notifications" } else { "notifications" };
+        self.run(&["api", "--method", "PUT", path, "-F", "read=true"]).await
+    }
+
     // --------------------------------------------------------------- actions
 
     pub async fn run_list(&self, branch: Option<&str>, limit: usize) -> Result<Vec<Run>> {

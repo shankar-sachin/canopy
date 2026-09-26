@@ -1213,9 +1213,35 @@ fn pulls(f: &mut Frame, area: Rect, app: &mut App) {
     diff::draw(f, da, app);
 }
 
+/// A panel title that names every view (active one underlined), or a
+/// compact `‹ Name 2/3 ›` when that doesn't fit, then a summary.
+fn switcher_title<'a>(names: &[&str], active: usize, summary: String, theme: &Theme, width: u16) -> Line<'a> {
+    let full: usize = names.iter().map(|n| n.len() + 3).sum::<usize>() + summary.chars().count() + 6;
+    let mut spans = vec![Span::raw(" ")];
+    if full <= width as usize {
+        for (i, n) in names.iter().enumerate() {
+            if i > 0 {
+                spans.push(Span::styled(" · ", theme.muted()));
+            }
+            let st = if i == active { theme.accent().add_modifier(Modifier::UNDERLINED) } else { theme.muted() };
+            spans.push(Span::styled(n.to_string(), st));
+        }
+    } else {
+        spans.push(Span::styled("‹ ", theme.muted()));
+        spans.push(Span::styled(names[active].to_string(), theme.accent()));
+        spans.push(Span::styled(format!(" {}/{} ›", active + 1, names.len()), theme.muted()));
+    }
+    spans.push(Span::styled(format!("  {summary} "), theme.muted()));
+    Line::from(spans)
+}
+
 fn issues(f: &mut Frame, area: Rect, app: &mut App) {
     let theme = app.theme.clone();
     if github_setup(f, area, app, "Issues") {
+        return;
+    }
+    if app.github.issues_view == crate::github::IssuesView::Notifications {
+        notifications(f, area, app);
         return;
     }
     let filter = app.github.issue_filter.label();
@@ -1260,7 +1286,14 @@ fn issues(f: &mut Frame, area: Rect, app: &mut App) {
     let focused = app.focus == Focus::List;
     let loading = if app.github.issues_loading { " · refreshing…" } else { "" };
     let repo = app.github.repo_name().unwrap_or_default();
-    let title = format!(" Issues · {repo} · {filter} · {}{loading} ", app.github.issues.len());
+    let names: Vec<&str> = crate::github::IssuesView::ALL.iter().map(|v| v.title()).collect();
+    let title = switcher_title(
+        &names,
+        0,
+        format!("{repo} · {filter} · {}{loading}", app.github.issues.len()),
+        &theme,
+        la.width,
+    );
     let table = Table::new(
         rows,
         [
@@ -1343,6 +1376,77 @@ fn runs(f: &mut Frame, area: Rect, app: &mut App) {
     let mut st = TableState::default().with_offset(app.list(Screen::Runs).offset()).with_selected(Some(sel));
     f.render_stateful_widget(table, la, &mut st);
     *app.list(Screen::Runs).offset_mut() = st.offset();
+    diff::draw(f, da, app);
+}
+
+fn notifications(f: &mut Frame, area: Rect, app: &mut App) {
+    let theme = app.theme.clone();
+    let (la, da) = split(area, 55);
+    let gh = &app.github;
+    let scope = if gh.notif_everywhere { "all repos" } else { gh.repo_name().unwrap_or("this repo") };
+    let which = if gh.notif_include_read { "all" } else { "unread" };
+    let unread = gh.notifications.iter().filter(|n| n.unread).count();
+    let names: Vec<&str> = crate::github::IssuesView::ALL.iter().map(|v| v.title()).collect();
+    let summary =
+        format!("{which} · {scope} · {unread} unread{}", if gh.notif_loading { " · refreshing…" } else { "" });
+    let title = switcher_title(&names, 1, summary, &theme, la.width);
+    let focused = app.focus == Focus::List;
+    if gh.notifications.is_empty() {
+        let msg = if gh.notif_loading || !gh.notif_loaded {
+            "Loading notifications…".to_string()
+        } else {
+            format!("No {which} notifications for {scope}. u shows read ones, f switches repos.")
+        };
+        f.render_widget(Paragraph::new(Line::styled(msg, theme.muted())).block(panel(&theme, title, focused)), la);
+        diff::draw(f, da, app);
+        return;
+    }
+    let everywhere = gh.notif_everywhere;
+    let rows: Vec<Row> = gh
+        .notifications
+        .iter()
+        .map(|n| {
+            let dim = if n.unread { Modifier::empty() } else { Modifier::DIM };
+            let kind = match n.subject.kind.as_str() {
+                "PullRequest" => "PR",
+                "Issue" => "issue",
+                "Release" => "release",
+                "CheckSuite" => "CI",
+                "Discussion" => "discussion",
+                "Commit" => "commit",
+                _ => "other",
+            };
+            let mut title =
+                vec![Span::styled(n.subject.title.clone(), Style::default().fg(theme.fg).add_modifier(dim))];
+            if everywhere {
+                title.push(Span::styled(format!("  {}", n.repository.full_name), theme.muted()));
+            }
+            Row::new(vec![
+                Cell::from(Span::styled(if n.unread { "●" } else { " " }, theme.fg(theme.accent))),
+                Cell::from(Span::styled(kind, theme.fg(theme.accent_alt).add_modifier(dim))),
+                Cell::from(Line::from(title)),
+                Cell::from(Span::styled(n.reason.replace('_', " "), theme.muted())),
+                Cell::from(Span::styled(ago(n.updated_at), theme.muted())),
+            ])
+        })
+        .collect();
+    let table = Table::new(
+        rows,
+        [
+            Constraint::Length(1),
+            Constraint::Length(10),
+            Constraint::Fill(1),
+            Constraint::Length(16),
+            Constraint::Length(4),
+        ],
+    )
+    .column_spacing(crate::ui::util::col_gap())
+    .block(panel(&theme, title, focused))
+    .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
+    let sel = app.selected(Screen::Issues);
+    let mut st = TableState::default().with_offset(app.list(Screen::Issues).offset()).with_selected(Some(sel));
+    f.render_stateful_widget(table, la, &mut st);
+    *app.list(Screen::Issues).offset_mut() = st.offset();
     diff::draw(f, da, app);
 }
 

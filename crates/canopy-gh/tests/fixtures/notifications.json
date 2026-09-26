@@ -1,0 +1,3 @@
+[{"id":"101","unread":true,"reason":"review_requested","updated_at":"2026-09-26T01:00:00Z","subject":{"title":"Add CSV parser","url":"https://api.github.com/repos/o/r/pulls/12","type":"PullRequest"},"repository":{"full_name":"o/r","html_url":"https://github.com/o/r"}},
+ {"id":"102","unread":false,"reason":"mention","updated_at":"2026-09-25T10:00:00Z","subject":{"title":"Crash on empty repo","url":"https://api.github.com/repos/o/r/issues/7","type":"Issue"},"repository":{"full_name":"o/r","html_url":"https://github.com/o/r"}},
+ {"id":"103","unread":true,"reason":"subscribed","updated_at":"2026-09-24T10:00:00Z","subject":{"title":"v0.4.0","url":null,"type":"Release"},"repository":{"full_name":"o/other","html_url":"https://github.com/o/other"}}]

@@ -22,6 +22,7 @@ pub fn screen_ctx(app: &App) -> Ctx {
         (Screen::Branches, RefsView::Remotes) => Ctx::Remotes,
         (Screen::Branches, RefsView::Worktrees) => Ctx::Worktrees,
         (Screen::Branches, RefsView::Submodules) => Ctx::Submodules,
+        (Screen::Issues, _) if app.github.issues_view == crate::github::IssuesView::Notifications => Ctx::Notifications,
         (s, _) => Ctx::Screen(s),
     }
 }
@@ -579,6 +580,20 @@ fn repo_action(app: &mut App, action: Action) {
                 InputKind::SetUpstream,
             );
         }
+        NextRefsView | PrevRefsView if app.screen == Screen::Issues => {
+            use crate::github::IssuesView;
+            app.github.issues_view = match app.github.issues_view {
+                IssuesView::Issues => IssuesView::Notifications,
+                IssuesView::Notifications => IssuesView::Issues,
+            };
+            app.focus = Focus::List;
+            let st = app.list(Screen::Issues);
+            *st.offset_mut() = 0;
+            st.select(Some(0));
+            app.clamp_selections();
+            diff::load_for_selection(app);
+            crate::github::on_enter(app, Screen::Issues);
+        }
         NextRefsView | PrevRefsView => {
             let all = RefsView::ALL;
             let i = all.iter().position(|v| *v == app.refs_view).unwrap_or(0);
@@ -686,7 +701,7 @@ fn repo_action(app: &mut App, action: Action) {
         }
         Bisect => bisect(app),
         PrCheckout | PrCreate | PrReview | Comment | PrMerge | CloseItem | IssueCreate | OpenInBrowser
-        | CycleFilter | ToggleDiff | RerunFailed => github_action(app, action),
+        | CycleFilter | ToggleDiff | RerunFailed | MarkRead | MarkAllRead | ToggleUnread => github_action(app, action),
         FileHistory => {
             let Some((path, _)) = target_file(app) else { return };
             app.set_log_path(Some(path));
@@ -971,6 +986,48 @@ fn github_action(app: &mut App, action: Action) {
     };
     let run = crate::github::selected_run(app).cloned().filter(|_| app.screen == Screen::Runs);
     match action {
+        Action::CycleFilter | Action::ToggleUnread
+            if app.screen == Screen::Issues && app.github.issues_view == crate::github::IssuesView::Notifications =>
+        {
+            if action == Action::CycleFilter {
+                app.github.notif_everywhere = !app.github.notif_everywhere;
+            } else {
+                app.github.notif_include_read = !app.github.notif_include_read;
+            }
+            let (w, r) = (app.github.notif_everywhere, app.github.notif_include_read);
+            app.toast(
+                Level::Info,
+                format!(
+                    "Showing {} notifications {}",
+                    if r { "all" } else { "unread" },
+                    if w { "from all your repos" } else { "for this repo" }
+                ),
+            );
+            app.set_selected(Screen::Issues, 0);
+            *app.list(Screen::Issues).offset_mut() = 0;
+            crate::github::load_notifications(app);
+        }
+        Action::MarkRead => {
+            let Some(n) = crate::github::selected_notification(app).cloned() else { return };
+            if !n.unread {
+                app.toast(Level::Info, "Already read");
+                return;
+            }
+            let id = n.id.clone();
+            app.run_op("Mark read", Then::GitHub, async move { gh.notification_read(&id).await });
+        }
+        Action::MarkAllRead => {
+            if app.github.issues_view != crate::github::IssuesView::Notifications {
+                return;
+            }
+            let here = !app.github.notif_everywhere;
+            let scope = if here { "for this repo" } else { "everywhere" };
+            app.run_op(
+                format!("Mark all read {scope}"),
+                Then::GitHub,
+                async move { gh.notifications_read_all(here).await },
+            );
+        }
         Action::CycleFilter if app.screen == Screen::Runs => {
             app.github.runs_all = !app.github.runs_all;
             app.set_selected(Screen::Runs, 0);
@@ -1009,6 +1066,13 @@ fn github_action(app: &mut App, action: Action) {
             diff::load_for_selection(app);
         }
         Action::OpenInBrowser => {
+            if let Some(n) = crate::github::selected_notification(app) {
+                let url = n.web_url();
+                if crate::terminal::open_url(&url) {
+                    app.toast(Level::Info, format!("Opened {url}"));
+                }
+                return;
+            }
             let url = match (&target, app.github.status.as_ref()) {
                 (Some((_, _, url, _)), _) => url.clone(),
                 (None, _) if run.is_some() => run.as_ref().map(|r| r.url.clone()).unwrap_or_default(),

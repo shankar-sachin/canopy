@@ -288,7 +288,11 @@ pub fn load_for_selection(app: &mut App) {
             return;
         }
         Screen::Issues => {
-            crate::github::load_issue_detail(app, gen);
+            if app.github.issues_view == crate::github::IssuesView::Notifications {
+                app.diff = crate::github::selected_notification(app).map(crate::github::notification_view);
+            } else {
+                crate::github::load_issue_detail(app, gen);
+            }
             return;
         }
         Screen::Runs => {
