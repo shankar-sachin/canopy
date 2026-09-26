@@ -39,17 +39,29 @@ pub enum Pending {
         rebase: bool,
     },
     Custom(usize),
+    DeleteTag {
+        name: String,
+        remote: Option<String>,
+    },
+    RemoveRemote(String),
 }
 
 #[derive(Debug, Clone)]
 pub enum InputKind {
-    NewBranch { start: Option<String> },
+    NewBranch {
+        start: Option<String>,
+    },
     RenameBranch(String),
     Tag(String),
     RawGit,
     Search(Screen),
     StashMessage,
     SetUpstream,
+    NewTag,
+    /// "name url"
+    AddRemote,
+    RenameRemote(String),
+    EditRemoteUrl(String),
 }
 
 #[derive(Debug, Clone)]
@@ -149,11 +161,11 @@ impl Modal {
 }
 
 /// Entries listed in the command palette.
-pub fn palette_actions(screen: Screen) -> Vec<(Action, String)> {
-    use crate::keymap::{bindings, Ctx};
+pub fn palette_actions(keymap: &crate::keymap::Keymap, screen_ctx: crate::keymap::Ctx) -> Vec<(Action, String)> {
+    use crate::keymap::Ctx;
     let mut out: Vec<(Action, String)> = Vec::new();
     let mut push = |ctx: Ctx| {
-        for b in bindings(ctx) {
+        for b in keymap.bindings(ctx) {
             if matches!(
                 b.action,
                 Action::Up
@@ -172,7 +184,7 @@ pub fn palette_actions(screen: Screen) -> Vec<(Action, String)> {
             }
         }
     };
-    push(Ctx::Screen(screen));
+    push(screen_ctx);
     push(Ctx::Global);
     out
 }

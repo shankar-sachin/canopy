@@ -4,7 +4,9 @@ use canopy_git::parse::diff::PatchMode;
 use canopy_git::{DiffLineKind, FileDiff, FileKind};
 
 use crate::app::{App, Level, Msg, Section, Then};
-use crate::keymap::Screen;
+use crate::keymap::{RefsView, Screen};
+use crate::views::conflict::ConflictView;
+use canopy_git::parse::conflict;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Row {
@@ -140,6 +142,25 @@ impl DiffView {
     }
 }
 
+fn remote_view(app: &App, r: &canopy_git::Remote) -> DiffView {
+    let prefix = format!("{}/", r.name);
+    let mut meta = vec![
+        format!("Remote {}", r.name),
+        String::new(),
+        format!("Fetch URL: {}", r.fetch_url),
+        format!("Push URL:  {}", r.push_url),
+        String::new(),
+    ];
+    let branches: Vec<_> = app.data.branches.iter().filter(|b| b.is_remote && b.name.starts_with(&prefix)).collect();
+    if branches.is_empty() {
+        meta.push("No branches fetched from this remote yet (f to fetch).".into());
+    } else {
+        meta.push(format!("{} branch(es):", branches.len()));
+        meta.extend(branches.iter().map(|b| format!("  {}  {}", b.name, b.subject)));
+    }
+    DiffView::new(format!("remote:{}", r.name), format!("remote {}", r.name), meta, Vec::new(), None)
+}
+
 /// Load the diff that matches the current screen's selection.
 pub fn load_for_selection(app: &mut App) {
     let Some(git) = app.git.clone() else { return };
@@ -160,9 +181,19 @@ pub fn load_for_selection(app: &mut App) {
         Screen::Log => {
             app.selected_commit().map(|c| Req::Show { rev: c.oid.clone(), title: format!("{} {}", c.short, c.subject) })
         }
-        Screen::Branches => {
-            app.selected_branch().map(|b| Req::Show { rev: b.oid.clone(), title: format!("{} (tip)", b.name) })
-        }
+        Screen::Branches => match app.refs_view {
+            RefsView::Branches => {
+                app.selected_branch().map(|b| Req::Show { rev: b.oid.clone(), title: format!("{} (tip)", b.name) })
+            }
+            RefsView::Tags => app
+                .selected_tag()
+                .map(|t| Req::Show { rev: format!("refs/tags/{}", t.name), title: format!("tag {}", t.name) }),
+            RefsView::Remotes => {
+                // Remote details come from data we already have; no git call.
+                app.diff = app.selected_remote().map(|r| remote_view(app, r));
+                return;
+            }
+        },
         Screen::Stash => app.data.stashes.get(app.selected(Screen::Stash)).map(|s| Req::Stash { name: s.name.clone() }),
         Screen::Reflog => app
             .data
@@ -180,6 +211,17 @@ pub fn load_for_selection(app: &mut App) {
     app.spawn(async move {
         let view = match req {
             Req::Status { path, section, untracked } => {
+                // Conflicted text files get the conflict panel instead of a diff.
+                if section == Section::Conflicts {
+                    let file = git.repo.root.join(&path);
+                    let text = tokio::task::spawn_blocking(move || std::fs::read_to_string(file).unwrap_or_default())
+                        .await
+                        .unwrap_or_default();
+                    if let Some(segments) = conflict::parse(&text).filter(|s| conflict::count(s) > 0) {
+                        let view = ConflictView { path, segments, current: 0, scroll: 0 };
+                        return Msg::Conflict { gen, view };
+                    }
+                }
                 let res = match (section, untracked) {
                     (Section::Unstaged, true) => git.diff_untracked(&path).await,
                     (Section::Staged, _) => git.diff_file(&path, true, 3).await,

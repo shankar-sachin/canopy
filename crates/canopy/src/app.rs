@@ -15,9 +15,10 @@ use ratatui::DefaultTerminal;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 
 use crate::config::Config;
-use crate::keymap::{Focus, Screen};
+use crate::keymap::{Focus, Keymap, RefsView, Screen};
 use crate::modal::Modal;
 use crate::theme::Theme;
+use crate::views::conflict::ConflictView;
 use crate::views::diff::DiffView;
 use crate::workspace::RepoSummary;
 
@@ -32,9 +33,16 @@ pub struct Snapshot {
     pub tags: Vec<Tag>,
     pub reflog: Vec<ReflogEntry>,
     pub state: Option<RepoState>,
+    /// How many commits were requested; fewer means we reached the root.
+    pub log_limit: usize,
 }
 
 pub enum Msg {
+    /// Next page of History, fetched starting at `skip`.
+    MoreLog {
+        skip: usize,
+        result: Result<Vec<Commit>, String>,
+    },
     Key(KeyEvent),
     Mouse(MouseEventKind),
     Resize,
@@ -43,6 +51,10 @@ pub enum Msg {
     Diff {
         gen: u64,
         view: Result<DiffView, String>,
+    },
+    Conflict {
+        gen: u64,
+        view: ConflictView,
     },
     OpDone {
         label: String,
@@ -96,6 +108,7 @@ pub struct App {
     pub git: Option<Git>,
     pub config: Config,
     pub theme: Theme,
+    pub keymap: Keymap,
     pub data: Snapshot,
     pub loaded: bool,
     pub screen: Screen,
@@ -103,6 +116,8 @@ pub struct App {
     pub lists: HashMap<Screen, ListState>,
     pub filters: HashMap<Screen, String>,
     pub diff: Option<DiffView>,
+    /// Conflict panel for the selected conflicted file (replaces the diff).
+    pub conflict: Option<ConflictView>,
     pub diff_gen: u64,
     pub modal: Modal,
     pub toast: Option<Toast>,
@@ -112,6 +127,10 @@ pub struct App {
     pub progress: Option<String>,
     pub workspace: Vec<RepoSummary>,
     pub workspace_scanning: bool,
+    /// True while a History page is being fetched.
+    pub log_loading: bool,
+    /// Branches, Tags, or Remotes in the Branches tab.
+    pub refs_view: RefsView,
     pub workspace_root: PathBuf,
     pub should_quit: bool,
     pub tick: u64,
@@ -126,11 +145,13 @@ impl App {
     pub fn new(git: Option<Git>, config: Config, workspace_root: PathBuf) -> Self {
         let (tx, rx) = unbounded_channel();
         let theme = Theme::by_name(&config.theme);
+        let (keymap, key_warnings) = Keymap::with_overrides(&config.key_overrides());
         let screen = if git.is_some() { Screen::Home } else { Screen::Workspace };
-        App {
+        let mut app = App {
             git,
             config,
             theme,
+            keymap,
             data: Snapshot::default(),
             loaded: false,
             screen,
@@ -138,6 +159,7 @@ impl App {
             lists: HashMap::new(),
             filters: HashMap::new(),
             diff: None,
+            conflict: None,
             diff_gen: 0,
             modal: Modal::None,
             toast: None,
@@ -154,7 +176,13 @@ impl App {
             paused: Arc::new(AtomicBool::new(false)),
             needs_redraw_full: false,
             last_status_poll: Instant::now(),
+            log_loading: false,
+            refs_view: RefsView::Branches,
+        };
+        if !key_warnings.is_empty() {
+            app.toast(Level::Error, format!("Config [keys]: {}", key_warnings.join("; ")));
         }
+        app
     }
 
     // ------------------------------------------------------------ helpers
@@ -251,7 +279,11 @@ impl App {
             Screen::Home => 0,
             Screen::Status => self.status_rows().len(),
             Screen::Log => self.visible_log().len(),
-            Screen::Branches => self.visible_branches().len(),
+            Screen::Branches => match self.refs_view {
+                RefsView::Branches => self.visible_branches().len(),
+                RefsView::Tags => self.visible_tags().len(),
+                RefsView::Remotes => self.data.remotes.len(),
+            },
             Screen::Stash => self.data.stashes.len(),
             Screen::Workspace => self.visible_workspace().len(),
             Screen::Reflog => self.data.reflog.len(),
@@ -263,7 +295,32 @@ impl App {
         vis.get(self.selected(Screen::Log)).map(|&i| &self.data.log[i])
     }
 
+    /// Indexes into `data.tags` after filtering (shares the Branches filter).
+    pub fn visible_tags(&self) -> Vec<usize> {
+        let f = self.filters.get(&Screen::Branches).map(String::as_str).unwrap_or("");
+        (0..self.data.tags.len())
+            .filter(|&i| f.is_empty() || Self::matches(f, &[&self.data.tags[i].name, &self.data.tags[i].subject]))
+            .collect()
+    }
+
+    pub fn selected_tag(&self) -> Option<&Tag> {
+        if self.refs_view != RefsView::Tags {
+            return None;
+        }
+        self.visible_tags().get(self.selected(Screen::Branches)).map(|&i| &self.data.tags[i])
+    }
+
+    pub fn selected_remote(&self) -> Option<&Remote> {
+        if self.refs_view != RefsView::Remotes {
+            return None;
+        }
+        self.data.remotes.get(self.selected(Screen::Branches))
+    }
+
     pub fn selected_branch(&self) -> Option<&Branch> {
+        if self.refs_view != RefsView::Branches {
+            return None;
+        }
         let vis = self.visible_branches();
         vis.get(self.selected(Screen::Branches)).map(|&i| &self.data.branches[i])
     }
@@ -299,9 +356,10 @@ impl App {
 
     pub fn refresh(&mut self) {
         let Some(git) = self.git.clone() else { return };
-        let page = self.config.log_page_size;
+        // Reload as many commits as are already loaded so History keeps its place.
+        let limit = self.config.log_page_size.max(self.data.log.len());
         self.spawn(async move {
-            let q = LogQuery { limit: page, ..Default::default() };
+            let q = LogQuery { limit, ..Default::default() };
             let (status, log, branches, stashes, remotes, tags, reflog) = tokio::join!(
                 git.status(),
                 git.log(&q),
@@ -321,9 +379,31 @@ impl App {
                     tags: tags.unwrap_or_default(),
                     reflog: reflog.unwrap_or_default(),
                     state: Some(git.state()),
+                    log_limit: limit,
                 })
             })();
             Msg::Loaded(snap.map(Box::new).map_err(|e| e.to_string()))
+        });
+    }
+
+    /// True when more history exists beyond what's loaded.
+    pub fn log_has_more(&self) -> bool {
+        self.data.log.len() >= self.data.log_limit && self.data.log_limit > 0
+    }
+
+    /// Fetch the next page of History if the selection is near the end.
+    pub fn maybe_load_more_log(&mut self) {
+        let near_end = self.selected(Screen::Log) + 50 >= self.data.log.len();
+        if self.log_loading || !near_end || !self.log_has_more() || self.filters.contains_key(&Screen::Log) {
+            return;
+        }
+        let Some(git) = self.git.clone() else { return };
+        self.log_loading = true;
+        let skip = self.data.log.len();
+        let limit = self.config.log_page_size;
+        self.spawn(async move {
+            let q = LogQuery { limit, skip, ..Default::default() };
+            Msg::MoreLog { skip, result: git.log(&q).await.map_err(|e| e.to_string()) }
         });
     }
 
@@ -365,6 +445,18 @@ impl App {
                 }
             }
             Msg::Loaded(Err(e)) => self.toast(Level::Error, e),
+            Msg::MoreLog { skip, result } => {
+                self.log_loading = false;
+                match result {
+                    // Ignore a page that no longer lines up (a refresh replaced the log).
+                    Ok(commits) if skip == self.data.log.len() => {
+                        self.data.log_limit = skip + self.config.log_page_size;
+                        self.data.log.extend(commits);
+                    }
+                    Ok(_) => {}
+                    Err(e) => self.toast(Level::Error, e),
+                }
+            }
             Msg::StatusOnly(status, state) => {
                 let changed = status != self.data.status || Some(state) != self.data.state;
                 if changed {
@@ -372,9 +464,23 @@ impl App {
                     self.refresh();
                 }
             }
+            Msg::Conflict { gen, mut view } => {
+                if gen != self.diff_gen {
+                    return;
+                }
+                if let Some(old) = self.conflict.as_ref().filter(|c| c.path == view.path) {
+                    view.current = old.current.min(view.count().saturating_sub(1));
+                }
+                self.conflict = Some(view);
+                self.diff = None;
+            }
             Msg::Diff { gen, view } => {
                 if gen != self.diff_gen {
                     return;
+                }
+                self.conflict = None;
+                if self.focus == Focus::Conflict {
+                    self.focus = Focus::List;
                 }
                 match view {
                     Ok(mut v) => {

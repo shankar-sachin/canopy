@@ -1,22 +1,34 @@
 //! Key handling: dispatch to actions, modal dialogs, and pending operations.
 
 use canopy_git::ops::{CommitOpts, ResetMode};
+use canopy_git::parse::conflict::Choice;
 use canopy_git::{FileKind, Output, RepoState};
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEventKind};
 use tokio::sync::mpsc;
 
 use crate::app::{App, Level, Msg, Section, Then};
-use crate::keymap::{self, Action, Ctx, Focus, Screen};
+use crate::keymap::{self, Action, Ctx, Focus, RefsView, Screen};
 use crate::modal::{palette_actions, InputKind, MenuItem, Modal, Pending, RebaseItem, TodoAction};
 use crate::textarea::TextArea;
 use crate::theme::Theme;
 use crate::views::diff;
 
+/// The key context for the current screen (and Branches sub-view).
+pub fn screen_ctx(app: &App) -> Ctx {
+    match (app.screen, app.refs_view) {
+        (Screen::Branches, RefsView::Tags) => Ctx::Tags,
+        (Screen::Branches, RefsView::Remotes) => Ctx::Remotes,
+        (s, _) => Ctx::Screen(s),
+    }
+}
+
 pub fn contexts(app: &App) -> Vec<Ctx> {
     if app.focus == Focus::Diff && app.diff.is_some() {
         vec![Ctx::Diff, Ctx::Global]
+    } else if app.focus == Focus::Conflict && app.conflict.is_some() {
+        vec![Ctx::Conflict, Ctx::Global]
     } else {
-        vec![Ctx::Screen(app.screen), Ctx::Global]
+        vec![screen_ctx(app), Ctx::Global]
     }
 }
 
@@ -30,7 +42,7 @@ pub fn handle_key(app: &mut App, key: KeyEvent) {
         do_action(app, Action::Custom(i));
         return;
     }
-    if let Some(action) = keymap::lookup(&contexts(app), &name) {
+    if let Some(action) = app.keymap.lookup(&contexts(app), &name) {
         do_action(app, action);
     }
 }
@@ -69,12 +81,19 @@ fn move_list(app: &mut App, delta: isize) {
         app.set_selected(s, next);
         diff::load_for_selection(app);
     }
+    if s == Screen::Log {
+        app.maybe_load_more_log();
+    }
 }
 
 fn navigate(app: &mut App, delta: isize) {
     if app.focus == Focus::Diff {
         if let Some(d) = app.diff.as_mut() {
             d.move_cursor(delta);
+        }
+    } else if app.focus == Focus::Conflict {
+        if let Some(c) = app.conflict.as_mut() {
+            c.step(delta.signum());
         }
     } else {
         move_list(app, delta);
@@ -139,7 +158,7 @@ pub fn do_action(app: &mut App, action: Action) {
         Back => {
             if let Some(d) = app.diff.as_mut().filter(|d| d.anchor.is_some()) {
                 d.anchor = None;
-            } else if app.focus == Focus::Diff {
+            } else if app.focus != Focus::List {
                 app.focus = Focus::List;
             } else if app.filters.remove(&app.screen).is_some() {
                 app.clamp_selections();
@@ -150,7 +169,10 @@ pub fn do_action(app: &mut App, action: Action) {
             Screen::Workspace => do_action(app, OpenRepo),
             Screen::Home => {}
             _ => {
-                if app.diff.as_ref().is_some_and(|d| !d.rows.is_empty()) {
+                let on_conflict = app.selected_status_row().is_some_and(|r| r.section == Section::Conflicts);
+                if app.screen == Screen::Status && on_conflict && app.conflict.is_some() {
+                    app.focus = Focus::Conflict;
+                } else if app.diff.as_ref().is_some_and(|d| !d.rows.is_empty()) {
                     app.focus = Focus::Diff;
                 }
             }
@@ -530,6 +552,120 @@ fn repo_action(app: &mut App, action: Action) {
                 InputKind::SetUpstream,
             );
         }
+        NextRefsView | PrevRefsView => {
+            let all = RefsView::ALL;
+            let i = all.iter().position(|v| *v == app.refs_view).unwrap_or(0);
+            let n = all.len();
+            app.refs_view = all[if action == NextRefsView { (i + 1) % n } else { (i + n - 1) % n }];
+            app.filters.remove(&Screen::Branches);
+            app.focus = Focus::List;
+            let st = app.list(Screen::Branches);
+            *st.offset_mut() = 0;
+            st.select(Some(0));
+            app.clamp_selections();
+            diff::load_for_selection(app);
+        }
+        CheckoutTag => {
+            let Some(t) = app.selected_tag().cloned() else { return };
+            confirm(
+                app,
+                &format!("Check out tag {}?", t.name),
+                vec![
+                    "You'll be in 'detached HEAD' state at this tag: good for".into(),
+                    "building or testing a release. Create a branch (n in History)".into(),
+                    "if you want to commit from here.".into(),
+                ],
+                Pending::Checkout(t.name),
+                false,
+            );
+        }
+        NewTag => {
+            app.modal =
+                Modal::input("New tag at HEAD", "name, or `name: message` for an annotated tag", "", InputKind::NewTag);
+        }
+        DeleteTag => {
+            let Some(t) = app.selected_tag().cloned() else { return };
+            let mut items = vec![MenuItem {
+                key: 'd',
+                label: "Delete locally".into(),
+                detail: "remote copies are untouched".into(),
+                pending: Pending::DeleteTag { name: t.name.clone(), remote: None },
+                danger: false,
+            }];
+            if let Some(r) = default_remote(app) {
+                items.push(MenuItem {
+                    key: 'D',
+                    label: format!("Delete here and on {r}"),
+                    detail: "removes it for everyone".into(),
+                    pending: Pending::DeleteTag { name: t.name.clone(), remote: Some(r) },
+                    danger: true,
+                });
+            }
+            app.modal = Modal::Menu { title: format!("Delete tag {}", t.name), items, sel: 0 };
+        }
+        PushTag => {
+            let Some(t) = app.selected_tag().cloned() else { return };
+            let Some(remote) = default_remote(app) else {
+                app.toast(Level::Warn, "No remote to push to");
+                return;
+            };
+            app.run_op(format!("Push tag {} → {remote}", t.name), Then::Refresh, async move {
+                git.push_tag(&remote, &t.name).await
+            });
+        }
+        AddRemote => {
+            app.modal = Modal::input(
+                "Add remote",
+                "name url, e.g. origin git@github.com:you/repo.git",
+                "",
+                InputKind::AddRemote,
+            );
+        }
+        RemoveRemote => {
+            let Some(r) = app.selected_remote().cloned() else { return };
+            confirm(
+                app,
+                &format!("Remove remote {}?", r.name),
+                vec![
+                    format!("Forgets {} and its remote-tracking branches locally.", r.fetch_url),
+                    "Nothing on the server is deleted.".into(),
+                ],
+                Pending::RemoveRemote(r.name),
+                true,
+            );
+        }
+        RenameRemote => {
+            let Some(r) = app.selected_remote().cloned() else { return };
+            app.modal = Modal::input(
+                format!("Rename remote {}", r.name),
+                "new name",
+                &r.name,
+                InputKind::RenameRemote(r.name.clone()),
+            );
+        }
+        EditRemoteUrl => {
+            let Some(r) = app.selected_remote().cloned() else { return };
+            app.modal = Modal::input(
+                format!("URL for {}", r.name),
+                "fetch and push URL",
+                &r.fetch_url,
+                InputKind::EditRemoteUrl(r.name.clone()),
+            );
+        }
+        FetchRemote => {
+            let Some(r) = app.selected_remote().cloned() else { return };
+            let p = progress_sender(app);
+            app.run_op(format!("Fetch {}", r.name), Then::Refresh, async move { git.fetch(Some(&r.name), p).await });
+        }
+        NextConflict | PrevConflict => {
+            if let Some(c) = app.conflict.as_mut() {
+                c.step(if action == NextConflict { 1 } else { -1 });
+            }
+        }
+        KeepOurs => crate::views::conflict::choose(app, Choice::Ours),
+        KeepTheirs => crate::views::conflict::choose(app, Choice::Theirs),
+        KeepBoth => crate::views::conflict::choose(app, Choice::Both),
+        RestoreConflict => crate::views::conflict::restore(app),
         StashApply | StashPop => {
             let Some(s) = app.data.stashes.get(app.selected(Screen::Stash)).cloned() else { return };
             if action == StashApply {
@@ -704,6 +840,11 @@ fn push(app: &mut App) {
             };
         }
     }
+}
+
+/// `origin` if it exists, else the first remote.
+fn default_remote(app: &App) -> Option<String> {
+    app.data.remotes.iter().find(|r| r.name == "origin").or(app.data.remotes.first()).map(|r| r.name.clone())
 }
 
 /// Undo the last HEAD movement using the reflog.
@@ -952,7 +1093,7 @@ fn modal_key(app: &mut App, key: KeyEvent) {
 }
 
 pub fn palette_matches(app: &App, query: &str) -> Vec<(Action, String)> {
-    let mut entries: Vec<(i64, Action, String)> = palette_actions(app.screen)
+    let mut entries: Vec<(i64, Action, String)> = palette_actions(&app.keymap, screen_ctx(app))
         .into_iter()
         .chain(app.config.custom_commands.iter().enumerate().map(|(i, c)| (Action::Custom(i), c.key.clone())))
         .filter_map(|(a, k)| {
@@ -1025,6 +1166,39 @@ fn submit_input(app: &mut App, text: String, kind: InputKind) {
             app.run_op("Stash", Then::Refresh, async move {
                 git.stash_push((!text.is_empty()).then_some(text.as_str()), true).await
             });
+        }
+        InputKind::NewTag => {
+            let git = git.expect("repo");
+            let (name, message) = match text.split_once(':') {
+                Some((n, m)) if !m.trim().is_empty() => (n.trim().replace(' ', "-"), Some(m.trim().to_string())),
+                _ => (text.trim_end_matches(':').replace(' ', "-"), None),
+            };
+            app.run_op(format!("Tag {name}"), Then::Refresh, async move {
+                git.create_tag(&name, "HEAD", message.as_deref()).await
+            });
+        }
+        InputKind::AddRemote => {
+            let git = git.expect("repo");
+            let Some((name, url)) = text.split_once(char::is_whitespace) else {
+                app.toast(Level::Warn, "Enter a name and a URL, separated by a space");
+                return;
+            };
+            let (name, url) = (name.to_string(), url.trim().to_string());
+            app.run_op(format!("Add remote {name}"), Then::Refresh, async move { git.add_remote(&name, &url).await });
+        }
+        InputKind::RenameRemote(old) => {
+            let git = git.expect("repo");
+            app.run_op(format!("Rename remote {old} → {text}"), Then::Refresh, async move {
+                git.rename_remote(&old, &text).await
+            });
+        }
+        InputKind::EditRemoteUrl(name) => {
+            let git = git.expect("repo");
+            app.run_op(
+                format!("Set URL of {name}"),
+                Then::Refresh,
+                async move { git.set_remote_url(&name, &text).await },
+            );
         }
         InputKind::SetUpstream => {
             let git = git.expect("repo");
@@ -1124,6 +1298,22 @@ pub fn execute(app: &mut App, pending: Pending) {
                     async move { git.delete_branch(&name, force).await },
                 );
             }
+        }
+        Pending::DeleteTag { name, remote } => {
+            let label = match &remote {
+                Some(r) => format!("Delete tag {name} (local + {r})"),
+                None => format!("Delete tag {name}"),
+            };
+            app.run_op(label, Then::Refresh, async move {
+                if let Some(r) = remote {
+                    // Remote first: if that fails, the local tag is still there to retry.
+                    git.delete_remote_tag(&r, &name).await?;
+                }
+                git.delete_tag(&name).await
+            });
+        }
+        Pending::RemoveRemote(name) => {
+            app.run_op(format!("Remove remote {name}"), Then::Refresh, async move { git.remove_remote(&name).await });
         }
         Pending::StashDrop(name) => {
             app.run_op(format!("Drop {name}"), Then::Refresh, async move { git.stash_drop(&name).await });

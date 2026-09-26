@@ -33,6 +33,8 @@ pub struct LogQuery {
     pub author: Option<String>,
     pub grep: Option<String>,
     pub path: Option<String>,
+    /// Follow renames (only meaningful with `path`).
+    pub follow: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -68,6 +70,9 @@ impl Git {
             args.push(r.clone());
         }
         if let Some(p) = &q.path {
+            if q.follow {
+                args.push("--follow".into());
+            }
             args.push("--".into());
             args.push(p.clone());
         }
@@ -394,6 +399,19 @@ impl Git {
         self.run(&["remote", "remove", name]).await
     }
 
+    pub async fn rename_remote(&self, old: &str, new: &str) -> Result<Output> {
+        self.run(&["remote", "rename", old, new]).await
+    }
+
+    pub async fn set_remote_url(&self, name: &str, url: &str) -> Result<Output> {
+        self.run(&["remote", "set-url", name, url]).await
+    }
+
+    pub async fn delete_remote_tag(&self, remote: &str, tag: &str) -> Result<Output> {
+        let refspec = format!("refs/tags/{tag}");
+        self.run(&["push", remote, "--delete", &refspec]).await
+    }
+
     pub async fn fetch(&self, remote: Option<&str>, progress: mpsc::UnboundedSender<String>) -> Result<Output> {
         let mut args = vec!["fetch", "--progress", "--prune"];
         match remote {
@@ -437,6 +455,22 @@ impl Git {
         let side = if ours { "--ours" } else { "--theirs" };
         self.run(&["checkout", side, "--", path]).await?;
         self.stage(&[path]).await
+    }
+
+    /// Who last changed each line of `path` at `rev` (working tree if `None`).
+    pub async fn blame(&self, path: &str, rev: Option<&str>) -> Result<crate::parse::blame::Blame> {
+        let mut args = vec!["blame", "--porcelain"];
+        if let Some(r) = rev {
+            args.push(r);
+        }
+        args.extend(["--", path]);
+        let out = self.run(&args).await?;
+        crate::parse::blame::parse(&out.stdout)
+    }
+
+    /// Put the conflict markers back into a file (undoes a manual resolution).
+    pub async fn restore_conflict(&self, path: &str) -> Result<Output> {
+        self.run(&["checkout", "-m", "--", path]).await
     }
 
     /// Run an arbitrary git command typed by the user.

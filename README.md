@@ -80,6 +80,13 @@ confirm_destructive = true
 workspace_dirs = ["~/code"]
 workspace_depth = 3
 
+# Remap any action by its snake_case name (see the full list with `?`).
+# A remapped key is taken away from whatever used it before, and Canopy
+# warns you if that leaves an action without a key.
+[keys]
+toggle_stage = "s"
+commit = ["c", "ctrl-s"]
+
 [[custom_commands]]
 key = "X"
 cmd = "git push --force-with-lease"

@@ -1,3 +1,4 @@
+pub mod conflict;
 pub mod diff;
 pub mod graph;
 pub mod modal;
@@ -13,7 +14,7 @@ use ratatui::Frame;
 
 use crate::app::{App, Level};
 use crate::input::{contexts, state_word};
-use crate::keymap::{bindings, pretty_key, Screen};
+use crate::keymap::{pretty_key, Screen};
 use util::key_hint;
 
 const SPINNER: [&str; 8] = ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"];
@@ -149,12 +150,12 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
     let mut spans = vec![Span::raw(" ")];
     let mut seen = Vec::new();
     for ctx in contexts(app) {
-        for b in bindings(ctx).iter().filter(|b| b.hint) {
+        for b in app.keymap.bindings(ctx).iter().filter(|b| b.hint && !b.keys.is_empty()) {
             if seen.contains(&b.action) {
                 continue;
             }
             seen.push(b.action);
-            spans.extend(key_hint(t, &pretty_key(b.keys[0]), b.action.short()));
+            spans.extend(key_hint(t, &pretty_key(&b.keys[0]), b.action.short()));
         }
     }
     f.render_widget(Paragraph::new(Line::from(spans)), area);

@@ -78,10 +78,12 @@ async fn press(app: &mut App, code: KeyCode) {
     app.settle().await;
 }
 
+/// Type text, then settle once (typing itself starts no background work).
 async fn chars(app: &mut App, s: &str) {
     for c in s.chars() {
-        press(app, KeyCode::Char(c)).await;
+        crate::input::handle_key(app, KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE));
     }
+    app.settle().await;
 }
 
 fn git_out(dir: &Path, args: &[&str]) -> String {
@@ -280,4 +282,166 @@ git merge other >/dev/null 2>&1 || true
     assert_eq!(std::fs::read_to_string(dir.path().join("README.md")).unwrap(), "OTHER\n");
     assert!(!dir.path().join(".git/MERGE_HEAD").exists());
     render(&mut app, 130, 30);
+}
+
+#[tokio::test]
+async fn history_loads_more_pages() {
+    let dir = TempDir::new().unwrap();
+    sh(
+        dir.path(),
+        "git init -q -b main && git config user.name T && git config user.email t@t.io && \
+         for i in $(seq 1 130); do git commit -q --allow-empty -m \"c$i\"; done",
+    );
+    let git = canopy_git::Git::open(dir.path()).await.unwrap();
+    let config = Config { log_page_size: 50, ..Config::default() };
+    let mut app = App::new(Some(git), config, dir.path().to_path_buf());
+    app.refresh();
+    app.settle().await;
+    assert_eq!(app.data.log.len(), 50);
+    assert!(app.log_has_more());
+    press(&mut app, KeyCode::Char('3')).await;
+    let s = render(&mut app, 120, 20);
+    assert!(s.contains("History · 50+ commits"), "{s}");
+
+    // Moving down near the end fetches the next pages.
+    press(&mut app, KeyCode::Char('j')).await;
+    assert_eq!(app.data.log.len(), 100);
+    press(&mut app, KeyCode::Char('G')).await;
+    press(&mut app, KeyCode::Char('G')).await;
+    assert_eq!(app.data.log.len(), 130);
+    assert!(!app.log_has_more());
+    assert_eq!(app.data.log.last().unwrap().subject, "c1");
+
+    // A refresh keeps everything loaded.
+    app.refresh();
+    app.settle().await;
+    assert_eq!(app.data.log.len(), 130);
+}
+
+#[tokio::test]
+async fn remapped_keys_work_and_show_in_hints() {
+    let dir = demo_repo();
+    let git = canopy_git::Git::open(dir.path()).await.unwrap();
+    let config: Config = toml::from_str("[keys]\ncommit = \"C\"\ntoggle_stage = \"s\"\n").unwrap();
+    let mut app = App::new(Some(git), config, dir.path().to_path_buf());
+    app.refresh();
+    app.settle().await;
+    // `C` was "continue" on Changes; the user is told it lost its key.
+    assert!(app.toast.as_ref().unwrap().text.contains("`continue_op` has no key left"));
+    app.toast = None;
+    let s = render(&mut app, 130, 30);
+    assert!(s.contains("Press C to commit"), "{s}");
+    assert!(s.contains(" C  commit"), "hint bar:\n{s}");
+
+    press(&mut app, KeyCode::Char('2')).await;
+    let s = render(&mut app, 130, 30);
+    assert!(s.contains(" s  stage"), "{s}");
+    // Old key does nothing; new key stages.
+    press(&mut app, KeyCode::Char(' ')).await;
+    let unstaged_before = app.data.status.unstaged().count();
+    press(&mut app, KeyCode::Char('s')).await;
+    assert_eq!(app.data.status.unstaged().count(), unstaged_before - 1);
+    press(&mut app, KeyCode::Char('c')).await;
+    assert!(!app.modal.is_open());
+    press(&mut app, KeyCode::Char('C')).await;
+    assert!(matches!(app.modal, Modal::Commit { .. }));
+}
+
+#[tokio::test]
+async fn tags_and_remotes_views() {
+    let dir = demo_repo();
+    let bare = TempDir::new().unwrap();
+    sh(bare.path(), "git init -q --bare -b main");
+    let mut app = app_for(dir.path()).await;
+    press(&mut app, KeyCode::Char('4')).await;
+    press(&mut app, KeyCode::Char(']')).await;
+    let s = render(&mut app, 130, 30);
+    assert!(s.contains("Branches · Tags · Remotes") && s.contains("v0.1.0"), "{s}");
+    assert!(s.contains(" P  push"), "tags hint bar:\n{s}");
+
+    // Annotated tag via `name: message`.
+    press(&mut app, KeyCode::Char('n')).await;
+    chars(&mut app, "v0.2.0: second release").await;
+    press(&mut app, KeyCode::Enter).await;
+    assert_eq!(git_out(dir.path(), &["tag", "-l", "v0.2.0", "--format=%(contents:subject)"]).trim(), "second release");
+
+    // Remotes: add, rename, edit URL.
+    press(&mut app, KeyCode::Char(']')).await;
+    let s = render(&mut app, 130, 30);
+    assert!(s.contains("No remotes yet"), "{s}");
+    press(&mut app, KeyCode::Char('n')).await;
+    chars(&mut app, &format!("up {}", bare.path().display())).await;
+    press(&mut app, KeyCode::Enter).await;
+    press(&mut app, KeyCode::Char('R')).await;
+    // Clear the prefilled name, then type the new one.
+    crate::input::handle_key(&mut app, KeyEvent::new(KeyCode::Char('u'), KeyModifiers::CONTROL));
+    chars(&mut app, "origin").await;
+    press(&mut app, KeyCode::Enter).await;
+    assert_eq!(git_out(dir.path(), &["remote"]).trim(), "origin");
+    let s = render(&mut app, 130, 30);
+    assert!(s.contains("Fetch URL:"), "remote details panel:\n{s}");
+
+    // Push a tag, then delete it here and on the remote.
+    press(&mut app, KeyCode::Char('[')).await;
+    let i = app.visible_tags().iter().position(|&i| app.data.tags[i].name == "v0.2.0").unwrap();
+    app.set_selected(Screen::Branches, i);
+    press(&mut app, KeyCode::Char('P')).await;
+    assert!(git_out(bare.path(), &["tag"]).contains("v0.2.0"));
+    press(&mut app, KeyCode::Char('d')).await;
+    press(&mut app, KeyCode::Char('D')).await;
+    assert!(!git_out(bare.path(), &["tag"]).contains("v0.2.0"));
+    assert!(!git_out(dir.path(), &["tag"]).contains("v0.2.0"));
+
+    // Remove the remote (confirmed).
+    press(&mut app, KeyCode::Char(']')).await;
+    press(&mut app, KeyCode::Char('d')).await;
+    press(&mut app, KeyCode::Char('y')).await;
+    assert_eq!(git_out(dir.path(), &["remote"]).trim(), "");
+}
+
+#[tokio::test]
+async fn resolve_conflicts_one_by_one() {
+    let dir = demo_repo();
+    sh(
+        dir.path(),
+        r#"
+set -e
+git stash -q -u
+printf '1\nshared\n2\n3\n4\n5\n6\nshared\n7\n' > c.txt; git add c.txt; git commit -qm base
+git switch -qc other; printf '1\nTHEIRS-A\n2\n3\n4\n5\n6\nTHEIRS-B\n7\n' > c.txt; git commit -qam other
+git switch -q main; printf '1\nOURS-A\n2\n3\n4\n5\n6\nOURS-B\n7\n' > c.txt; git commit -qam main
+git merge other >/dev/null 2>&1 || true
+"#,
+    );
+    let mut app = app_for(dir.path()).await;
+    press(&mut app, KeyCode::Char('2')).await;
+    let s = render(&mut app, 130, 34);
+    assert!(s.contains("Conflict 1 of 2") && s.contains("ours · HEAD") && s.contains("theirs · other"), "{s}");
+    assert!(s.contains("to resolve conflicts one by one"), "{s}");
+
+    press(&mut app, KeyCode::Enter).await;
+    let s = render(&mut app, 130, 34);
+    assert!(s.contains(" o  ours") && s.contains(" t  theirs"), "hint bar:\n{s}");
+
+    // Resolve the first, change our mind, restore, then do it properly.
+    press(&mut app, KeyCode::Char('o')).await;
+    let text = std::fs::read_to_string(dir.path().join("c.txt")).unwrap();
+    assert!(text.starts_with("1\nOURS-A\n2\n") && text.contains("<<<<<<<"), "{text}");
+    press(&mut app, KeyCode::Char('u')).await;
+    let text = std::fs::read_to_string(dir.path().join("c.txt")).unwrap();
+    assert_eq!(text.matches("<<<<<<<").count(), 2);
+
+    press(&mut app, KeyCode::Enter).await;
+    press(&mut app, KeyCode::Char('t')).await; // conflict 1 -> theirs
+    let s = render(&mut app, 130, 34);
+    assert!(s.contains("Conflict 1 of 1"), "{s}");
+    press(&mut app, KeyCode::Char('b')).await; // conflict 2 -> both
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("c.txt")).unwrap(),
+        "1\nTHEIRS-A\n2\n3\n4\n5\n6\nOURS-B\nTHEIRS-B\n7\n"
+    );
+    // Fully resolved: staged automatically, merge can continue.
+    assert_eq!(app.data.status.conflicted().count(), 0);
+    press(&mut app, KeyCode::Char('C')).await;
+    assert!(!dir.path().join(".git/MERGE_HEAD").exists());
 }

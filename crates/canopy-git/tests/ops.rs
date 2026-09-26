@@ -225,3 +225,106 @@ async fn fetch_push_with_progress() {
     git.fetch(None, tx).await.unwrap();
     assert!(git.branches().await.unwrap().iter().any(|b| b.is_remote));
 }
+
+#[tokio::test]
+async fn tags_and_remotes() {
+    let remote = TempDir::new().unwrap();
+    sh(remote.path(), &["init", "-q", "--bare", "-b", "main"]);
+    let dir = repo();
+    let git = Git::open(dir.path()).await.unwrap();
+    write(&dir, "f.txt", "x\n");
+    commit_all(&git, "x").await;
+
+    git.create_tag("v1.0.0", "HEAD", None).await.unwrap();
+    git.create_tag("v1.1.0", "HEAD", Some("release notes")).await.unwrap();
+    let tags = git.tags().await.unwrap();
+    assert_eq!(tags.len(), 2);
+    assert!(tags.iter().any(|t| t.name == "v1.1.0" && t.subject == "release notes"));
+
+    git.add_remote("upstream", remote.path().to_str().unwrap()).await.unwrap();
+    git.rename_remote("upstream", "origin").await.unwrap();
+    git.set_remote_url("origin", remote.path().to_str().unwrap()).await.unwrap();
+    let remotes = git.remotes().await.unwrap();
+    assert_eq!(remotes.len(), 1);
+    assert_eq!(remotes[0].name, "origin");
+
+    git.push_tag("origin", "v1.0.0").await.unwrap();
+    assert!(sh(remote.path(), &["tag"]).contains("v1.0.0"));
+    git.delete_remote_tag("origin", "v1.0.0").await.unwrap();
+    assert!(!sh(remote.path(), &["tag"]).contains("v1.0.0"));
+    git.delete_tag("v1.0.0").await.unwrap();
+    assert_eq!(git.tags().await.unwrap().len(), 1);
+
+    git.remove_remote("origin").await.unwrap();
+    assert!(git.remotes().await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn real_conflicts_parse_resolve_and_restore() {
+    use canopy_git::parse::conflict::{self, Choice};
+    for style in ["merge", "diff3"] {
+        let dir = repo();
+        sh(dir.path(), &["config", "merge.conflictStyle", style]);
+        let git = Git::open(dir.path()).await.unwrap();
+        write(&dir, "f.txt", "1\nshared\n2\n3\n4\n5\n6\nshared\n7\n");
+        commit_all(&git, "base").await;
+        git.create_branch("other", None, true).await.unwrap();
+        write(&dir, "f.txt", "1\nTHEIRS-A\n2\n3\n4\n5\n6\nTHEIRS-B\n7\n");
+        commit_all(&git, "other").await;
+        git.checkout("main").await.unwrap();
+        write(&dir, "f.txt", "1\nOURS-A\n2\n3\n4\n5\n6\nOURS-B\n7\n");
+        commit_all(&git, "main").await;
+        assert!(git.merge("other", false).await.is_err());
+
+        let path = dir.path().join("f.txt");
+        let text = std::fs::read_to_string(&path).unwrap();
+        let segs = conflict::parse(&text).unwrap();
+        assert_eq!(conflict::count(&segs), 2, "{style}: {text}");
+        if style == "diff3" {
+            assert!(segs.iter().any(|s| matches!(s, conflict::Segment::Conflict(c) if c.base.is_some())));
+        }
+
+        let once = conflict::resolve_one(&segs, 0, Choice::Ours);
+        let segs = conflict::parse(&once).unwrap();
+        let done = conflict::resolve_one(&segs, 0, Choice::Theirs);
+        assert_eq!(done, "1\nOURS-A\n2\n3\n4\n5\n6\nTHEIRS-B\n7\n");
+        std::fs::write(&path, &done).unwrap();
+
+        // Changed our mind: bring the markers back.
+        git.restore_conflict("f.txt").await.unwrap();
+        let again = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(conflict::count(&conflict::parse(&again).unwrap()), 2);
+    }
+}
+
+#[tokio::test]
+async fn blame_and_file_history_follow_renames() {
+    let dir = repo();
+    let git = Git::open(dir.path()).await.unwrap();
+    write(&dir, "old.txt", "one\ntwo\n");
+    commit_all(&git, "create").await;
+    sh(dir.path(), &["mv", "old.txt", "new.txt"]);
+    commit_all(&git, "rename").await;
+    write(&dir, "new.txt", "one\nTWO\nthree\n");
+    commit_all(&git, "edit").await;
+    write(&dir, "other.txt", "x\n");
+    commit_all(&git, "unrelated").await;
+    write(&dir, "new.txt", "one\nTWO\nthree\nwip\n");
+
+    let q = LogQuery { path: Some("new.txt".into()), follow: true, ..Default::default() };
+    let subjects: Vec<_> = git.log(&q).await.unwrap().into_iter().map(|c| c.subject).collect();
+    assert_eq!(subjects, vec!["edit", "rename", "create"]);
+
+    let b = git.blame("new.txt", None).await.unwrap();
+    assert_eq!(b.lines.len(), 4);
+    let who = |i: usize| b.commits[&b.lines[i].oid].summary.clone();
+    assert_eq!(who(0), "create");
+    assert_eq!(who(1), "edit");
+    assert!(b.commits[&b.lines[3].oid].uncommitted);
+
+    // Blame at an older revision.
+    let log = git.log(&LogQuery::default()).await.unwrap();
+    let rename = log.iter().find(|c| c.subject == "rename").unwrap();
+    let b = git.blame("new.txt", Some(&rename.oid)).await.unwrap();
+    assert_eq!(b.lines.iter().map(|l| l.content.as_str()).collect::<Vec<_>>(), vec!["one", "two"]);
+}
