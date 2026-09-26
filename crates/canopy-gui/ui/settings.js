@@ -90,14 +90,16 @@ function updateHtml() {
 function aiRow(s) {
   const ai = gh.ai || { installed: [] };
   const known = ["auto", "claude", "codex", "off"];
-  const custom = !known.includes(s.ai_assistant);
+  // Settings saved before 1.0.5 have no ai_assistant: that's auto.
+  const current = s.ai_assistant || "auto";
+  const custom = !known.includes(current);
   const detected = ai.installed.length ? `found: ${ai.installed.join(", ")}` : "none found on this computer";
   const opts = [["auto", `Auto (${ai.installed[0] || "none found"})`], ["claude", "Claude Code"], ["codex", "Codex"], ["custom", "Custom command…"], ["off", "Off"]];
   return row("AI assistant",
     `When CI fails, "Fix with AI" writes a prompt from the error and opens this in a new terminal window (${esc(detected)}).`,
-    `<select class="input small-select" id="ai-pick">${opts.map(([v, l]) => `<option value="${v}"${(custom ? "custom" : s.ai_assistant) === v ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`)
+    `<select class="input small-select" id="ai-pick">${opts.map(([v, l]) => `<option value="${v}"${(custom ? "custom" : current) === v ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`)
     + (custom ? `<div class="srow2"><div><b>Command</b><p>Your assistant's command line. <code>{prompt}</code> marks where the prompt goes (otherwise it's added at the end).</p></div>
-       <div class="sctl"><input class="input" id="ai-cmd" value="${esc(s.ai_assistant === "custom" ? "" : s.ai_assistant)}" placeholder="aider --message {prompt}" spellcheck="false"></div></div>` : "");
+       <div class="sctl"><input class="input" id="ai-cmd" value="${esc(current === "custom" ? "" : current)}" placeholder="aider --message {prompt}" spellcheck="false"></div></div>` : "");
 }
 
 function settingsBody() {

@@ -318,6 +318,11 @@ async fn fix_a_failed_run_with_ai() {
     assert!(toast.contains(".git/canopy/fix-ci.md"), "{toast}");
     let prompt = std::fs::read_to_string(dir.path().join(".git/canopy/fix-ci.md")).unwrap();
     assert!(prompt.contains("# Fix a failing CI run") && prompt.contains("Don't commit or push"), "{prompt}");
+    // e: the details, written and opened in the editor.
+    press(&mut app, KeyCode::Char('e')).await;
+    app.settle().await;
+    let toast = app.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    assert!(toast.starts_with("would edit: ") && toast.ends_with("fix-ci.md"), "{toast}");
     // Off: says how to set one up.
     app.config.ai = "off".into();
     press(&mut app, KeyCode::Char('A')).await;
@@ -1146,6 +1151,39 @@ fn frame_html(app: &mut App, w: u16, h: u16) -> String {
 /// Fills `<!-- SCREEN:name -->…<!-- /SCREEN:name -->` and
 /// `<!-- KEYS:START -->…<!-- KEYS:END -->` in every `docs/*.html`.
 /// Run with: cargo test -p canopy-git-tui export_site_screens -- --ignored
+/// Fix with AI frames as HTML pages, for previews:
+/// `CANOPY_SHOT_DIR=/tmp/ai cargo test -p canopy-git-tui export_ai_frames -- --ignored`
+#[tokio::test]
+#[ignore]
+async fn export_ai_frames() {
+    let out = std::path::PathBuf::from(std::env::var("CANOPY_SHOT_DIR").expect("set CANOPY_SHOT_DIR"));
+    std::fs::create_dir_all(&out).unwrap();
+    let page = |frame: &str| {
+        format!(
+            "<!doctype html><meta charset=utf-8><link rel=stylesheet href=\"https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap\">\
+             <style>body{{margin:0;background:#101612}}pre{{margin:0;padding:14px;font:14px/1.25 'JetBrains Mono',ui-monospace,Menlo,monospace;color:#d6e2d6;white-space:pre}}\
+             i.g{{font-style:normal;display:inline-block;width:1ch;text-align:center;vertical-align:top}}</style><pre>{frame}</pre>"
+        )
+    };
+    let dir = demo_repo();
+    let bin = TempDir::new().unwrap();
+    let gh = fake_gh(bin.path(), true);
+    let mut app = github_app(dir.path(), &gh).await;
+    app.tick = 30;
+    app.settle().await;
+    std::fs::write(out.join("tui-ai-home.html"), page(&frame_html(&mut app, 118, 30))).unwrap();
+    press(&mut app, KeyCode::Char('0')).await;
+    app.settle().await;
+    std::fs::write(out.join("tui-ai-actions.html"), page(&frame_html(&mut app, 118, 30))).unwrap();
+    // What A shows once the assistant opened (the test build doesn't open it).
+    app.toast_for(
+        crate::app::Level::Success,
+        "CI failed in check (ubuntu-latest) → Run cargo test.  Opened Claude Code in a new Terminal window",
+        10,
+    );
+    std::fs::write(out.join("tui-ai-launched.html"), page(&frame_html(&mut app, 118, 30))).unwrap();
+}
+
 /// A short tour as numbered HTML frames (for a screen recording):
 /// `CANOPY_SHOT_DIR=/tmp/tour cargo test -p canopy-git-tui export_tui_tour -- --ignored`
 #[tokio::test]

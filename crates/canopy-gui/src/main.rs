@@ -210,6 +210,8 @@ fn main() {
             github::ai_status,
             github::latest_failure,
             github::fix_with_ai,
+            github::failure_details,
+            github::open_details,
             settings::get_settings,
             settings::set_settings,
             settings::clear_recent,

@@ -20,6 +20,61 @@ async function aiStatus() {
   return gh.ai;
 }
 
+/// A popup with everything Canopy knows about why run `id` failed: the same
+/// text the AI assistant gets, saved in .git/canopy/fix-ci.md.
+async function showDetails(id) {
+  const wrap = document.createElement("div");
+  wrap.className = "modal-wrap";
+  wrap.innerHTML = `<div class="modal details" role="dialog" aria-modal="true" aria-label="Failure details">
+    <div class="details-head"><div><h3>What went wrong</h3><p class="faint" id="det-headline">Gathering the failure from GitHub…</p></div>
+      <button class="btn icon ghost" data-d="close" type="button" title="Close (Esc)">${icon("x", 14)}</button></div>
+    <pre class="details-text selectable" id="det-text"></pre>
+    <div class="details-foot"><span class="faint mono" id="det-file"></span><span class="grow"></span>
+      <button class="btn small" data-d="copy" type="button">Copy</button>
+      <button class="btn small" data-d="editor" type="button">Open in editor</button>
+      <button class="btn small" data-d="github" type="button">View in GitHub</button>
+      <button class="btn small primary" data-d="fix" type="button">✦ Fix with ${esc(gh.ai?.chosen || "AI")}</button></div>
+  </div>`;
+  let details = null;
+  const close = () => {
+    wrap.remove();
+    document.removeEventListener("keydown", onKey, true);
+  };
+  const onKey = (e) => {
+    if (e.key === "Escape") { e.stopPropagation(); close(); }
+  };
+  wrap.addEventListener("click", async (e) => {
+    if (e.target === wrap) return close();
+    const b = e.target.closest("[data-d]");
+    if (!b) return;
+    switch (b.dataset.d) {
+      case "close": return close();
+      case "copy":
+        try { await navigator.clipboard.writeText(details?.text || ""); b.textContent = "Copied"; } catch { toast("Select the text and copy it."); }
+        return;
+      case "editor":
+        return invoke("open_details").catch((err) => toast(String(err), { error: true }));
+      case "github":
+        return details?.url && openUrl(details.url);
+      case "fix":
+        close();
+        return fixWithAi(id);
+    }
+  });
+  document.addEventListener("keydown", onKey, true);
+  document.body.append(wrap);
+  aiStatus().then((ai) => { const f = wrap.querySelector('[data-d="fix"]'); if (f) f.textContent = `✦ Fix with ${ai.chosen || "AI"}`; });
+  try {
+    details = await invoke("failure_details", { id });
+    $("#det-headline").textContent = details.headline;
+    $("#det-text").textContent = details.text;
+    $("#det-file").textContent = details.file.replace(/^.*?(\.git[\/\\])/, "$1");
+  } catch (err) {
+    $("#det-headline").textContent = "Couldn't get the details";
+    $("#det-text").textContent = String(err);
+  }
+}
+
 /// Write the prompt for run `id` and open the AI assistant on it.
 async function fixWithAi(id) {
   const ai = await aiStatus();
@@ -140,7 +195,7 @@ function prDetailHtml() {
     <div class="gmeta">${stateBadge(pr)} <span><b>${esc(pr.author.login)}</b> wants to merge <code>${esc(pr.headRefName)}</code> into <code>${esc(pr.baseRefName)}</code></span>
       <span class="adds">+${pr.additions}</span><span class="dels">−${pr.deletions}</span>${REVIEW[pr.reviewDecision] || ""}${labelChips(pr.labels)}</div>
     <div class="cactions">
-      <button class="btn small" data-g="open" data-url="${esc(pr.url)}">Open on GitHub</button>
+      <button class="btn small" data-g="open" data-url="${esc(pr.url)}">View in GitHub</button>
       <button class="btn small" data-g="pr-checkout">Check out</button>
       <button class="btn small" data-g="pr-comment">Comment…</button>
       ${open ? `<button class="btn small" data-g="pr-review">Review…</button><button class="btn small" data-g="pr-close">Close…</button>
@@ -201,7 +256,7 @@ function issueDetailHtml() {
     <h2 class="selectable">${esc(i.title)} <span class="num">#${i.number}</span></h2>
     <div class="gmeta">${stateBadge(i)}<span>opened by <b>${esc(i.author.login)}</b></span>${labelChips(i.labels)}</div>
     <div class="cactions">
-      <button class="btn small" data-g="open" data-url="${esc(i.url)}">Open on GitHub</button>
+      <button class="btn small" data-g="open" data-url="${esc(i.url)}">View in GitHub</button>
       <button class="btn small" data-g="issue-comment">Comment…</button>
       ${open ? `<button class="btn small" data-g="issue-close">Close</button>` : `<button class="btn small" data-g="issue-reopen">Reopen</button>`}
     </div>
@@ -270,8 +325,9 @@ function runDetailHtml() {
     <h2 class="selectable">${esc(run.displayTitle)}</h2>
     <div class="gmeta">${checkIcon(RUN_ICON[run.state])}<span>${esc(run.workflowName)} #${run.number}</span><code>${esc(run.headBranch)}</code><span class="faint">${esc(run.event)} · ${ago(run.createdAt)}</span></div>
     <div class="cactions">
-      <button class="btn small" data-g="open" data-url="${esc(run.url)}">Open on GitHub</button>
-      ${run.state === "failed" ? `<button class="btn small" data-g="run-rerun">Re-run failed jobs</button>
+      <button class="btn small" data-g="open" data-url="${esc(run.url)}">View in GitHub</button>
+      ${run.state === "failed" ? `<button class="btn small" data-g="details">Details</button>
+        <button class="btn small" data-g="run-rerun">Re-run failed jobs</button>
         <button class="btn small primary" data-g="fix-ai" title="Write a prompt from this failure and open your AI assistant with it">✦ Fix with ${esc(gh.ai?.chosen || "AI")}</button>` : ""}
     </div>
     ${jobs}${log}
@@ -428,6 +484,8 @@ async function ghAction(ns, what, el) {
     case "issue-close":
     case "issue-reopen":
       return after(await run(what === "issue-close" ? `Closed #${issue.number}` : `Reopened #${issue.number}`, "gh_op", { op: what, args: [String(issue.number)] }));
+    case "details":
+      return showDetails(gh.runs.sel);
     case "fix-ai":
       return fixWithAi(gh.runs.sel);
     case "run-rerun":
@@ -495,7 +553,8 @@ function ghFailureBanner() {
     <div class="fail-icon">✗</div>
     <div class="fail-text"><b>Canopy found an error in your latest commit.</b><p>${esc(f.headline)} <span class="faint">(${esc(f.workflow)})</span></p></div>
     <div class="fail-actions">
-      <button class="btn small" data-fail="open" data-url="${esc(f.url)}">See the run</button>
+      <button class="btn small" data-fail="details">Details</button>
+      <button class="btn small" data-fail="open" data-url="${esc(f.url)}">View in GitHub</button>
       ${who ? `<button class="btn small primary" data-fail="fix" title="Write a prompt from this failure and open ${esc(who)} with it">✦ Fix with ${esc(who)}</button>`
             : `<button class="btn small" data-fail="setup">Set up an AI assistant</button>`}
     </div></div>`;
@@ -505,6 +564,7 @@ document.addEventListener("click", (e) => {
   const b = e.target.closest("[data-fail]");
   if (!b) return;
   if (b.dataset.fail === "open") openUrl(b.dataset.url);
+  else if (b.dataset.fail === "details") showDetails(gh.failure.run_id);
   else if (b.dataset.fail === "fix") fixWithAi(gh.failure.run_id);
   else openSettings("general");
 });

@@ -45,10 +45,18 @@
   </div>
 </header>
 <main class="wrap doc">
-  <aside class="toc"><b>On this page</b><a href="#v1-0-5">v1.0.5</a><a href="#v1-0-4">v1.0.4</a><a href="#v1-0-3">v1.0.3</a><a href="#v1-0-2">v1.0.2</a><a href="#v1-0-1">v1.0.1</a><a href="#v1-0-0">v1.0.0</a><a href="#v0-4-0">v0.4.0</a><a href="#v0-3-0">v0.3.0</a><a href="#v0-2-0">v0.2.0</a><a href="#v0-1-0">v0.1.0</a><a href="#next">What's next</a></aside>
+  <aside class="toc"><b>On this page</b><a href="#v1-0-6">v1.0.6</a><a href="#v1-0-5">v1.0.5</a><a href="#v1-0-4">v1.0.4</a><a href="#v1-0-3">v1.0.3</a><a href="#v1-0-2">v1.0.2</a><a href="#v1-0-1">v1.0.1</a><a href="#v1-0-0">v1.0.0</a><a href="#v0-4-0">v0.4.0</a><a href="#v0-3-0">v0.3.0</a><a href="#v0-2-0">v0.2.0</a><a href="#v0-1-0">v0.1.0</a><a href="#next">What's next</a></aside>
   <article class="prose">
 
-<div class="release" id="v1-0-5"><h2>v1.0.5 <span class="tag-new">Latest</span></h2><div class="date">September 2026</div>
+<div class="release" id="v1-0-6"><h2>v1.0.6 <span class="tag-new">Latest</span></h2><div class="date">September 2026</div>
+<ul>
+  <li><b>Details</b> for a failed run: the full write-up of what went wrong. Desktop: a popup with Copy, Open in editor and View in GitHub, on the Home banner and on failed runs. Terminal: <kbd>e</kbd> on a failed run opens it in your editor.</li>
+  <li><b>View in GitHub</b> buttons across the desktop app; the terminal app's <kbd>o</kbd> hint says so too.</li>
+  <li>Fixed: color codes that GitHub writes out as text (<code>^[[1m</code>) no longer end up in the prompt.</li>
+  <li>Fixed: the desktop AI assistant setting showed "Custom command" for settings saved before 1.0.5.</li>
+</ul></div>
+
+<div class="release" id="v1-0-5"><h2>v1.0.5</h2><div class="date">September 2026</div>
 <p><b><a href="github.html#fix-with-ai">Fix with AI</a></b>: when CI fails, hand it to Claude Code or Codex.</p>
 <ul>
   <li>Canopy writes a prompt from the failure (the failed job and step, GitHub's summary, including why a workflow file is invalid, and the cleaned-up log) into <code>.git/canopy/fix-ci.md</code>, then opens your assistant in a new terminal tab or window, already working on it.</li>
