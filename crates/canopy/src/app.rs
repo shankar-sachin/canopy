@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::future::Future;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -92,6 +92,15 @@ pub struct Toast {
     pub at: Instant,
 }
 
+/// Decrements the in-flight task count when dropped.
+pub struct InFlight(Arc<AtomicUsize>);
+
+impl Drop for InFlight {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
 /// One row in the Changes list.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Section {
@@ -141,6 +150,8 @@ pub struct App {
     pub tx: UnboundedSender<Msg>,
     rx: Option<UnboundedReceiver<Msg>>,
     pub paused: Arc<AtomicBool>,
+    /// Background tasks that haven't finished sending their results.
+    inflight: Arc<AtomicUsize>,
     pub needs_redraw_full: bool,
     last_status_poll: Instant,
 }
@@ -178,6 +189,7 @@ impl App {
             tx,
             rx: Some(rx),
             paused: Arc::new(AtomicBool::new(false)),
+            inflight: Arc::new(AtomicUsize::new(0)),
             needs_redraw_full: false,
             last_status_poll: Instant::now(),
             log_loading: false,
@@ -349,9 +361,17 @@ impl App {
         F: Future<Output = Msg> + Send + 'static,
     {
         let tx = self.tx.clone();
+        let guard = self.in_flight();
         tokio::spawn(async move {
             let _ = tx.send(fut.await);
+            drop(guard);
         });
+    }
+
+    /// Count a background task as running until the guard is dropped.
+    pub fn in_flight(&self) -> InFlight {
+        self.inflight.fetch_add(1, Ordering::SeqCst);
+        InFlight(self.inflight.clone())
     }
 
     /// Run a git operation in the background and report the result.
@@ -685,8 +705,14 @@ impl App {
     #[cfg(test)]
     pub async fn settle(&mut self) {
         let mut rx = self.rx.take().expect("receiver");
-        while let Ok(Some(msg)) = tokio::time::timeout(Duration::from_millis(400), rx.recv()).await {
-            self.update(msg);
+        let deadline = Instant::now() + Duration::from_secs(30);
+        loop {
+            match tokio::time::timeout(Duration::from_millis(20), rx.recv()).await {
+                Ok(Some(msg)) => self.update(msg),
+                // Idle: done only once no background task is still running.
+                _ if self.inflight.load(Ordering::SeqCst) == 0 => break,
+                _ => assert!(Instant::now() < deadline, "background work never finished"),
+            }
         }
         self.rx = Some(rx);
     }

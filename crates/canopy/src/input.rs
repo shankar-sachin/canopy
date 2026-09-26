@@ -1368,7 +1368,9 @@ fn submit_input(app: &mut App, text: String, kind: InputKind) {
             let label = format!("git {text}");
             let tx = app.tx.clone();
             app.busy = Some(label.clone());
+            let guard = app.in_flight();
             tokio::spawn(async move {
+                let _guard = guard;
                 let argv: Vec<&str> = args.iter().map(String::as_str).collect();
                 let result = git.raw(&argv).await.map_err(|e| e.to_string());
                 // Show output in a scrollable panel.
@@ -1541,7 +1543,9 @@ pub fn execute(app: &mut App, pending: Pending) {
             let label = if c.description.is_empty() { c.cmd.clone() } else { c.description.clone() };
             let tx = app.tx.clone();
             app.busy = Some(label.clone());
+            let guard = app.in_flight();
             tokio::spawn(async move {
+                let _guard = guard;
                 let res = tokio::process::Command::new("sh")
                     .arg("-c")
                     .arg(&c.cmd)
