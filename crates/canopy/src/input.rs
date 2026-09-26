@@ -1883,6 +1883,7 @@ fn submit_input(app: &mut App, text: String, kind: InputKind) {
     let text = text.trim().to_string();
     match kind {
         InputKind::Search(_) => {}
+        InputKind::SetupBranch | InputKind::SetupRemote => crate::setup::submit(app, kind, text),
         _ if text.is_empty() && !matches!(kind, InputKind::StashMessage) => {}
         InputKind::NewBranch { start } => {
             let git = git.expect("repo");
@@ -2044,11 +2045,27 @@ pub fn execute(app: &mut App, pending: Pending) {
             }
             return;
         }
+        p if p.is_setup() => {
+            crate::setup::step(app, p);
+            return;
+        }
         other => other,
     };
     let Some(git) = app.git.clone() else { return };
     match pending {
-        Pending::CopyText { .. } | Pending::OpenUrl(_) => {}
+        // Handled above, before a repository is needed.
+        Pending::CopyText { .. }
+        | Pending::OpenUrl(_)
+        | Pending::SetupBranch
+        | Pending::SetupWorkspace
+        | Pending::SetupQuit
+        | Pending::SetupIgnore(_)
+        | Pending::SetupFiles { .. }
+        | Pending::SetupGitHub
+        | Pending::SetupGhCreate { .. }
+        | Pending::SetupExisting
+        | Pending::SetupConnect(_)
+        | Pending::SetupSkip => {}
         Pending::Discard(files) => {
             app.run_op("Discard", Then::Refresh, async move {
                 let tracked: Vec<&str> = files.iter().filter(|f| !f.1).map(|f| f.0.as_str()).collect();

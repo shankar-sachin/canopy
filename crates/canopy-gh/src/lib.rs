@@ -323,6 +323,21 @@ impl Gh {
         self.run(&["api", "--method", "PUT", path, "-F", "read=true"]).await
     }
 
+    // ------------------------------------------------------------ repositories
+
+    /// Create a GitHub repository from the local one in `dir`, add it as the
+    /// `origin` remote, and push when `push` (it needs at least one commit).
+    /// `name` is `repo` (under your account) or `owner/repo`.
+    pub async fn repo_create(&self, name: &str, private: bool, dir: &Path, push: bool) -> Result<Output> {
+        let source = format!("--source={}", dir.display());
+        let mut args = vec!["repo", "create", name, if private { "--private" } else { "--public" }, &source];
+        args.extend(["--remote", "origin"]);
+        if push {
+            args.push("--push");
+        }
+        self.run(&args).await
+    }
+
     // --------------------------------------------------------------- actions
 
     pub async fn run_list(&self, branch: Option<&str>, limit: usize) -> Result<Vec<Run>> {

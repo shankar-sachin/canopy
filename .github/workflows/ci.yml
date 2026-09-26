@@ -48,6 +48,17 @@ jobs:
       - name: Desktop app smoke test (Windows)
         if: runner.os == 'Windows'
         run: cargo run -p canopy-desktop -- --smoke .
+      # An empty folder: the app offers to start a repository, runs git init
+      # with starter files and a first commit, then opens it.
+      - name: Desktop app smoke test, new repository
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/fresh-repo"
+          if [ "$RUNNER_OS" = Linux ]; then
+            xvfb-run -a cargo run -p canopy-desktop -- --smoke "$RUNNER_TEMP/fresh-repo"
+          else
+            cargo run -p canopy-desktop -- --smoke "$RUNNER_TEMP/fresh-repo"
+          fi
 
   # Releases ship a Windows on Arm build; make sure it still builds.
   windows-arm64:

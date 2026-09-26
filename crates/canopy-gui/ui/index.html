@@ -15,7 +15,10 @@
     <img class="welcome-logo" src="logo.svg" alt="" width="84" height="84">
     <h1>canopy</h1>
     <p class="welcome-sub">A beautiful, powerful git dashboard.</p>
-    <button class="btn primary big" id="open-btn" type="button">Open a repository… <kbd class="k">⌘O</kbd></button>
+    <div class="welcome-actions">
+      <button class="btn primary big" id="open-btn" type="button">Open a repository… <kbd class="k">⌘O</kbd></button>
+      <button class="btn big" id="new-btn" type="button">Start a new one…</button>
+    </div>
     <div class="recent" id="recent"></div>
     <button class="btn ghost small welcome-settings" id="welcome-settings" type="button">Settings</button>
   </div>
@@ -77,5 +80,6 @@
 <script src="stash.js"></script>
 <script src="github.js"></script>
 <script src="settings.js"></script>
+<script src="setup.js"></script>
 </body>
 </html>

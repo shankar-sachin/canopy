@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FAQ · Canopy wiki</title>
-<meta name="description" content="Short answers to common questions.">
-<meta property="og:title" content="FAQ · Canopy wiki">
+<title>Start a new repository · Canopy wiki</title>
+<meta name="description" content="Turn a folder into a git repository, then connect it to GitHub over HTTPS or SSH, from the terminal or the desktop app.">
+<meta property="og:title" content="Start a new repository · Canopy wiki">
 <meta property="og:image" content="https://shankar-sachin.github.io/canopy/assets/og.png">
 <meta name="theme-color" content="#0b100c">
 <script>try{const t=localStorage.getItem("canopy-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;}catch(e){}</script>
@@ -55,40 +55,43 @@
 <a href="two-branches.html">Work on two branches at once</a>
 <a href="review-a-pr.html">Review a pull request</a>
 <a href="fix-ci.html">Fix a failing CI run</a>
-<a href="new-repo.html">Start a new repository</a>
+<a href="new-repo.html" aria-current="page">Start a new repository</a>
 </div></details>
-<details open><summary>Reference<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<details><summary>Reference<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
 <a href="config.html">Configuration</a>
 <a href="cli.html">Command line</a>
 <a href="themes.html">Themes</a>
 <a href="troubleshooting.html">Troubleshooting</a>
-<a href="faq.html" aria-current="page">FAQ</a>
+<a href="faq.html">FAQ</a>
 </div></details>
 </nav></aside>
   <main class="wmain" id="content">
-    <div class="wbanner"><b>New in 1.0.3:</b> <a href="../desktop.html">Canopy Desktop</a> (preview) runs on macOS, Windows and Linux. Spot something wrong or unclear? <a href="https://github.com/shankar-sachin/canopy/edit/main/docs/wiki/faq.html">Suggest an edit</a>.</div>
+    <div class="wbanner"><b>New in 1.0.3:</b> <a href="../desktop.html">Canopy Desktop</a> (preview) runs on macOS, Windows and Linux. Spot something wrong or unclear? <a href="https://github.com/shankar-sachin/canopy/edit/main/docs/wiki/fix-ci.html">Suggest an edit</a>.</div>
     <article class="wprose">
-      <div class="crumbs"><a href="index.html">Wiki</a><span>/</span>Reference</div>
-      <h1>FAQ</h1>
-      <p class="wlede">Short answers to common questions.</p>
-<h3 id="does-canopy-replace-git">Does Canopy replace git?<a class="hash" href="#does-canopy-replace-git" aria-label="Link to this section">#</a></h3>
-<p>No. Canopy runs the real <code>git</code> for everything, so your hooks, config, signing and credential helpers all work, and you can mix it freely with the command line.</p>
-<h3 id="is-it-safe-to-use-on-important-repositories">Is it safe to use on important repositories?<a class="hash" href="#is-it-safe-to-use-on-important-repositories" aria-label="Link to this section">#</a></h3>
-<p>Canopy asks before anything destructive, and <kbd>z</kbd> undoes most actions. Everything it does is a normal git command; turn on teach mode to see each one.</p>
-<h3 id="does-it-send-my-code-anywhere">Does it send my code anywhere?<a class="hash" href="#does-it-send-my-code-anywhere" aria-label="Link to this section">#</a></h3>
-<p>No. Git runs locally. GitHub features use your own <code>gh</code> login and only contact GitHub when you open a GitHub tab or act on one.</p>
-<h3 id="is-there-a-desktop-app">Is there a desktop app?<a class="hash" href="#is-there-a-desktop-app" aria-label="Link to this section">#</a></h3>
-<p>Yes: <a href="../desktop.html">Canopy Desktop</a>, a release preview for macOS, Windows and Linux. On a Mac: <code>brew install --cask shankar-sachin/canopy/canopy-desktop</code>; on Windows: <code>winget install shankars.canopy-desktop</code>. It isn't notarized by Apple yet, so macOS asks you to confirm the first time you open it.</p>
-<h3 id="does-it-work-on-linux-windows">Does it work on Linux? Windows?<a class="hash" href="#does-it-work-on-linux-windows" aria-label="Link to this section">#</a></h3>
-<p>Yes, all three. On macOS and Linux install it with Homebrew; on Windows use <code>winget install shankars.canopy</code>, the install script, or the .zip from GitHub Releases (x64 and Arm). See <a href="../get-started.html#windows">Windows install</a>. Windows Terminal is recommended.</p>
-<h3 id="can-i-use-it-with-gitlab-or-bitbucket">Can I use it with GitLab or Bitbucket?<a class="hash" href="#can-i-use-it-with-gitlab-or-bitbucket" aria-label="Link to this section">#</a></h3>
-<p>All the git features work with any remote. The GitHub tabs are GitHub-only for now.</p>
-<h3 id="why-and-but-no-shortcuts">Why ⌃ and ⌥ but no ⌘ shortcuts?<a class="hash" href="#why-and-but-no-shortcuts" aria-label="Link to this section">#</a></h3>
-<p>Terminals keep the Command key for themselves (copy, paste, new tab) and don't pass it to programs, so Canopy uses Control and Option.</p>
-<h3 id="how-do-i-update">How do I update?<a class="hash" href="#how-do-i-update" aria-label="Link to this section">#</a></h3>
-<p><code>brew upgrade canopy</code>, or re-run the <code>cargo install</code> command with <code>--force</code>.</p>
-
-<nav class="pager" aria-label="Pages"><a href="troubleshooting.html"><small>Previous</small>Troubleshooting</a><span></span></nav>
+      <div class="crumbs"><a href="index.html">Wiki</a><span>/</span>Recipes</div>
+      <h1>Start a new repository</h1>
+      <p class="wlede">Turn a folder into a git repository, then connect it to GitHub over HTTPS or SSH, from the terminal or the desktop app.</p>
+<h2 id="terminal">In the terminal</h2>
+<ol class="steps">
+  <li>Run <code>canopy</code> with the folder: <code>canopy ~/code/my-app</code> (or just <code>canopy</code> inside it). If there's no repository there, Canopy says so instead of stopping.</li>
+  <li>Press <kbd>c</kbd> to create one. Pick a branch name (most projects use <code>main</code>), a <code>.gitignore</code> for your language, and whether to start with a README (and an MIT license) and a first commit.</li>
+  <li>Canopy runs <code>git init</code>, writes the files, and makes the first commit. Teach mode shows each command.</li>
+  <li>Then connect it to GitHub, or skip and do it later (Branches → Remotes):
+    <ul>
+      <li><b>Create it on GitHub</b> (<kbd>g</kbd>) if the GitHub CLI is signed in: choose private or public, and Canopy runs <code>gh repo create</code>, adds it as <code>origin</code> and pushes.</li>
+      <li><b>Connect an existing repository</b> (<kbd>e</kbd>): make it on github.com first (empty, without a README), then type <code>owner/name</code> or paste its URL, and choose HTTPS or SSH.</li>
+    </ul></li>
+</ol>
+<h2 id="desktop">In the desktop app</h2>
+<p>Choose <b>Start a new one…</b> on the welcome screen, or open any folder that isn't a repository. A three-step dialog asks the same questions, shows the address it will use as you type, and ends with the list of git commands it ran.</p>
+<h2 id="https-or-ssh">HTTPS or SSH?</h2>
+<p>Both reach the same repository; they differ in how git proves it's you.</p>
+<table class="ref">
+<tr><td><b>HTTPS</b><br><code>https://github.com/owner/name.git</code></td><td>Works everywhere, even behind strict networks. You sign in through the browser or with a token; <code>gh auth login</code> sets this up for you. The easiest place to start.</td></tr>
+<tr><td><b>SSH</b><br><code>git@github.com:owner/name.git</code></td><td>Uses an SSH key on your computer, so there are no password prompts once the key is added to GitHub. Check it works with <code>ssh -T git@github.com</code>.</td></tr>
+</table>
+<p>Canopy suggests the one your GitHub CLI is set to use (<code>gh config get git_protocol</code>), or SSH if your computer already has an SSH key. You can switch later: <code>git remote set-url origin &lt;other address&gt;</code>, or edit the remote in Branches → Remotes.</p>
+<nav class="pager" aria-label="Pages"><a href="fix-ci.html"><small>Previous</small>Fix a failing CI run</a><a href="config.html" class="next"><small>Next</small>Configuration</a></nav>
     </article>
   </main>
   <aside class="wtoc" aria-label="On this page"><b>On this page</b><nav id="toc"></nav></aside>

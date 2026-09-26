@@ -202,3 +202,15 @@ async fn review_comments() {
     );
     assert!(log.contains(&"api --method POST repos/{owner}/{repo}/pulls/12/comments -f commit_id=abc123 -f path=csv.rs -F line=1 -f side=RIGHT -f body=Nice one".to_string()), "{log:?}");
 }
+
+#[tokio::test]
+async fn create_a_repository() {
+    let _serial = SERIAL.lock().await;
+    let dir = TempDir::new().unwrap();
+    let gh = Gh::new(dir.path(), Some(fake_gh(dir.path(), true)));
+    gh.repo_create("csvkit", true, Path::new("/code/csvkit"), true).await.unwrap();
+    assert_eq!(
+        calls(dir.path()).last().unwrap(),
+        "repo create csvkit --private --source=/code/csvkit --remote origin --push"
+    );
+}

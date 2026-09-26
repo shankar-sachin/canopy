@@ -66,6 +66,22 @@ pub enum Pending {
     Reopen(crate::github::Target),
     /// Open the compose dialog for a review of this kind.
     PrReview(u64, canopy_gh::ReviewKind),
+    // Starting a repository (setup.rs).
+    SetupBranch,
+    SetupWorkspace,
+    SetupQuit,
+    SetupIgnore(canopy_git::init::Ignore),
+    SetupFiles {
+        license: bool,
+        commit: bool,
+    },
+    SetupGitHub,
+    SetupGhCreate {
+        private: bool,
+    },
+    SetupExisting,
+    SetupConnect(canopy_git::init::Protocol),
+    SetupSkip,
     /// Copy text to the clipboard; `what` names it in the toast.
     CopyText {
         text: String,
@@ -94,6 +110,9 @@ pub enum InputKind {
     NewWorktree,
     /// Tag for a new GitHub release.
     ReleaseTag,
+    /// Starting a repository: the branch name, then the remote.
+    SetupBranch,
+    SetupRemote,
 }
 
 #[derive(Debug, Clone)]
@@ -244,6 +263,25 @@ impl Modal {
 
     pub fn is_open(&self) -> bool {
         !matches!(self, Modal::None)
+    }
+}
+
+impl Pending {
+    /// A step of starting a repository (handled by setup.rs; no repo needed).
+    pub fn is_setup(&self) -> bool {
+        matches!(
+            self,
+            Pending::SetupBranch
+                | Pending::SetupWorkspace
+                | Pending::SetupQuit
+                | Pending::SetupIgnore(_)
+                | Pending::SetupFiles { .. }
+                | Pending::SetupGitHub
+                | Pending::SetupGhCreate { .. }
+                | Pending::SetupExisting
+                | Pending::SetupConnect(_)
+                | Pending::SetupSkip
+        )
     }
 }
 

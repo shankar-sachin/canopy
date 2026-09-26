@@ -32,35 +32,51 @@ pub fn draw(f: &mut Frame, app: &App) {
             f.render_widget(Paragraph::new(text).block(modal_block(t, format!(" {title} "), *danger)), r);
         }
         Modal::Menu { title, items, sel } => {
-            let w = items.iter().map(|i| i.label.len() + i.detail.len() + 10).max().unwrap_or(30).max(title.len() + 6)
-                as u16
+            // The label column fits the longest label; long details wrap
+            // onto indented lines instead of running off the edge.
+            let label_w = items.iter().map(|i| i.label.chars().count()).max().unwrap_or(0).max(24) + 2;
+            let prefix = 3 + 2 + label_w; // " k " + two spaces + label
+            let want = items
+                .iter()
+                .map(|i| prefix + i.detail.chars().count())
+                .max()
+                .unwrap_or(30)
+                .max(title.chars().count() + 6)
                 + 6;
             let (ew, eh) = modal_extra();
-            let r = centered(area, w + ew, items.len() as u16 + 5 + eh);
-            f.render_widget(Clear, r);
-            let lines: Vec<Line> = items
-                .iter()
-                .enumerate()
-                .map(|(i, it)| {
-                    let color = if it.danger { t.error } else { t.accent };
-                    let mut l = Line::from(vec![
-                        Span::styled(
-                            format!(" {} ", it.key),
-                            Style::default().fg(t.bg).bg(color).add_modifier(Modifier::BOLD),
-                        ),
-                        Span::styled(
-                            format!("  {:<24}", it.label),
-                            Style::default().fg(t.fg).add_modifier(Modifier::BOLD),
-                        ),
-                        Span::styled(it.detail.clone(), t.muted()),
-                    ]);
+            let max_w = area.width.saturating_sub(4 + ew).max(40) as usize;
+            let w = want.min(max_w);
+            // Inside: two border columns and up to six of padding.
+            let detail_w = w.saturating_sub(prefix + 8).max(16);
+            let mut text: Vec<Line> = Vec::new();
+            for (i, it) in items.iter().enumerate() {
+                let color = if it.danger { t.error } else { t.accent };
+                let chunks = wrap_words(&it.detail, detail_w);
+                let mut first = Line::from(vec![
+                    Span::styled(
+                        format!(" {} ", it.key),
+                        Style::default().fg(t.bg).bg(color).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        format!("  {:<label_w$}", it.label),
+                        Style::default().fg(t.fg).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(chunks.first().cloned().unwrap_or_default(), t.muted()),
+                ]);
+                if i == *sel {
+                    first = first.style(t.selected());
+                }
+                text.push(first);
+                for more in chunks.iter().skip(1) {
+                    let mut l = Line::from(vec![Span::raw(" ".repeat(prefix)), Span::styled(more.clone(), t.muted())]);
                     if i == *sel {
                         l = l.style(t.selected());
                     }
-                    l
-                })
-                .collect();
-            let mut text = lines;
+                    text.push(l);
+                }
+            }
+            let r = centered(area, w as u16 + ew, text.len() as u16 + 5 + eh);
+            f.render_widget(Clear, r);
             text.push(Line::default());
             text.push(Line::styled("esc cancel", t.muted()));
             f.render_widget(Paragraph::new(text).block(modal_block(t, format!(" {title} "), false)), r);
@@ -585,4 +601,24 @@ fn help(f: &mut Frame, area: Rect, app: &App, scroll: u16) {
     let block =
         modal_block(t, " Keys ", false).title_bottom(Line::styled(" j/k scroll · any other key closes ", t.muted()));
     f.render_widget(Paragraph::new(lines).scroll((scroll, 0)).block(block), r);
+}
+
+/// Split `text` into lines of at most `width` characters, at spaces.
+fn wrap_words(text: &str, width: usize) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut cur = String::new();
+    for word in text.split_whitespace() {
+        let len = cur.chars().count();
+        if len > 0 && len + 1 + word.chars().count() > width {
+            lines.push(std::mem::take(&mut cur));
+        }
+        if !cur.is_empty() {
+            cur.push(' ');
+        }
+        cur.push_str(word);
+    }
+    if !cur.is_empty() || lines.is_empty() {
+        lines.push(cur);
+    }
+    lines
 }

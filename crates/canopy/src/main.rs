@@ -7,6 +7,7 @@ mod github;
 mod input;
 mod keymap;
 mod modal;
+mod setup;
 mod terminal;
 mod textarea;
 mod theme;
@@ -72,9 +73,15 @@ async fn main() -> anyhow::Result<()> {
     let cwd = std::env::current_dir()?;
     let start = cli.path.clone().unwrap_or_else(|| cwd.clone());
     let git = if cli.workspace.is_some() { None } else { canopy_git::Git::open(&start).await.ok() };
-    if cli.path.is_some() && git.is_none() && cli.workspace.is_none() {
-        anyhow::bail!("{} is not inside a git repository", start.display());
-    }
+    // A folder that isn't a repository: offer to create one (setup.rs).
+    let setup = if git.is_none() && cli.workspace.is_none() {
+        if cli.path.is_some() && !start.is_dir() {
+            anyhow::bail!("{} is not a folder", start.display());
+        }
+        Some(setup::Setup::detect(start.clone()).await)
+    } else {
+        None
+    };
     let workspace_root = match (&cli.workspace, &git) {
         (Some(w), _) => w.clone(),
         (None, Some(g)) => g.repo.root.parent().map(PathBuf::from).unwrap_or(cwd),
@@ -85,7 +92,10 @@ async fn main() -> anyhow::Result<()> {
     if let Some(e) = config_err {
         app.toast(Level::Error, format!("Config error, using defaults: {e}"));
     }
-    if first_run {
+    if setup.is_some() {
+        app.setup = setup;
+        setup::ask(&mut app);
+    } else if first_run {
         app.modal = modal::Modal::Welcome;
     } else if app.config.desktop_tip && app.toast.is_none() {
         // Now and then, mention the desktop app (off with desktop_tip = false).

@@ -5,6 +5,7 @@
 //! command so the UI can show it in teach mode.
 
 pub mod cli;
+pub mod init;
 pub mod model;
 pub mod ops;
 pub mod parse;
