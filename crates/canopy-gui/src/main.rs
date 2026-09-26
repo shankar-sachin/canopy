@@ -14,6 +14,7 @@ mod history;
 mod overview;
 mod recent;
 mod settings;
+mod setup;
 
 use canopy_git::Git;
 use tauri::State;
@@ -84,7 +85,8 @@ async fn pick_folder(app: tauri::AppHandle) -> Option<String> {
 
 #[tauri::command]
 async fn open_repo(path: String, state: State<'_, AppState>) -> Res<Overview> {
-    let git = Git::open(&path).await.map_err(|_| format!("{path} isn't inside a git repository"))?;
+    // The page offers to create one when it sees this prefix.
+    let git = Git::open(&path).await.map_err(|_| format!("NOT_A_REPO:{path}"))?;
     let o = overview::load(&git).await.map_err(|e| e.to_string())?;
     if let Some(f) = recent::store_path() {
         let _ = recent::add(&f, &o.root);
@@ -212,6 +214,11 @@ fn main() {
             settings::environment,
             settings::profile,
             settings::account,
+            setup::inspect_folder,
+            setup::init_repo,
+            setup::remote_preview,
+            setup::connect_remote,
+            setup::github_create,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Canopy");

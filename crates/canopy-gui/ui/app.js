@@ -466,6 +466,8 @@ async function openRepo(path) {
     $("#shell").hidden = false;
     render();
   } catch (e) {
+    // A folder without a repository: offer to create one (setup.js).
+    if (String(e).startsWith("NOT_A_REPO:")) return startSetup(path);
     toast(String(e), { error: true });
   }
 }
@@ -566,7 +568,21 @@ async function start() {
 // side and render Home, then quit (used by CI).
 async function smoke(path) {
   try {
-    state.overview = await invoke("open_repo", { path });
+    // An empty folder: go through "start a repository" first.
+    let setup = "";
+    try {
+      state.overview = await invoke("open_repo", { path });
+    } catch (e) {
+      if (!String(e).startsWith("NOT_A_REPO:")) throw e;
+      const info = await invoke("inspect_folder", { path });
+      const options = { branch: info.default_branch, readme: true, gitignore: "rust", mit_license: true, commit: true };
+      const res = await invoke("init_repo", { path, options });
+      const https = await invoke("remote_preview", { input: "ada/" + info.name, protocol: "https", owner: null });
+      const ssh = await invoke("remote_preview", { input: https, protocol: "ssh", owner: null });
+      setup = `setup: ${res.cmd.split("\n").join(" · ")}\nremote: ${https} / ${ssh}`;
+      if (!https || !ssh) throw new Error("remote preview failed: " + setup);
+      state.overview = await invoke("open_repo", { path });
+    }
     $("#welcome").hidden = true;
     $("#shell").hidden = false;
     render();
@@ -607,7 +623,7 @@ async function smoke(path) {
     go("prs");
     for (let i = 0; i < 150 && !(gh.status && (gh.status.state !== "ready" || gh.prs.list)); i++) await new Promise((r) => setTimeout(r, 100));
     const github = gh.status?.state === "ready" ? `${gh.prs.list?.length ?? "?"} open pull requests` : `setup card (${gh.status?.state})`;
-    const text = [...home, `changes: ${files.join(", ") || "(clean)"}`, `diff lines: ${lines}`,
+    const text = [...(setup ? [setup] : []), ...home, `changes: ${files.join(", ") || "(clean)"}`, `diff lines: ${lines}`,
       `history: ${commits} commits, ${graphs} graph rows, details ${detail ? "loaded" : "missing"}`,
       `branches: ${branches} rows`, `stash: ${stashes} stashes`, `github: ${github}`, `commit box keeps focus: ${typingOk}`].join("\n");
     const ok = !!home.length && changesOk && typingOk

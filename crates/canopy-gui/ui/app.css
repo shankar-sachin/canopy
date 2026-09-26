@@ -555,3 +555,29 @@ html[data-theme="light"] .dl.add .code, html[data-theme="light"] .dl.add .sign {
 ::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--muted) 48%, transparent); }
 ::-webkit-scrollbar-thumb:active { background-color: color-mix(in srgb, var(--green) 55%, transparent); }
 ::-webkit-scrollbar-button { display: none; height: 0; width: 0; }
+
+/* ---------- starting a repository ---------- */
+.welcome-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.modal.setup { width: min(600px, 100% - 40px); max-height: calc(100% - 48px); overflow: auto; position: relative; padding: 24px; }
+.modal.setup h3 { font-size: 18px; margin: 14px 0 8px; }
+.modal.setup p { color: var(--muted); }
+.modal.setup .path { font-size: 12.5px; color: var(--text); background: var(--surface-2); padding: 6px 10px; border-radius: 8px; overflow-wrap: anywhere; }
+.stepper { list-style: none; display: flex; gap: 6px; margin: 0; padding: 0; font-size: 12px; color: var(--faint); }
+.stepper li { display: flex; align-items: center; gap: 6px; }
+.stepper li + li::before { content: ""; width: 18px; height: 1px; background: var(--border-2); margin-right: 2px; }
+.stepper span { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); font-weight: 700; }
+.stepper li.on { color: var(--text); }
+.stepper li.on span { background: var(--green); color: var(--on-accent); }
+.stepper li.done span { background: color-mix(in srgb, var(--green) 25%, transparent); color: var(--green); }
+.hint { font-size: 12.5px; margin: 4px 0 10px; }
+.seg.wide { margin: 14px 0 6px; }
+.seg.wide button { height: 30px; font-size: 13px; }
+.choice-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0; }
+@media (max-width: 560px) { .choice-row { grid-template-columns: 1fr; } }
+.choice { display: flex; flex-direction: column; gap: 4px; padding: 12px; border-radius: 10px; border: 1px solid var(--border-2); cursor: pointer; font-size: 13px; }
+.choice input { position: absolute; opacity: 0; pointer-events: none; }
+.choice b { color: var(--text); display: flex; align-items: center; gap: 6px; }
+.choice span { color: var(--muted); font-size: 12.5px; }
+.choice small { font-size: 12px; }
+.choice small.ok { color: var(--green); }
+.choice.on, .choice:has(input:checked) { border-color: var(--green); background: color-mix(in srgb, var(--green) 9%, transparent); }

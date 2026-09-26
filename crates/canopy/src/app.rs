@@ -67,6 +67,8 @@ pub enum Msg {
     Progress(String),
     Workspace(Vec<RepoSummary>),
     RepoOpened(Result<Git, String>),
+    /// `git init` finished (setup.rs).
+    SetupCreated(Result<(Git, Vec<String>), String>),
     /// Full message of HEAD, fetched to prefill the amend dialog.
     OpenAmend(String),
     ShowOutput(String, String),
@@ -196,6 +198,8 @@ pub struct App {
     pub last_log_height: std::cell::Cell<u16>,
     /// Git's answer to the last bisect step, while bisecting.
     pub bisect: Option<BisectStep>,
+    /// Starting a repository in a folder that isn't one (setup.rs).
+    pub setup: Option<crate::setup::Setup>,
     /// Select this commit in History once the next refresh lands.
     pub jump_after_load: Option<String>,
     /// Branches, Tags, or Remotes in the Branches tab.
@@ -257,6 +261,7 @@ impl App {
             log_loading: false,
             log_path: None,
             splash_start: None,
+            setup: None,
             github: Default::default(),
             last_diff_width: 72,
             last_log_height: std::cell::Cell::new(20),
@@ -558,6 +563,22 @@ impl App {
         });
     }
 
+    /// Switch to `git` (a repository just opened or created) and load it.
+    pub fn set_repo(&mut self, git: Git) {
+        self.github = Default::default();
+        self.git = Some(git);
+        self.data = Snapshot::default();
+        self.loaded = false;
+        self.diff = None;
+        self.lists.clear();
+        self.filters.remove(&Screen::Log);
+        self.filters.remove(&Screen::Branches);
+        self.screen = Screen::Home;
+        self.focus = Focus::List;
+        self.refresh();
+        crate::github::detect(self);
+    }
+
     pub fn scan_workspace(&mut self) {
         self.workspace_scanning = true;
         let dirs = crate::workspace::roots(&self.config, &self.workspace_root);
@@ -715,20 +736,10 @@ impl App {
                 self.clamp_selections();
             }
             Msg::RepoOpened(Ok(git)) => {
-                self.github = Default::default();
                 self.toast(Level::Info, format!("Opened {}", git.repo.root.display()));
-                self.git = Some(git);
-                self.data = Snapshot::default();
-                self.loaded = false;
-                self.diff = None;
-                self.lists.clear();
-                self.filters.remove(&Screen::Log);
-                self.filters.remove(&Screen::Branches);
-                self.screen = Screen::Home;
-                self.focus = Focus::List;
-                self.refresh();
-                crate::github::detect(self);
+                self.set_repo(git);
             }
+            Msg::SetupCreated(res) => crate::setup::created(self, res),
             Msg::RepoOpened(Err(e)) => self.toast(Level::Error, e),
             Msg::Blame(Ok(view)) => {
                 self.busy = None;

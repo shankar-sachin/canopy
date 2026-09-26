@@ -63,6 +63,7 @@ Windows Terminal is recommended. Full steps are on the
 canopy                 # open the repo you're in
 canopy ~/code/project  # open a specific repo
 canopy -w ~/code       # workspace view: every repo under ~/code
+canopy ~/code/new-app  # not a repository yet? Canopy offers to create one (and connect GitHub)
 ```
 
 | Tab | What it shows |

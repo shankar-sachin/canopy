@@ -277,6 +277,29 @@ async fn get_canopy_desktop_from_the_palette() {
 }
 
 #[tokio::test]
+async fn starting_a_repository_explains_https_and_ssh() {
+    use canopy_git::init::{Ignore, Protocol};
+    let tmp = TempDir::new().unwrap();
+    let mut app = App::new(None, Config::default(), tmp.path().to_path_buf());
+    app.setup = Some(crate::setup::Setup {
+        dir: tmp.path().join("new-app"),
+        branch: "main".into(),
+        ignore: Ignore::None,
+        gh_login: Some("ada".into()),
+        suggested: Protocol::Ssh,
+        committed: true,
+        remote_input: String::new(),
+    });
+    crate::setup::ask(&mut app);
+    let s = render(&mut app, 120, 30);
+    assert!(s.contains("No git repository in") && s.contains("Create a repository here"), "{s}");
+    crate::setup::submit(&mut app, crate::modal::InputKind::SetupRemote, "ada/new-app".into());
+    let s = render(&mut app, 120, 30);
+    assert!(s.contains("How should git connect to GitHub?") && s.contains("SSH (suggested)"), "{s}");
+    assert!(s.contains("browser or a token") && s.contains("SSH key"), "{s}");
+}
+
+#[tokio::test]
 async fn merge_conflict_resolution() {
     let dir = demo_repo();
     sh(

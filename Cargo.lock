@@ -336,7 +336,7 @@ dependencies = [
 
 [[package]]
 name = "canopy-desktop"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "anyhow",
  "canopy-gh",
@@ -352,7 +352,7 @@ dependencies = [
 
 [[package]]
 name = "canopy-gh"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "canopy-git",
  "serde",
@@ -364,7 +364,7 @@ dependencies = [
 
 [[package]]
 name = "canopy-git"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "anyhow",
  "serde",
@@ -375,7 +375,7 @@ dependencies = [
 
 [[package]]
 name = "canopy-git-tui"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "anyhow",
  "canopy-gh",
