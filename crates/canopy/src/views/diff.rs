@@ -291,6 +291,10 @@ pub fn load_for_selection(app: &mut App) {
             crate::github::load_issue_detail(app, gen);
             return;
         }
+        Screen::Runs => {
+            crate::github::load_run_detail(app, gen);
+            return;
+        }
         Screen::Home | Screen::Workspace => None,
     };
 

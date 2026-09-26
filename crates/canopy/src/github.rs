@@ -1,6 +1,6 @@
 //! GitHub tabs: state, loading, and turning PRs into the details panel.
 
-use canopy_gh::{Gh, GhStatus, Issue, IssueFilter, PrFilter, PullRequest};
+use canopy_gh::{Gh, GhStatus, Issue, IssueFilter, Job, PrFilter, PullRequest, Run};
 
 use crate::app::{App, Msg};
 use crate::keymap::Screen;
@@ -26,6 +26,11 @@ pub struct GithubState {
     pub issue_filter: IssueFilterChoice,
     pub issues_loading: bool,
     pub issues_loaded: bool,
+    pub runs: Vec<Run>,
+    /// All branches instead of just the current one.
+    pub runs_all: bool,
+    pub runs_loading: bool,
+    pub runs_loaded: bool,
 }
 
 /// A GitHub item that can be commented on or closed.
@@ -145,6 +150,101 @@ pub fn load_issues(app: &mut App) {
     app.spawn(async move { Msg::Issues(gh.issue_list(filter, 50).await.map_err(|e| e.to_string())) });
 }
 
+pub fn load_runs(app: &mut App) {
+    if !app.github.ready() {
+        return;
+    }
+    let Some(gh) = app.github.gh.clone() else { return };
+    let branch = if app.github.runs_all { None } else { app.current_branch().map(String::from) };
+    app.github.runs_loading = true;
+    app.spawn(async move { Msg::Runs(gh.run_list(branch.as_deref(), 30).await.map_err(|e| e.to_string())) });
+}
+
+pub fn selected_run(app: &App) -> Option<&Run> {
+    app.github.runs.get(app.selected(Screen::Runs))
+}
+
+/// True while any listed run hasn't finished (drives auto-refresh).
+pub fn runs_in_progress(app: &App) -> bool {
+    app.github.runs.iter().any(|r| r.state() == canopy_gh::CheckState::Pending)
+}
+
+pub fn load_run_detail(app: &mut App, gen: u64) {
+    let (Some(gh), Some(run)) = (app.github.gh.clone(), selected_run(app).cloned()) else {
+        app.diff = None;
+        return;
+    };
+    if app.diff.as_ref().is_none_or(|d| d.key != format!("run:{}", run.database_id)) {
+        app.diff = Some(run_view(&run, &[], None, app.last_diff_width));
+    }
+    app.spawn(async move {
+        let jobs = gh.run_jobs(run.database_id).await.map_err(|e| e.to_string());
+        let failed = run.state() == canopy_gh::CheckState::Failed;
+        let log = if failed { gh.run_failed_log(run.database_id).await.ok() } else { None };
+        Msg::RunDetail { gen, run: Box::new(run), jobs, log }
+    });
+}
+
+/// `gh run view --log-failed` lines look like `job<TAB>step<TAB>timestamp text`.
+/// Keep just the text, and only the last `max` lines.
+pub fn clean_failed_log(log: &str, max: usize) -> Vec<String> {
+    let lines: Vec<String> = log
+        .lines()
+        .map(|l| {
+            let text = l.splitn(3, '\t').nth(2).unwrap_or(l);
+            // Drop a leading ISO timestamp (e.g. 2026-09-26T00:32:32.4188517Z).
+            match text.split_once(' ') {
+                Some((ts, rest)) if ts.len() >= 20 && ts.as_bytes().get(10) == Some(&b'T') => rest.to_string(),
+                _ => text.to_string(),
+            }
+        })
+        .collect();
+    let start = lines.len().saturating_sub(max);
+    lines[start..].to_vec()
+}
+
+pub fn run_view(run: &Run, jobs: &[Job], log: Option<&str>, width: usize) -> DiffView {
+    let icon = |status: &str, conclusion: &str| match (status, conclusion) {
+        ("completed", "success") => "✓",
+        ("completed", "skipped" | "neutral") => "-",
+        ("completed", _) => "✗",
+        _ => "…",
+    };
+    let result = if run.status == "completed" { run.conclusion.clone() } else { run.status.replace('_', " ") };
+    let mut meta = vec![
+        format!("{} #{} · {}", run.workflow_name, run.number, run.display_title),
+        format!("{result} · {} on {} · {}", run.event, run.head_branch, ago(run.created_at)),
+        String::new(),
+    ];
+    if jobs.is_empty() {
+        meta.push("Loading jobs…".into());
+    }
+    for j in jobs {
+        meta.push(format!("{} {}", icon(&j.status.to_lowercase(), &j.conclusion.to_lowercase()), j.name));
+        for s in &j.steps {
+            let (st, c) = (s.status.to_lowercase(), s.conclusion.to_lowercase());
+            // Show every step of a failed job; only failures elsewhere.
+            if j.conclusion.eq_ignore_ascii_case("failure") || c == "failure" {
+                meta.push(format!("    {} {}", icon(&st, &c), s.name));
+            }
+        }
+    }
+    if let Some(log) = log {
+        meta.push(String::new());
+        meta.push("── Failed log (last lines) ──".into());
+        for l in clean_failed_log(log, 60) {
+            meta.extend(wrap(&l, width));
+        }
+    }
+    DiffView::new(
+        format!("run:{}", run.database_id),
+        format!("{} #{}", run.workflow_name, run.number),
+        meta,
+        Vec::new(),
+        None,
+    )
+}
+
 /// Reload whichever GitHub lists have been opened (after an action).
 pub fn reload_loaded(app: &mut App) {
     if app.github.prs_loaded {
@@ -152,6 +252,9 @@ pub fn reload_loaded(app: &mut App) {
     }
     if app.github.issues_loaded {
         load_issues(app);
+    }
+    if app.github.runs_loaded {
+        load_runs(app);
     }
 }
 
@@ -164,6 +267,7 @@ pub fn on_enter(app: &mut App, screen: Screen) {
     match screen {
         Screen::Pulls if !gh.prs_loaded && !gh.prs_loading => load_prs(app),
         Screen::Issues if !gh.issues_loaded && !gh.issues_loading => load_issues(app),
+        Screen::Runs if !gh.runs_loaded && !gh.runs_loading => load_runs(app),
         _ => {}
     }
 }
@@ -345,6 +449,14 @@ pub fn pr_view(pr: &PullRequest, diff: Option<&str>, width: usize) -> DiffView {
 #[cfg(test)]
 mod tests {
     use super::wrap;
+
+    #[test]
+    fn cleans_failed_logs() {
+        let log = "check (ubuntu)\tRun cargo test\t2026-09-26T00:32:32.4188517Z thread 'x' panicked\n\
+                   check (ubuntu)\tRun cargo test\t2026-09-26T00:32:32.4189Z note: run with RUST_BACKTRACE=1\n";
+        assert_eq!(super::clean_failed_log(log, 10), vec!["thread 'x' panicked", "note: run with RUST_BACKTRACE=1"]);
+        assert_eq!(super::clean_failed_log(log, 1), vec!["note: run with RUST_BACKTRACE=1"]);
+    }
 
     #[test]
     fn wraps_words_and_keeps_blank_lines() {

@@ -65,6 +65,7 @@ pub fn draw(f: &mut Frame, area: Rect, app: &mut App) {
         Screen::Reflog => reflog(f, area, app),
         Screen::Pulls => pulls(f, area, app),
         Screen::Issues => issues(f, area, app),
+        Screen::Runs => runs(f, area, app),
     }
 }
 
@@ -1176,6 +1177,71 @@ fn issues(f: &mut Frame, area: Rect, app: &mut App) {
     let mut st = TableState::default().with_offset(app.list(Screen::Issues).offset()).with_selected(Some(sel));
     f.render_stateful_widget(table, la, &mut st);
     *app.list(Screen::Issues).offset_mut() = st.offset();
+    diff::draw(f, da, app);
+}
+
+fn runs(f: &mut Frame, area: Rect, app: &mut App) {
+    use canopy_gh::CheckState;
+    let theme = app.theme.clone();
+    if github_setup(f, area, app, "Actions") {
+        return;
+    }
+    let scope =
+        if app.github.runs_all { "all branches".to_string() } else { app.current_branch().unwrap_or("?").to_string() };
+    if app.github.runs.is_empty() {
+        let msg = if app.github.runs_loading || !app.github.runs_loaded {
+            vec!["Loading workflow runs…".to_string()]
+        } else {
+            vec![format!("No workflow runs for {scope}"), "f shows runs for all branches".to_string()]
+        };
+        let refs: Vec<&str> = msg.iter().map(String::as_str).collect();
+        empty(f, area, &theme, "Actions", &refs);
+        return;
+    }
+    let (la, da) = split(area, 55);
+    let spin = ["◐", "◓", "◑", "◒"][(app.tick as usize / 3) % 4];
+    let rows: Vec<Row> = app
+        .github
+        .runs
+        .iter()
+        .map(|r| {
+            let (icon, color) = match r.state() {
+                CheckState::Passed => ("✓", theme.added),
+                CheckState::Failed => ("✗", theme.error),
+                CheckState::Neutral => ("-", theme.muted),
+                CheckState::Pending => (spin, theme.warn),
+            };
+            Row::new(vec![
+                Cell::from(Span::styled(icon, Style::default().fg(color).add_modifier(Modifier::BOLD))),
+                Cell::from(Span::styled(trunc(&r.workflow_name, 16), theme.fg(theme.accent_alt))),
+                Cell::from(r.display_title.clone()),
+                Cell::from(Span::styled(trunc(&r.head_branch, 18), theme.fg(theme.branch))),
+                Cell::from(Span::styled(r.event.clone(), theme.muted())),
+                Cell::from(Span::styled(ago(r.created_at), theme.muted())),
+            ])
+        })
+        .collect();
+    let focused = app.focus == Focus::List;
+    let live = if crate::github::runs_in_progress(app) { " · live" } else { "" };
+    let title = format!(" Actions · {scope} · {}{live} ", app.github.runs.len());
+    let table = Table::new(
+        rows,
+        [
+            Constraint::Length(1),
+            Constraint::Length(16),
+            Constraint::Fill(1),
+            Constraint::Length(18),
+            Constraint::Length(12),
+            Constraint::Length(4),
+        ],
+    )
+    .column_spacing(1)
+    .block(panel(&theme, title, focused))
+    .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
+    let sel = app.selected(Screen::Runs);
+    let mut st = TableState::default().with_offset(app.list(Screen::Runs).offset()).with_selected(Some(sel));
+    f.render_stateful_widget(table, la, &mut st);
+    *app.list(Screen::Runs).offset_mut() = st.offset();
     diff::draw(f, da, app);
 }
 

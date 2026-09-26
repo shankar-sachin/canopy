@@ -16,10 +16,11 @@ pub enum Screen {
     Reflog,
     Pulls,
     Issues,
+    Runs,
 }
 
 impl Screen {
-    pub const ALL: [Screen; 9] = [
+    pub const ALL: [Screen; 10] = [
         Screen::Home,
         Screen::Status,
         Screen::Log,
@@ -29,6 +30,7 @@ impl Screen {
         Screen::Reflog,
         Screen::Pulls,
         Screen::Issues,
+        Screen::Runs,
     ];
 
     pub fn title(self) -> &'static str {
@@ -42,6 +44,23 @@ impl Screen {
             Screen::Reflog => "Reflog",
             Screen::Pulls => "Pull requests",
             Screen::Issues => "Issues",
+            Screen::Runs => "Actions",
+        }
+    }
+
+    /// Compact tab label for narrow terminals.
+    pub fn short_title(self) -> &'static str {
+        match self {
+            Screen::Home => "Home",
+            Screen::Status => "Changes",
+            Screen::Log => "Log",
+            Screen::Branches => "Refs",
+            Screen::Stash => "Stash",
+            Screen::Workspace => "Repos",
+            Screen::Reflog => "Reflog",
+            Screen::Pulls => "PRs",
+            Screen::Issues => "Issues",
+            Screen::Runs => "CI",
         }
     }
 
@@ -179,6 +198,7 @@ pub enum Action {
     PrMerge,
     CloseItem,
     IssueCreate,
+    RerunFailed,
     OpenInBrowser,
     CycleFilter,
     ToggleDiff,
@@ -233,6 +253,7 @@ impl Action {
             Goto(Screen::Reflog) => "go to reflog",
             Goto(Screen::Pulls) => "go to pull requests",
             Goto(Screen::Issues) => "go to issues",
+            Goto(Screen::Runs) => "go to actions",
             NextScreen => "next tab",
             PrevScreen => "previous tab",
             Refresh => "refresh",
@@ -299,6 +320,7 @@ impl Action {
             PrReview => "review: approve / comment / request changes",
             Comment => "comment",
             IssueCreate => "new issue",
+            RerunFailed => "re-run failed jobs",
             PrMerge => "merge pull request",
             CloseItem => "close / reopen",
             OpenInBrowser => "open in browser",
@@ -378,6 +400,7 @@ impl Action {
             PrReview => "review",
             PrMerge => "merge",
             IssueCreate => "new",
+            RerunFailed => "re-run",
             Comment => "comment",
             CloseItem => "close",
             OpenInBrowser => "browser",
@@ -433,6 +456,7 @@ pub static GLOBAL: &[Binding] = &[
     b(&["7"], Action::Goto(Screen::Reflog), false),
     b(&["8"], Action::Goto(Screen::Pulls), false),
     b(&["9"], Action::Goto(Screen::Issues), false),
+    b(&["0"], Action::Goto(Screen::Runs), false),
     b(&["tab"], Action::NextScreen, false),
     b(&["backtab"], Action::PrevScreen, false),
     b(&["ctrl-r"], Action::Refresh, false),
@@ -527,6 +551,13 @@ pub static REFLOG: &[Binding] = &[b(&["enter", "l"], Action::Enter, true), b(&["
 
 pub static HOME: &[Binding] = &[];
 
+pub static RUNS: &[Binding] = &[
+    b(&["enter", "l"], Action::Enter, false),
+    b(&["R"], Action::RerunFailed, true),
+    b(&["o"], Action::OpenInBrowser, true),
+    b(&["f"], Action::CycleFilter, true),
+];
+
 pub static ISSUES: &[Binding] = &[
     b(&["enter", "l"], Action::Enter, false),
     b(&["n"], Action::IssueCreate, true),
@@ -610,6 +641,7 @@ pub fn defaults(ctx: Ctx) -> &'static [Binding] {
         Ctx::Screen(Screen::Reflog) => REFLOG,
         Ctx::Screen(Screen::Pulls) => PULLS,
         Ctx::Screen(Screen::Issues) => ISSUES,
+        Ctx::Screen(Screen::Runs) => RUNS,
         Ctx::Tags => TAGS,
         Ctx::Conflict => CONFLICT,
         Ctx::Remotes => REMOTES,
@@ -648,7 +680,7 @@ pub fn key_name(ev: &KeyEvent) -> String {
     }
 }
 
-pub const ALL_CTX: [Ctx; 16] = [
+pub const ALL_CTX: [Ctx; 17] = [
     Ctx::Global,
     Ctx::Diff,
     Ctx::Screen(Screen::Home),
@@ -660,6 +692,7 @@ pub const ALL_CTX: [Ctx; 16] = [
     Ctx::Screen(Screen::Reflog),
     Ctx::Screen(Screen::Pulls),
     Ctx::Screen(Screen::Issues),
+    Ctx::Screen(Screen::Runs),
     Ctx::Tags,
     Ctx::Remotes,
     Ctx::Worktrees,

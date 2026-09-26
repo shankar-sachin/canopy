@@ -381,7 +381,7 @@ fn welcome(f: &mut Frame, area: Rect, t: &Theme) {
         Line::styled("Welcome to Canopy 🌳", t.accent()),
         Line::styled("A git dashboard for your terminal.", t.muted()),
         Line::default(),
-        Line::from(vec![k("1-7"), Span::raw("  switch tabs: Home, Changes, History, Branches, …")]),
+        Line::from(vec![k("1-9 0"), Span::raw("  switch tabs: Home, Changes, History, … Pull requests, Actions")]),
         Line::from(vec![k("space"), Span::raw("  stage or unstage the selected file")]),
         Line::from(vec![k("⏎"), Span::raw("  dive into a diff to stage single lines or hunks")]),
         Line::from(vec![
