@@ -1,6 +1,6 @@
 //! GitHub tabs: state, loading, and turning PRs into the details panel.
 
-use canopy_gh::{Gh, GhStatus, Issue, IssueFilter, Job, Notification, PrFilter, PullRequest, Run};
+use canopy_gh::{Gh, GhStatus, Issue, IssueFilter, Job, Notification, PrFilter, PullRequest, Release, Run};
 
 use crate::app::{App, Msg};
 use crate::keymap::Screen;
@@ -44,6 +44,43 @@ pub struct GithubState {
     pub notif_include_read: bool,
     pub notif_loading: bool,
     pub notif_loaded: bool,
+    /// Actions tab: showing workflow runs or releases.
+    pub runs_view: RunsView,
+    pub releases: Vec<Release>,
+    pub releases_loading: bool,
+    pub releases_loaded: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RunsView {
+    #[default]
+    Actions,
+    Releases,
+}
+
+impl RunsView {
+    pub const ALL: [RunsView; 2] = [RunsView::Actions, RunsView::Releases];
+
+    pub fn title(self) -> &'static str {
+        match self {
+            RunsView::Actions => "Actions",
+            RunsView::Releases => "Releases",
+        }
+    }
+}
+
+/// Suggest the next tag after `latest`: v1.2.3 -> v1.2.4, else v0.1.0.
+pub fn next_tag(latest: Option<&str>) -> String {
+    let Some(t) = latest else { return "v0.1.0".into() };
+    let (prefix, ver) = if let Some(v) = t.strip_prefix('v') { ("v", v) } else { ("", t) };
+    let core = ver.split(['-', '+']).next().unwrap_or(ver);
+    let parts: Vec<u64> = core.split('.').filter_map(|p| p.parse().ok()).collect();
+    match parts.as_slice() {
+        [a, b, c] => format!("{prefix}{a}.{b}.{}", c + 1),
+        [a, b] => format!("{prefix}{a}.{}", b + 1),
+        [a] => format!("{prefix}{}", a + 1),
+        _ => format!("{t}-next"),
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -192,6 +229,9 @@ pub fn load_runs(app: &mut App) {
 }
 
 pub fn selected_run(app: &App) -> Option<&Run> {
+    if app.github.runs_view != RunsView::Actions {
+        return None;
+    }
     app.github.runs.get(app.selected(Screen::Runs))
 }
 
@@ -303,6 +343,63 @@ pub fn load_notifications(app: &mut App) {
     app.spawn(async move { Msg::Notifications(gh.notifications(here, all).await.map_err(|e| e.to_string())) });
 }
 
+pub fn load_releases(app: &mut App) {
+    if !app.github.ready() {
+        return;
+    }
+    let Some(gh) = app.github.gh.clone() else { return };
+    app.github.releases_loading = true;
+    app.spawn(async move { Msg::Releases(gh.release_list(50).await.map_err(|e| e.to_string())) });
+}
+
+pub fn selected_release(app: &App) -> Option<&Release> {
+    if app.github.runs_view != RunsView::Releases {
+        return None;
+    }
+    app.github.releases.get(app.selected(Screen::Runs))
+}
+
+pub fn load_release_detail(app: &mut App, gen: u64) {
+    let (Some(gh), Some(r)) = (app.github.gh.clone(), selected_release(app).cloned()) else {
+        app.diff = None;
+        return;
+    };
+    app.diff = Some(release_view(&r));
+    app.spawn(async move {
+        let detail = gh.release_view(&r.tag_name).await.map(Box::new).map_err(|e| e.to_string());
+        Msg::ReleaseDetail { gen, detail }
+    });
+}
+
+pub fn release_view(r: &Release) -> DiffView {
+    let status = if r.is_draft {
+        "draft (not published)".to_string()
+    } else if r.is_prerelease {
+        format!("pre-release · published {}", ago(r.published_at))
+    } else {
+        format!("{}published {}", if r.is_latest { "latest · " } else { "" }, ago(r.published_at))
+    };
+    let name = if r.name.is_empty() { r.tag_name.clone() } else { r.name.clone() };
+    let mut meta = vec![name.clone(), format!("tag {} · {status}", r.tag_name)];
+    if !r.author.login.is_empty() {
+        meta.push(format!("by {}", r.author.login));
+    }
+    if !r.assets.is_empty() {
+        meta.push(String::new());
+        meta.push(format!("Downloads ({} files)", r.assets.len()));
+        for a in &r.assets {
+            meta.push(format!("  {}  {:.1} MB · {} downloads", a.name, a.size as f64 / 1_048_576.0, a.download_count));
+        }
+    }
+    meta.push(String::new());
+    if r.body.trim().is_empty() {
+        meta.push(if r.url.is_empty() { "Loading notes…".into() } else { "(no release notes)".into() });
+    } else {
+        meta.extend(r.body.trim().lines().map(String::from));
+    }
+    DiffView::new(format!("release:{}", r.tag_name), name, meta, Vec::new(), None)
+}
+
 pub fn selected_notification(app: &App) -> Option<&Notification> {
     if app.github.issues_view != IssuesView::Notifications {
         return None;
@@ -343,6 +440,9 @@ pub fn reload_loaded(app: &mut App) {
     if app.github.notif_loaded {
         load_notifications(app);
     }
+    if app.github.releases_loaded {
+        load_releases(app);
+    }
     load_home(app);
 }
 
@@ -360,6 +460,11 @@ pub fn on_enter(app: &mut App, screen: Screen) {
             }
         }
         Screen::Issues if !gh.issues_loaded && !gh.issues_loading => load_issues(app),
+        Screen::Runs if gh.runs_view == RunsView::Releases => {
+            if !gh.releases_loaded && !gh.releases_loading {
+                load_releases(app)
+            }
+        }
         Screen::Runs if !gh.runs_loaded && !gh.runs_loading => load_runs(app),
         _ => {}
     }
@@ -545,6 +650,15 @@ pub fn pr_view(pr: &PullRequest, diff: Option<&str>, width: usize) -> DiffView {
 #[cfg(test)]
 mod tests {
     use super::wrap;
+
+    #[test]
+    fn next_tags() {
+        use super::next_tag;
+        assert_eq!(next_tag(Some("v0.4.0")), "v0.4.1");
+        assert_eq!(next_tag(Some("1.9.9")), "1.9.10");
+        assert_eq!(next_tag(Some("v2.0.0-rc1")), "v2.0.1");
+        assert_eq!(next_tag(None), "v0.1.0");
+    }
 
     #[test]
     fn cleans_failed_logs() {

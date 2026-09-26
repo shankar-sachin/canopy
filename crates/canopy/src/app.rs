@@ -78,6 +78,11 @@ pub enum Msg {
     Issues(Result<Vec<canopy_gh::Issue>, String>),
     Runs(Result<Vec<canopy_gh::Run>, String>),
     Notifications(Result<Vec<canopy_gh::Notification>, String>),
+    Releases(Result<Vec<canopy_gh::Release>, String>),
+    ReleaseDetail {
+        gen: u64,
+        detail: Result<Box<canopy_gh::Release>, String>,
+    },
     GhHome {
         /// The branch this was fetched for (ignored if we've switched since).
         branch: Option<String>,
@@ -366,7 +371,10 @@ impl App {
                 crate::github::IssuesView::Issues => self.github.issues.len(),
                 crate::github::IssuesView::Notifications => self.github.notifications.len(),
             },
-            Screen::Runs => self.github.runs.len(),
+            Screen::Runs => match self.github.runs_view {
+                crate::github::RunsView::Actions => self.github.runs.len(),
+                crate::github::RunsView::Releases => self.github.releases.len(),
+            },
         }
     }
 
@@ -757,6 +765,35 @@ impl App {
                         if self.screen == Screen::Issues {
                             crate::views::diff::load_for_selection(self);
                         }
+                    }
+                    Err(e) => self.toast(Level::Error, e),
+                }
+            }
+            Msg::Releases(result) => {
+                self.github.releases_loading = false;
+                match result {
+                    Ok(list) => {
+                        self.github.releases = list;
+                        self.github.releases_loaded = true;
+                        self.clamp_selections();
+                        if self.screen == Screen::Runs {
+                            crate::views::diff::load_for_selection(self);
+                        }
+                    }
+                    Err(e) => self.toast(Level::Error, e),
+                }
+            }
+            Msg::ReleaseDetail { gen, detail } => {
+                if gen != self.diff_gen || self.screen != Screen::Runs {
+                    return;
+                }
+                match detail {
+                    Ok(r) => {
+                        let mut v = crate::github::release_view(&r);
+                        if let Some(old) = self.diff.as_ref().filter(|o| o.key == v.key) {
+                            v.cursor = old.cursor.min(v.rows.len().saturating_sub(1));
+                        }
+                        self.diff = Some(v);
                     }
                     Err(e) => self.toast(Level::Error, e),
                 }

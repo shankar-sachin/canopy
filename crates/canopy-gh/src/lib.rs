@@ -57,6 +57,8 @@ const PR_DETAIL_FIELDS: &str = "number,title,author,headRefName,baseRefName,isDr
 reviewDecision,statusCheckRollup,labels,additions,deletions,body,reviews,comments,mergeable";
 const ISSUE_FIELDS: &str = "number,title,author,state,labels,url,updatedAt,comments";
 const ISSUE_DETAIL_FIELDS: &str = "number,title,author,state,labels,url,updatedAt,comments,body";
+const RELEASE_FIELDS: &str = "tagName,name,publishedAt,createdAt,isLatest,isDraft,isPrerelease";
+const RELEASE_DETAIL_FIELDS: &str = "tagName,name,publishedAt,createdAt,isDraft,isPrerelease,body,url,author,assets";
 const RUN_FIELDS: &str = "databaseId,number,displayTitle,workflowName,headBranch,status,conclusion,event,createdAt,url";
 
 impl Gh {
@@ -242,6 +244,33 @@ impl Gh {
     pub async fn issue_reopen(&self, number: u64) -> Result<Output> {
         let n = number.to_string();
         self.run(&["issue", "reopen", &n]).await
+    }
+
+    // -------------------------------------------------------------- releases
+
+    pub async fn release_list(&self, limit: usize) -> Result<Vec<Release>> {
+        let limit = limit.to_string();
+        self.json(&["release", "list", "--json", RELEASE_FIELDS, "--limit", &limit]).await
+    }
+
+    pub async fn release_view(&self, tag: &str) -> Result<Release> {
+        self.json(&["release", "view", tag, "--json", RELEASE_DETAIL_FIELDS]).await
+    }
+
+    /// Create a release. Empty `notes` asks GitHub to generate them from the
+    /// merged PRs since the last release. If `tag` doesn't exist yet, GitHub
+    /// creates it on the default branch.
+    pub async fn release_create(&self, tag: &str, title: &str, notes: &str, draft: bool) -> Result<Output> {
+        let mut args = vec!["release", "create", tag, "--title", title];
+        if notes.trim().is_empty() {
+            args.push("--generate-notes");
+        } else {
+            args.extend(["--notes", notes]);
+        }
+        if draft {
+            args.push("--draft");
+        }
+        self.run(&args).await
     }
 
     // --------------------------------------------------------- notifications

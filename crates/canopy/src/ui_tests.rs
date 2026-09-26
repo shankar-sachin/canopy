@@ -641,6 +641,8 @@ case "$1 $2" in
   "issue list") case "$*" in *"--state all"*) sed 's/"OPEN"/"CLOSED"/' "{f}/issue_list.json" ;; *) cat "{f}/issue_list.json" ;; esac ;;
   "issue view") cat "{f}/issue_view.json" ;;
   "run list") cat "{f}/run_list.json" ;;
+  "release list") cat "{f}/release_list.json" ;;
+  "release view") cat "{f}/release_view.json" ;;
   "api --method") case "$*" in *GET*notifications*) cat "{f}/notifications.json" ;; *) : ;; esac ;;
   "run view") case "$*" in *--log-failed*) printf 'check (ubuntu)\tRun cargo test\t2026-09-26T00:32:32.4188517Z thread main panicked at src/lib.rs:10\n' ;; *) cat "{f}/run_jobs.json" ;; esac ;;
   "pr diff") printf 'diff --git a/csv.rs b/csv.rs\n--- a/csv.rs\n+++ b/csv.rs\n@@ -0,0 +1 @@\n+fn parse() {{}}\n' ;;
@@ -834,7 +836,7 @@ async fn actions_tab() {
     let mut app = github_app(dir.path(), &gh).await;
     press(&mut app, KeyCode::Char('0')).await;
     let s = render(&mut app, 140, 30);
-    assert!(s.contains("Actions · main · 2 · live"), "{s}");
+    assert!(s.contains("Actions · Releases  main · 2 · live"), "{s}");
     assert!(s.contains("✗") && s.contains("Add CSV parser") && s.contains("pull_request"), "{s}");
     // Failed run: jobs, failing step, and the cleaned log tail.
     assert!(s.contains("✗ check (ubuntu-latest)") && s.contains("✗ Run cargo test"), "{s}");
@@ -1452,4 +1454,31 @@ async fn notifications_view() {
     press(&mut app, KeyCode::Char('[')).await;
     let s = render(&mut app, 150, 30);
     assert!(s.contains("Crash on empty repo") && s.contains("Issues · Notifications"), "{s}");
+}
+
+#[tokio::test]
+async fn releases_view() {
+    let dir = demo_repo();
+    let bin = TempDir::new().unwrap();
+    let gh = fake_gh(bin.path(), true);
+    let mut app = github_app(dir.path(), &gh).await;
+    press(&mut app, KeyCode::Char('0')).await;
+    press(&mut app, KeyCode::Char(']')).await;
+    let s = render(&mut app, 150, 30);
+    assert!(s.contains("Actions · Releases  3 releases"), "{s}");
+    assert!(s.contains("v1.2.0") && s.contains("latest") && s.contains("pre-release") && s.contains("draft"), "{s}");
+    // Details: notes and downloads.
+    assert!(s.contains("CSV parser by @ada") && s.contains("1.4 MB · 42"), "{s}");
+
+    // n suggests the next tag after the latest published one.
+    press(&mut app, KeyCode::Char('n')).await;
+    let Modal::Input { input, .. } = &app.modal else { panic!("tag prompt") };
+    assert_eq!(input.text(), "v1.2.1");
+    press(&mut app, KeyCode::Enter).await;
+    assert!(matches!(app.modal, Modal::Compose(_)), "compose after the tag");
+    // Title is prefilled with the tag; leave notes empty to generate them.
+    crate::input::handle_key(&mut app, KeyEvent::new(KeyCode::Char('s'), KeyModifiers::CONTROL));
+    app.settle().await;
+    let calls = gh_calls(bin.path());
+    assert!(calls.contains(&"release create v1.2.1 --title v1.2.1 --generate-notes".to_string()), "{calls:?}");
 }

@@ -90,6 +90,7 @@ pub enum Ctx {
     Worktrees,
     Submodules,
     Notifications,
+    Releases,
     /// The conflict panel on the Changes tab.
     Conflict,
 }
@@ -202,6 +203,7 @@ pub enum Action {
     CloseItem,
     IssueCreate,
     RerunFailed,
+    ReleaseCreate,
     MarkRead,
     MarkAllRead,
     ToggleUnread,
@@ -328,6 +330,7 @@ impl Action {
             Comment => "comment",
             IssueCreate => "new issue",
             RerunFailed => "re-run failed jobs",
+            ReleaseCreate => "create a release",
             MarkRead => "mark notification read",
             MarkAllRead => "mark all notifications read",
             ToggleUnread => "show read notifications too",
@@ -411,6 +414,7 @@ impl Action {
             PrMerge => "merge",
             IssueCreate => "new",
             RerunFailed => "re-run",
+            ReleaseCreate => "new release",
             MarkRead => "read",
             MarkAllRead => "all read",
             ToggleUnread => "unread/all",
@@ -568,10 +572,20 @@ pub static REFLOG: &[Binding] = &[b(&["enter", "l"], Action::Enter, true), b(&["
 pub static HOME: &[Binding] = &[];
 
 pub static RUNS: &[Binding] = &[
+    b(&["]"], Action::NextRefsView, true),
+    b(&["["], Action::PrevRefsView, false),
     b(&["enter", "l"], Action::Enter, false),
     b(&["R"], Action::RerunFailed, true),
     b(&["o"], Action::OpenInBrowser, true),
     b(&["f"], Action::CycleFilter, true),
+];
+
+pub static RELEASES: &[Binding] = &[
+    b(&["enter", "l"], Action::Enter, false),
+    b(&["n"], Action::ReleaseCreate, true),
+    b(&["o"], Action::OpenInBrowser, true),
+    b(&["]"], Action::NextRefsView, true),
+    b(&["["], Action::PrevRefsView, false),
 ];
 
 pub static NOTIFICATIONS: &[Binding] = &[
@@ -676,6 +690,7 @@ pub fn defaults(ctx: Ctx) -> &'static [Binding] {
         Ctx::Worktrees => WORKTREES,
         Ctx::Submodules => SUBMODULES,
         Ctx::Notifications => NOTIFICATIONS,
+        Ctx::Releases => RELEASES,
     }
 }
 
@@ -764,7 +779,7 @@ pub fn key_name(ev: &KeyEvent) -> String {
     }
 }
 
-pub const ALL_CTX: [Ctx; 18] = [
+pub const ALL_CTX: [Ctx; 19] = [
     Ctx::Global,
     Ctx::Diff,
     Ctx::Screen(Screen::Home),
@@ -782,6 +797,7 @@ pub const ALL_CTX: [Ctx; 18] = [
     Ctx::Worktrees,
     Ctx::Submodules,
     Ctx::Notifications,
+    Ctx::Releases,
     Ctx::Conflict,
 ];
 

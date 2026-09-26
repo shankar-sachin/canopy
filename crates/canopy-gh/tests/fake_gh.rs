@@ -25,6 +25,8 @@ case "$1 $2" in
   "run list") cat "{f}/run_list.json" ;;
   "run view") case "$*" in *--log-failed*) printf 'test\tRun cargo test\tpanicked at x\n' ;; *) cat "{f}/run_jobs.json" ;; esac ;;
   "pr merge") echo "merged" ;;
+  "release list") cat "{f}/release_list.json" ;;
+  "release view") cat "{f}/release_view.json" ;;
   "api --method") case "$*" in *GET*notifications*) cat "{f}/notifications.json" ;; *) : ;; esac ;;
   *) : ;;
 esac
@@ -147,4 +149,25 @@ async fn notifications() {
     );
     assert!(log.contains(&"api --method PATCH notifications/threads/101".to_string()), "{log:?}");
     assert!(log.contains(&"api --method PUT notifications -F read=true".to_string()), "{log:?}");
+}
+
+#[tokio::test]
+async fn releases() {
+    let dir = TempDir::new().unwrap();
+    let gh = Gh::new(dir.path(), Some(fake_gh(dir.path(), true)));
+    let list = gh.release_list(20).await.unwrap();
+    assert_eq!(list.len(), 3);
+    assert!(list[0].is_latest && list[1].is_prerelease && list[2].is_draft);
+    assert_eq!(list[2].published_at, 0, "a draft has no publish date");
+    let r = gh.release_view("v1.2.0").await.unwrap();
+    assert!(r.body.contains("CSV parser"));
+    assert_eq!((r.assets[0].download_count, r.author.login.as_str()), (42, "ada"));
+    gh.release_create("v1.3.0", "Acme v1.3.0", "", false).await.unwrap();
+    gh.release_create("v1.4.0", "Acme v1.4.0", "Big release", true).await.unwrap();
+    let log = calls(dir.path());
+    assert!(log.contains(&"release create v1.3.0 --title Acme v1.3.0 --generate-notes".to_string()), "{log:?}");
+    assert!(
+        log.contains(&"release create v1.4.0 --title Acme v1.4.0 --notes Big release --draft".to_string()),
+        "{log:?}"
+    );
 }

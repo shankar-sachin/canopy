@@ -1320,6 +1320,10 @@ fn runs(f: &mut Frame, area: Rect, app: &mut App) {
     if github_setup(f, area, app, "Actions") {
         return;
     }
+    if app.github.runs_view == crate::github::RunsView::Releases {
+        releases(f, area, app);
+        return;
+    }
     let scope =
         if app.github.runs_all { "all branches".to_string() } else { app.current_branch().unwrap_or("?").to_string() };
     if app.github.runs.is_empty() {
@@ -1357,7 +1361,8 @@ fn runs(f: &mut Frame, area: Rect, app: &mut App) {
         .collect();
     let focused = app.focus == Focus::List;
     let live = if crate::github::runs_in_progress(app) { " · live" } else { "" };
-    let title = format!(" Actions · {scope} · {}{live} ", app.github.runs.len());
+    let names: Vec<&str> = crate::github::RunsView::ALL.iter().map(|v| v.title()).collect();
+    let title = switcher_title(&names, 0, format!("{scope} · {}{live}", app.github.runs.len()), &theme, la.width);
     let table = Table::new(
         rows,
         [
@@ -1372,6 +1377,63 @@ fn runs(f: &mut Frame, area: Rect, app: &mut App) {
     .column_spacing(crate::ui::util::col_gap())
     .block(panel(&theme, title, focused))
     .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
+    let sel = app.selected(Screen::Runs);
+    let mut st = TableState::default().with_offset(app.list(Screen::Runs).offset()).with_selected(Some(sel));
+    f.render_stateful_widget(table, la, &mut st);
+    *app.list(Screen::Runs).offset_mut() = st.offset();
+    diff::draw(f, da, app);
+}
+
+fn releases(f: &mut Frame, area: Rect, app: &mut App) {
+    let theme = app.theme.clone();
+    let (la, da) = split(area, 55);
+    let gh = &app.github;
+    let names: Vec<&str> = crate::github::RunsView::ALL.iter().map(|v| v.title()).collect();
+    let refreshing = if gh.releases_loading { " · refreshing…" } else { "" };
+    let title = switcher_title(&names, 1, format!("{} releases{refreshing}", gh.releases.len()), &theme, la.width);
+    let focused = app.focus == Focus::List;
+    if gh.releases.is_empty() {
+        let msg = if gh.releases_loading || !gh.releases_loaded {
+            "Loading releases…"
+        } else {
+            "No releases yet. Press n to publish one: pick a tag, and GitHub can write the notes for you."
+        };
+        f.render_widget(
+            Paragraph::new(Line::styled(msg, theme.muted()))
+                .wrap(Wrap { trim: true })
+                .block(panel(&theme, title, focused)),
+            la,
+        );
+        diff::draw(f, da, app);
+        return;
+    }
+    let rows: Vec<Row> = gh
+        .releases
+        .iter()
+        .map(|r| {
+            let badge = if r.is_draft {
+                Span::styled("draft", theme.muted())
+            } else if r.is_prerelease {
+                Span::styled("pre-release", theme.fg(theme.warn))
+            } else if r.is_latest {
+                Span::styled("latest", theme.fg(theme.added).add_modifier(Modifier::BOLD))
+            } else {
+                Span::raw("")
+            };
+            let when = if r.is_draft { String::new() } else { ago(r.published_at) };
+            Row::new(vec![
+                Cell::from(Span::styled(r.tag_name.clone(), theme.fg(theme.tag).add_modifier(Modifier::BOLD))),
+                Cell::from(Span::raw(if r.name.is_empty() { r.tag_name.clone() } else { r.name.clone() })),
+                Cell::from(badge),
+                Cell::from(Span::styled(when, theme.muted())),
+            ])
+        })
+        .collect();
+    let table =
+        Table::new(rows, [Constraint::Length(14), Constraint::Fill(1), Constraint::Length(11), Constraint::Length(4)])
+            .column_spacing(crate::ui::util::col_gap())
+            .block(panel(&theme, title, focused))
+            .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
     let sel = app.selected(Screen::Runs);
     let mut st = TableState::default().with_offset(app.list(Screen::Runs).offset()).with_selected(Some(sel));
     f.render_stateful_widget(table, la, &mut st);
