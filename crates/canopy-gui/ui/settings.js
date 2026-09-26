@@ -9,6 +9,7 @@ const setts = {
 };
 
 async function loadSettings() {
+  loadProfile();
   state.settings = await invoke("get_settings").catch(() => state.settings);
   applyTheme(state.settings.theme);
   scheduleRefresh();
@@ -203,4 +204,35 @@ async function openSettings(section) {
 }
 
 $("#settings-btn").addEventListener("click", () => openSettings());
+$("#me").addEventListener("click", () => openSettings("git"));
+
+// ---------------------------------------------------------------- profile
+
+const PERSON = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor"><circle cx="8" cy="5.5" r="2.8"/><path d="M2.5 14c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6z"/></svg>';
+
+function initials(name) {
+  const parts = (name || "").trim().split(/\s+/).filter(Boolean);
+  return (parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : (parts[0] || "").slice(0, 2)).toUpperCase();
+}
+
+/// The avatar: your GitHub picture, else your initials, else a person icon.
+async function loadProfile() {
+  const p = await invoke("profile").catch(() => ({}));
+  const av = $("#avatar");
+  const fallback = () => {
+    const ini = initials(p.name || p.git_name || p.login);
+    av.innerHTML = ini ? `<span class="ini">${esc(ini)}</span>` : PERSON;
+    av.classList.add("placeholder");
+  };
+  if (p.avatar_url) {
+    const img = new Image(28, 28);
+    img.alt = "";
+    img.onerror = fallback;
+    img.src = p.avatar_url + (p.avatar_url.includes("?") ? "&" : "?") + "s=64";
+    av.replaceChildren(img);
+    av.classList.remove("placeholder");
+  } else fallback();
+  $("#me-name").textContent = p.name || p.login || p.git_name || "Not signed in";
+  $("#me-sub").textContent = p.login ? `@${p.login}` : "not signed in to GitHub";
+}
 $("#welcome-settings").addEventListener("click", () => openSettings());

@@ -210,6 +210,7 @@ fn main() {
             settings::clear_recent,
             settings::check_update,
             settings::environment,
+            settings::profile,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Canopy");

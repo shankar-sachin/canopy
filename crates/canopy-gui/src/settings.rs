@@ -234,6 +234,35 @@ pub async fn environment() -> Environment {
     }
 }
 
+// ------------------------------------------------------------------ profile
+
+/// Who's using Canopy: the GitHub account (from gh) and the git name.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct Profile {
+    pub login: Option<String>,
+    pub name: Option<String>,
+    pub avatar_url: Option<String>,
+    /// `git config user.name`, for the placeholder's initials.
+    pub git_name: Option<String>,
+}
+
+#[tauri::command]
+pub async fn profile() -> Profile {
+    let (gh, git_name) = tokio::join!(
+        first_line("gh", &["api", "user", "--jq", "[.login, (.name // \"\"), .avatar_url] | @tsv"]),
+        first_line("git", &["config", "--global", "user.name"]),
+    );
+    let mut p = Profile { git_name: git_name.filter(|n| !n.is_empty()), ..Default::default() };
+    if let Some(line) = gh {
+        let mut parts = line.split('\t').map(|s| s.trim().to_string()).map(|s| Some(s).filter(|s| !s.is_empty()));
+        p.login = parts.next().flatten();
+        p.name = parts.next().flatten();
+        // Only GitHub's own avatar host (the page's CSP allows just that).
+        p.avatar_url = parts.next().flatten().filter(|u| u.starts_with("https://avatars.githubusercontent.com/"));
+    }
+    p
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

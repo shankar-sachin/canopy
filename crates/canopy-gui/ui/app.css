@@ -513,3 +513,17 @@ html[data-theme="light"] .dl.add .code, html[data-theme="light"] .dl.add .sign {
 .all-clean b { color: var(--text); font-size: 15px; }
 .all-clean p { margin: 8px 0 16px; }
 .all-clean .oid { font: 12px var(--mono); color: var(--amber); }
+
+/* ---------- you (sidebar footer) ---------- */
+.me { display: flex; align-items: center; gap: 4px; }
+.me-btn { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 6px 8px; border: 0; border-radius: 9px; background: transparent; cursor: pointer; text-align: left; }
+.me-btn:hover { background: var(--hover); }
+.avatar { flex: none; width: 28px; height: 28px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: var(--surface-2); box-shadow: 0 0 0 1px var(--border-2); }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatar.placeholder { color: var(--green); background: color-mix(in srgb, var(--green) 16%, var(--surface)); }
+.avatar .ini { font: 700 11px var(--sans); letter-spacing: .02em; }
+.me-names { min-width: 0; }
+.me-names b { display: block; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.me-names small { display: block; font-size: 11.5px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gear { position: relative; }
+.gear .update-dot { position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; margin: 0; }
