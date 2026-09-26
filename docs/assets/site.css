@@ -261,3 +261,11 @@
   .next-links a { border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; color: var(--text); background: var(--surface); }
   .next-links a:hover { border-color: var(--green); }
   .next-links small { display: block; color: var(--faint); font-size: 12px; }
+
+  /* ---------- logo ---------- */
+  .brand .mark { display: block; border-radius: 7px; }
+  footer .mark.sm { vertical-align: -4px; margin-right: 4px; border-radius: 4px; }
+  .hero-mark {
+    display: block; margin: 0 auto 22px; border-radius: 20px;
+    box-shadow: 0 18px 60px -18px color-mix(in srgb, var(--green) 55%, transparent);
+  }

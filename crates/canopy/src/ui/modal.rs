@@ -373,15 +373,30 @@ fn compose(f: &mut Frame, area: Rect, t: &Theme, c: &crate::modal::Compose) {
 }
 
 fn welcome(f: &mut Frame, area: Rect, t: &Theme) {
-    let r = centered(area, 72, 23);
+    let r = centered(area, 72, 26);
     f.render_widget(Clear, r);
     let path = crate::config::Config::path().map(|p| p.display().to_string()).unwrap_or_default();
     let k = |s: &str| Span::styled(format!(" {s} "), t.key());
-    let lines = vec![
+    // The tree, with the title beside it.
+    let beside = [
+        Line::default(),
         Line::styled("Welcome to Canopy", t.accent()),
         Line::styled("A git dashboard for your terminal.", t.muted()),
         Line::default(),
-        Line::from(vec![k("1-9 0"), Span::raw("  switch tabs: Home, Changes, History, … Pull requests, Actions")]),
+    ];
+    let mut lines: Vec<Line> = crate::ui::logo::lines(1)
+        .into_iter()
+        .zip(beside)
+        .map(|(tree, text)| {
+            let mut spans = tree.spans;
+            spans.push(Span::raw("   "));
+            spans.extend(text.spans.into_iter().map(|s| s.style(text.style)));
+            Line::from(spans)
+        })
+        .collect();
+    lines.extend(vec![
+        Line::default(),
+        Line::from(vec![k("1-9 0"), Span::raw("  switch tabs: Home, Changes, History, … Actions")]),
         Line::from(vec![k("space"), Span::raw("  stage or unstage the selected file")]),
         Line::from(vec![k("↵"), Span::raw("  dive into a diff to stage single lines or hunks")]),
         Line::from(vec![
@@ -395,7 +410,14 @@ fn welcome(f: &mut Frame, area: Rect, t: &Theme) {
         Line::from(vec![k("z"), Span::raw("  undo the last commit/reset/checkout (via the reflog)")]),
         Line::from(vec![k(":"), Span::raw("  command palette: search every action by name")]),
         Line::from(vec![k("?"), Span::raw("  all keys for the current screen")]),
-        Line::from(vec![k("q"), Span::raw("  quit (ctrl-q or option-q work from anywhere, even in a dialog)")]),
+        Line::from(vec![
+            k("q"),
+            Span::raw(format!(
+                "  quit ({} or {} work from anywhere)",
+                crate::keymap::pretty_key("ctrl-q"),
+                crate::keymap::pretty_key("alt-q")
+            )),
+        ]),
         Line::default(),
         Line::from(vec![
             Span::styled("Teach mode", t.fg(t.accent_alt).add_modifier(Modifier::BOLD)),
@@ -406,7 +428,7 @@ fn welcome(f: &mut Frame, area: Rect, t: &Theme) {
         Line::styled(format!("A starter config will be written to {path}"), t.muted()),
         Line::default(),
         Line::styled("Press any key to start", t.accent()),
-    ];
+    ]);
     f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }).block(modal_block(t, " canopy ", false)), r);
 }
 

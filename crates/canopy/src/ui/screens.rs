@@ -37,17 +37,17 @@ fn empty(f: &mut Frame, area: Rect, theme: &Theme, title: &str, lines: &[&str]) 
 }
 
 fn no_repo(f: &mut Frame, area: Rect, theme: &Theme) {
-    empty(
-        f,
-        area,
-        theme,
-        "No repository",
-        &[
-            "No repository open",
-            "Go to Workspace (6) and press enter on a repo,",
-            "or run `canopy` inside a git repository.",
-        ],
-    );
+    let block = panel(theme, " No repository ", true);
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+    let mut text: Vec<Line> = crate::ui::logo::lines(2).into_iter().map(|l| l.centered()).collect();
+    text.push(Line::default());
+    text.push(Line::styled("No repository open", theme.accent()).centered());
+    text.push(Line::styled("Go to Workspace (6) and press enter on a repo,", theme.muted()).centered());
+    text.push(Line::styled("or run `canopy` inside a git repository.", theme.muted()).centered());
+    let h = text.len() as u16;
+    let r = Rect { y: inner.y + inner.height.saturating_sub(h) / 3, height: h.min(inner.height), ..inner };
+    f.render_widget(Paragraph::new(text), r);
 }
 
 pub fn draw(f: &mut Frame, area: Rect, app: &mut App) {
