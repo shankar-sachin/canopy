@@ -63,6 +63,11 @@ Press `?` on any screen for its keys, or `:` to search every action by name.
 | `L` | history of a file (follows renames) | | `B` | blame: who changed each line |
 | `b` | bisect: find the commit that broke something | | | |
 | `:` or `ctrl-p` | command palette | | `ctrl-t` | cycle theme |
+| `⌃Q` / `⌥Q` | quit, from anywhere (even in a dialog) | | `⌥1`…`⌥0` | jump to a tab |
+| `⌥←` / `⌥→` | previous / next tab | | `⌥C` `⌥P` `⌥⇧P` | commit, pull, push |
+
+⌃ is Control and ⌥ is Option (Alt on other keyboards). On macOS Canopy shows
+keys this way; on Linux it shows `ctrl-q` / `alt-q` (set `mac_key_symbols` to choose).
 
 ### Made for learning git
 

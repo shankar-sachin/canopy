@@ -37,6 +37,15 @@ pub fn contexts(app: &App) -> Vec<Ctx> {
 }
 
 pub fn handle_key(app: &mut App, key: KeyEvent) {
+    // Quitting always works, even with a dialog open or while typing.
+    // Only real modifier presses count here (not Option-typed characters,
+    // which could be text someone is writing).
+    let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+    let alt = key.modifiers.contains(KeyModifiers::ALT);
+    if matches!(key.code, KeyCode::Char('q')) && (ctrl || alt) || (key.code == KeyCode::Char('c') && ctrl) {
+        app.should_quit = true;
+        return;
+    }
     if app.modal.is_open() {
         modal_key(app, key);
         return;
@@ -138,6 +147,7 @@ pub fn do_action(app: &mut App, action: Action) {
     use Action::*;
     match action {
         Quit => app.should_quit = true,
+        Redraw => app.needs_redraw_full = true,
         Help => app.modal = Modal::Help { scroll: 0 },
         Palette => app.modal = Modal::Palette { input: TextArea::single(""), sel: 0 },
         Goto(s) => goto(app, s),

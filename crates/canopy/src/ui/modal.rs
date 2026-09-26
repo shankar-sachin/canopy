@@ -373,7 +373,7 @@ fn compose(f: &mut Frame, area: Rect, t: &Theme, c: &crate::modal::Compose) {
 }
 
 fn welcome(f: &mut Frame, area: Rect, t: &Theme) {
-    let r = centered(area, 72, 22);
+    let r = centered(area, 72, 23);
     f.render_widget(Clear, r);
     let path = crate::config::Config::path().map(|p| p.display().to_string()).unwrap_or_default();
     let k = |s: &str| Span::styled(format!(" {s} "), t.key());
@@ -395,6 +395,7 @@ fn welcome(f: &mut Frame, area: Rect, t: &Theme) {
         Line::from(vec![k("z"), Span::raw("  undo the last commit/reset/checkout (via the reflog)")]),
         Line::from(vec![k(":"), Span::raw("  command palette: search every action by name")]),
         Line::from(vec![k("?"), Span::raw("  all keys for the current screen")]),
+        Line::from(vec![k("q"), Span::raw("  quit (ctrl-q or option-q work from anywhere, even in a dialog)")]),
         Line::default(),
         Line::from(vec![
             Span::styled("Teach mode", t.fg(t.accent_alt).add_modifier(Modifier::BOLD)),

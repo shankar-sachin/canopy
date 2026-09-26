@@ -1130,7 +1130,8 @@ fn keys_html() -> String {
 /// elements (sparklines) and a short list of widely supported symbols.
 #[tokio::test]
 async fn only_single_width_glyphs() {
-    const SAFE: &str = "·…✓✗●○•↑↓←→↵‹›—▌";
+    // ⌃⌥⇧ only appear with Mac key symbols, and every macOS font has them.
+    const SAFE: &str = "·…✓✗●○•↑↓←→↵‹›—▌⌃⌥⇧";
     let ok = |c: char| c.is_ascii() || ('\u{2500}'..='\u{259F}').contains(&c) || SAFE.contains(c);
     let dir = demo_repo();
     let bin = TempDir::new().unwrap();
@@ -1159,4 +1160,44 @@ async fn only_single_width_glyphs() {
         check(render(&mut app, 140, 34), &mut bad);
     }
     assert!(bad.is_empty(), "risky glyphs on screen: {bad:?}");
+}
+
+#[tokio::test]
+async fn modifier_shortcuts() {
+    let dir = demo_repo();
+    let key = |c, m| KeyEvent::new(c, m);
+
+    // alt-<n> jumps tabs; alt-left/right cycle.
+    let mut app = app_for(dir.path()).await;
+    crate::input::handle_key(&mut app, key(KeyCode::Char('3'), KeyModifiers::ALT));
+    assert_eq!(app.screen, Screen::Log);
+    crate::input::handle_key(&mut app, key(KeyCode::Right, KeyModifiers::ALT));
+    assert_eq!(app.screen, Screen::Branches);
+    // Option+2 in macOS Terminal types ™: still goes to tab 2.
+    crate::input::handle_key(&mut app, key(KeyCode::Char('™'), KeyModifiers::NONE));
+    assert_eq!(app.screen, Screen::Status);
+
+    // ctrl-q quits even from inside the commit dialog…
+    press(&mut app, KeyCode::Char('c')).await;
+    assert!(matches!(app.modal, Modal::Commit { .. }));
+    crate::input::handle_key(&mut app, key(KeyCode::Char('q'), KeyModifiers::CONTROL));
+    assert!(app.should_quit);
+
+    // …but typing œ in a message is just text.
+    let mut app = app_for(dir.path()).await;
+    press(&mut app, KeyCode::Char('c')).await;
+    crate::input::handle_key(&mut app, key(KeyCode::Char('œ'), KeyModifiers::NONE));
+    assert!(!app.should_quit);
+    let Modal::Commit { subject, .. } = &app.modal else { panic!() };
+    assert_eq!(subject.text(), "œ");
+
+    // Outside dialogs, Option+Q (œ) quits.
+    press(&mut app, KeyCode::Esc).await;
+    crate::input::handle_key(&mut app, key(KeyCode::Char('œ'), KeyModifiers::NONE));
+    assert!(app.should_quit);
+
+    // The hint bar shows how to quit.
+    let mut app = app_for(dir.path()).await;
+    let s = render(&mut app, 160, 24);
+    assert!(s.contains(" q  quit"), "{s}");
 }

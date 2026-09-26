@@ -40,39 +40,41 @@
 <main class="wrap doc">
   <aside class="toc"><b>On this page</b><a href="#k-global">Everywhere</a><a href="#k-status">Changes</a><a href="#k-diff">Diff panel</a><a href="#k-conflict">Conflict panel</a><a href="#k-log">History</a><a href="#k-branches">Branches</a><a href="#k-tags">Tags</a><a href="#k-remotes">Remotes</a><a href="#k-worktrees">Worktrees</a><a href="#k-submodules">Submodules</a><a href="#k-stash">Stash</a><a href="#k-workspace">Workspace</a><a href="#k-reflog">Reflog</a><a href="#k-pulls">Pull requests</a><a href="#k-issues">Issues</a><a href="#k-runs">Actions</a></aside>
   <article class="prose">
+<div class="note"><b>Keys are shown the Mac way:</b> ⌃ is Control, ⌥ is Option (Alt on other keyboards), ⇧ is Shift. Option shortcuts work in any terminal, including macOS Terminal's default setup where Option types special characters. <kbd>⌃Q</kbd> and <kbd>⌥Q</kbd> quit from anywhere, even inside a dialog. In Canopy itself, Linux shows <code>ctrl-q</code> / <code>alt-q</code> instead; set <code>mac_key_symbols</code> in the config to choose.</div>
 <!-- KEYS:START -->
 <h2 id="k-global">Everywhere</h2>
 <table class="ref">
-<tr><td><kbd>?</kbd></td><td>help</td><td><code>help</code></td></tr>
-<tr><td><kbd>:</kbd> <kbd>^p</kbd></td><td>command palette</td><td><code>palette</code></td></tr>
-<tr><td><kbd>q</kbd> <kbd>^c</kbd></td><td>quit</td><td><code>quit</code></td></tr>
-<tr><td><kbd>1</kbd></td><td>go to home</td><td><code>goto_home</code></td></tr>
-<tr><td><kbd>2</kbd></td><td>go to changes</td><td><code>goto_changes</code></td></tr>
-<tr><td><kbd>3</kbd></td><td>go to history</td><td><code>goto_history</code></td></tr>
-<tr><td><kbd>4</kbd></td><td>go to branches</td><td><code>goto_branches</code></td></tr>
-<tr><td><kbd>5</kbd></td><td>go to stash</td><td><code>goto_stash</code></td></tr>
-<tr><td><kbd>6</kbd></td><td>go to workspace</td><td><code>goto_workspace</code></td></tr>
-<tr><td><kbd>7</kbd></td><td>go to reflog</td><td><code>goto_reflog</code></td></tr>
-<tr><td><kbd>8</kbd></td><td>go to pull requests</td><td><code>goto_pull requests</code></td></tr>
-<tr><td><kbd>9</kbd></td><td>go to issues</td><td><code>goto_issues</code></td></tr>
-<tr><td><kbd>0</kbd></td><td>go to actions</td><td><code>goto_actions</code></td></tr>
-<tr><td><kbd>tab</kbd></td><td>next tab</td><td><code>next_screen</code></td></tr>
-<tr><td><kbd>shift-tab</kbd></td><td>previous tab</td><td><code>prev_screen</code></td></tr>
-<tr><td><kbd>^r</kbd></td><td>refresh</td><td><code>refresh</code></td></tr>
-<tr><td><kbd>c</kbd></td><td>commit</td><td><code>commit</code></td></tr>
-<tr><td><kbd>f</kbd></td><td>fetch</td><td><code>fetch</code></td></tr>
-<tr><td><kbd>p</kbd></td><td>pull</td><td><code>pull</code></td></tr>
-<tr><td><kbd>P</kbd></td><td>push</td><td><code>push</code></td></tr>
-<tr><td><kbd>z</kbd></td><td>undo last action</td><td><code>undo</code></td></tr>
-<tr><td><kbd>S</kbd></td><td>stash changes</td><td><code>stash_push</code></td></tr>
+<tr><td><kbd>?</kbd> <kbd>⌥H</kbd> <kbd>f1</kbd></td><td>help</td><td><code>help</code></td></tr>
+<tr><td><kbd>:</kbd> <kbd>⌃P</kbd> <kbd>⌃K</kbd></td><td>command palette</td><td><code>palette</code></td></tr>
+<tr><td><kbd>q</kbd> <kbd>⌃Q</kbd> <kbd>⌥Q</kbd> <kbd>⌃C</kbd></td><td>quit</td><td><code>quit</code></td></tr>
+<tr><td><kbd>1</kbd> <kbd>⌥1</kbd></td><td>go to home</td><td><code>goto_home</code></td></tr>
+<tr><td><kbd>2</kbd> <kbd>⌥2</kbd></td><td>go to changes</td><td><code>goto_changes</code></td></tr>
+<tr><td><kbd>3</kbd> <kbd>⌥3</kbd></td><td>go to history</td><td><code>goto_history</code></td></tr>
+<tr><td><kbd>4</kbd> <kbd>⌥4</kbd></td><td>go to branches</td><td><code>goto_branches</code></td></tr>
+<tr><td><kbd>5</kbd> <kbd>⌥5</kbd></td><td>go to stash</td><td><code>goto_stash</code></td></tr>
+<tr><td><kbd>6</kbd> <kbd>⌥6</kbd></td><td>go to workspace</td><td><code>goto_workspace</code></td></tr>
+<tr><td><kbd>7</kbd> <kbd>⌥7</kbd></td><td>go to reflog</td><td><code>goto_reflog</code></td></tr>
+<tr><td><kbd>8</kbd> <kbd>⌥8</kbd></td><td>go to pull requests</td><td><code>goto_pull requests</code></td></tr>
+<tr><td><kbd>9</kbd> <kbd>⌥9</kbd></td><td>go to issues</td><td><code>goto_issues</code></td></tr>
+<tr><td><kbd>0</kbd> <kbd>⌥0</kbd></td><td>go to actions</td><td><code>goto_actions</code></td></tr>
+<tr><td><kbd>tab</kbd> <kbd>⌥→</kbd> <kbd>⌃→</kbd></td><td>next tab</td><td><code>next_screen</code></td></tr>
+<tr><td><kbd>⇧tab</kbd> <kbd>⌥←</kbd> <kbd>⌃←</kbd></td><td>previous tab</td><td><code>prev_screen</code></td></tr>
+<tr><td><kbd>⌃R</kbd> <kbd>⌥R</kbd></td><td>refresh</td><td><code>refresh</code></td></tr>
+<tr><td><kbd>⌃L</kbd></td><td>redraw the screen</td><td><code>redraw</code></td></tr>
+<tr><td><kbd>c</kbd> <kbd>⌥C</kbd> <kbd>⌃S</kbd></td><td>commit</td><td><code>commit</code></td></tr>
+<tr><td><kbd>f</kbd> <kbd>⌥F</kbd></td><td>fetch</td><td><code>fetch</code></td></tr>
+<tr><td><kbd>p</kbd> <kbd>⌥P</kbd></td><td>pull</td><td><code>pull</code></td></tr>
+<tr><td><kbd>P</kbd> <kbd>⌥⇧P</kbd></td><td>push</td><td><code>push</code></td></tr>
+<tr><td><kbd>z</kbd> <kbd>⌥Z</kbd></td><td>undo last action</td><td><code>undo</code></td></tr>
+<tr><td><kbd>S</kbd> <kbd>⌥S</kbd></td><td>stash changes</td><td><code>stash_push</code></td></tr>
 <tr><td><kbd>b</kbd></td><td>bisect: find the commit that broke something</td><td><code>bisect</code></td></tr>
-<tr><td><kbd>!</kbd></td><td>run git command</td><td><code>raw_git</code></td></tr>
+<tr><td><kbd>!</kbd> <kbd>⌥G</kbd></td><td>run git command</td><td><code>raw_git</code></td></tr>
 <tr><td><kbd>T</kbd></td><td>toggle teach mode</td><td><code>toggle_teach</code></td></tr>
-<tr><td><kbd>^t</kbd></td><td>cycle theme</td><td><code>cycle_theme</code></td></tr>
+<tr><td><kbd>⌃T</kbd> <kbd>⌥T</kbd></td><td>cycle theme</td><td><code>cycle_theme</code></td></tr>
 <tr><td><kbd>k</kbd> <kbd>↑</kbd></td><td>up</td><td><code>up</code></td></tr>
 <tr><td><kbd>j</kbd> <kbd>↓</kbd></td><td>down</td><td><code>down</code></td></tr>
-<tr><td><kbd>^u</kbd> <kbd>pageup</kbd></td><td>page up</td><td><code>page_up</code></td></tr>
-<tr><td><kbd>^d</kbd> <kbd>pagedown</kbd></td><td>page down</td><td><code>page_down</code></td></tr>
+<tr><td><kbd>⌃U</kbd> <kbd>pageup</kbd></td><td>page up</td><td><code>page_up</code></td></tr>
+<tr><td><kbd>⌃D</kbd> <kbd>pagedown</kbd></td><td>page down</td><td><code>page_down</code></td></tr>
 <tr><td><kbd>g</kbd> <kbd>home</kbd></td><td>top</td><td><code>top</code></td></tr>
 <tr><td><kbd>G</kbd> <kbd>end</kbd></td><td>bottom</td><td><code>bottom</code></td></tr>
 <tr><td><kbd>esc</kbd></td><td>back</td><td><code>back</code></td></tr>
