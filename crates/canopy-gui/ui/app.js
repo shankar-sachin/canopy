@@ -41,6 +41,7 @@ const ICONS = {
   home: '<path d="M2.5 7.5 8 3l5.5 4.5V13a.5.5 0 0 1-.5.5H10v-4H6v4H3a.5.5 0 0 1-.5-.5z"/>',
   folder: '<path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.8l1.4 1.5h4.8A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"/>',
   x: '<path d="M4 4l8 8M12 4l-8 8"/>',
+  changes: '<path d="M4 2.5h5.5L12 5v8.5H4z"/><path d="M8 6.5v4M6 8.5h4"/>',
 };
 
 function icon(name, size = 16) {
@@ -67,6 +68,12 @@ const PAGES = {
   home: { title: "Home", icon: "home", render: renderHome },
 };
 const NAV = [{ items: ["home"] }];
+
+/// Pages in other files add themselves here.
+function addPage(id, page, group = 0) {
+  PAGES[id] = page;
+  NAV[group].items.push(id);
+}
 
 function renderNav() {
   const o = state.overview;
@@ -189,7 +196,10 @@ function branchRow(br) {
 }
 
 // Buttons on "next steps". Pages that don't exist yet have no button.
-const ACTIONS = {};
+const ACTIONS = {
+  push: { label: "Push", run: () => sync("push") },
+  pull: { label: "Pull", run: () => sync("pull") },
+};
 
 // ---------------------------------------------------------------- render
 
@@ -203,18 +213,126 @@ function render() {
   $("#sync").innerHTML = syncPills(b);
   document.title = `${o.name} · Canopy`;
   renderNav();
-  // Keep the scroll position across refreshes.
   const view = $("#view");
-  const top = view.scrollTop;
-  view.innerHTML = PAGES[state.page].render(o);
+  const page = PAGES[state.page];
+  // Pages with their own state (like a half-written commit message) update
+  // in place instead of being redrawn.
+  if (page.update && view.dataset.page === state.page) {
+    page.update(o, view);
+    return;
+  }
+  const top = view.dataset.page === state.page ? view.scrollTop : 0;
+  view.className = "view" + (page.full ? " full" : "");
+  view.innerHTML = page.render(o);
+  view.dataset.page = state.page;
   view.scrollTop = top;
+  page.mounted?.(o, view);
 }
 
 function go(page) {
   if (!PAGES[page]) return;
   state.page = page;
-  $("#view").scrollTop = 0;
+  delete $("#view").dataset.page;
   render();
+}
+
+// ---------------------------------------------------------------- running git
+
+/// Run a command that changes the repo, show what git ran, then refresh.
+/// Resolves to the result, or null if it failed (the error is shown).
+async function run(label, cmd, args) {
+  state.busy = true;
+  document.body.classList.add("busy");
+  try {
+    const res = await invoke(cmd, args);
+    toast(label, { detail: res?.cmd });
+    return res;
+  } catch (e) {
+    toast(label + " failed", { error: true, detail: String(e) });
+    return null;
+  } finally {
+    state.busy = false;
+    document.body.classList.remove("busy");
+    await refresh({ quiet: true });
+  }
+}
+
+/// A small dialog. buttons: [{label, value, kind: "primary" | "danger"}].
+/// Resolves to the chosen value, or null for Cancel / Escape.
+function ask({ title, text = "", html = "", buttons }) {
+  return new Promise((resolve) => {
+    const wrap = document.createElement("div");
+    wrap.className = "modal-wrap";
+    wrap.innerHTML = `<div class="modal" role="dialog" aria-modal="true">
+      <h3>${esc(title)}</h3>${text ? `<p>${esc(text)}</p>` : ""}${html}
+      <div class="modal-actions"><button class="btn ghost" data-v="" type="button">Cancel</button>${buttons
+        .map((b, i) => `<button class="btn ${b.kind || ""}" data-v="${i}" type="button">${esc(b.label)}</button>`)
+        .join("")}</div></div>`;
+    const close = (v) => {
+      wrap.remove();
+      document.removeEventListener("keydown", onKey, true);
+      resolve(v === "" || v == null ? null : buttons[Number(v)].value);
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") { e.stopPropagation(); close(null); }
+    };
+    wrap.addEventListener("click", (e) => {
+      if (e.target === wrap) close(null);
+      const b = e.target.closest("[data-v]");
+      if (b) close(b.dataset.v);
+    });
+    document.addEventListener("keydown", onKey, true);
+    document.body.append(wrap);
+    (wrap.querySelector(".btn.primary, .btn.danger") || wrap.querySelector(".btn")).focus();
+  });
+}
+
+// ---------------------------------------------------------------- fetch / pull / push
+
+const SYNC_LABELS = {
+  fetch: "Fetch", pull: "Pull", "pull-rebase": "Pull (rebase)", "pull-merge": "Pull (merge)",
+  push: "Push", "force-push": "Force push",
+};
+
+async function sync(kind) {
+  const o = state.overview;
+  if (!o || state.busy) return;
+  const b = o.status.branch;
+  if (kind === "push" && b.upstream && b.ahead && b.behind) {
+    kind = await ask({
+      title: `Your branch has diverged (${b.ahead} ahead, ${b.behind} behind)`,
+      text: "The remote has commits you don't have. Bring them in first, then push again.",
+      buttons: [
+        { label: "Pull with merge", value: "pull-merge" },
+        { label: "Pull with rebase", value: "pull-rebase", kind: "primary" },
+        { label: "Force push", value: "force-push", kind: "danger" },
+      ],
+    });
+    if (!kind) return;
+    if (kind === "force-push" && !(await ask({
+      title: "Force push?",
+      text: `This replaces ${b.upstream} with your branch. The ${b.behind} commit(s) only on the remote will be lost (--force-with-lease stops if someone pushed since your last fetch).`,
+      buttons: [{ label: "Force push", value: true, kind: "danger" }],
+    }))) return;
+  } else if (kind === "push" && b.upstream && !b.ahead) {
+    toast(b.behind ? "Nothing to push: pull first." : "Nothing to push: already up to date.");
+    return;
+  } else if (kind === "pull" && !b.upstream) {
+    toast("This branch isn't on the remote yet, so there's nothing to pull. Push it first.");
+    return;
+  }
+  const bar = $("#progress");
+  bar.hidden = false;
+  bar.querySelector("b").textContent = SYNC_LABELS[kind] + "…";
+  bar.querySelector("span").textContent = "";
+  const res = await run(SYNC_LABELS[kind], "sync", { kind });
+  bar.hidden = true;
+  if (res?.output && kind !== "fetch") toast(res.output.split("\n").slice(-2).join(" "));
+}
+
+function onProgress(line) {
+  const bar = $("#progress");
+  if (!bar.hidden) bar.querySelector("span").textContent = line;
 }
 
 // ---------------------------------------------------------------- repos
@@ -285,9 +403,17 @@ $("#repo-switch").addEventListener("click", async () => {
   showWelcome();
 });
 $("#refresh").addEventListener("click", () => refresh());
+for (const b of document.querySelectorAll("[data-sync]")) b.addEventListener("click", () => sync(b.dataset.sync));
+window.__TAURI__.event?.listen("progress", (e) => onProgress(e.payload));
 
 document.addEventListener("keydown", (e) => {
   const mod = e.metaKey || e.ctrlKey;
+  if (document.querySelector(".modal-wrap")) return;
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
+  if (!mod && !typing && state.overview && PAGES[state.page].key?.(e)) {
+    e.preventDefault();
+    return;
+  }
   if (mod && e.key === "o") { e.preventDefault(); chooseRepo(); }
   else if (mod && e.key === "r") { e.preventDefault(); refresh(); }
   else if (mod && /^[1-9]$/.test(e.key)) {
@@ -303,7 +429,9 @@ setInterval(() => { if (document.visibilityState === "visible") refresh({ quiet:
 
 // ---------------------------------------------------------------- start
 
-(async function start() {
+window.addEventListener("DOMContentLoaded", start);
+
+async function start() {
   if (/Mac/.test(navigator.platform)) document.documentElement.classList.add("mac");
   else for (const k of document.querySelectorAll(".k")) k.textContent = k.textContent.replace("⌘", "Ctrl+");
   applyTheme(savedTheme());
@@ -315,7 +443,7 @@ setInterval(() => { if (document.visibilityState === "visible") refresh({ quiet:
     if (state.overview) return;
   }
   showWelcome();
-})();
+}
 
 // `canopy-desktop --smoke <repo>`: prove the real web view can call the Rust
 // side and render Home, then quit (used by CI).
@@ -325,8 +453,16 @@ async function smoke(path) {
     $("#welcome").hidden = true;
     $("#shell").hidden = false;
     render();
-    const text = [...document.querySelectorAll(".hero h1, .tile, .step p")].map((e) => e.innerText.replace(/\s+/g, " ")).join("\n");
-    await invoke("smoke_report", { ok: !!document.querySelector(".hero h1"), text });
+    const grab = (sel) => [...document.querySelectorAll(sel)].map((e) => e.innerText.replace(/\s+/g, " ").trim());
+    const home = grab(".hero h1, .tile, .step p");
+    // Changes: the file list, and the first file's diff loaded from git.
+    go("changes");
+    for (let i = 0; i < 50 && !document.querySelector(".dl, .diff-body .diff-empty, .clean"); i++) await new Promise((r) => setTimeout(r, 100));
+    const files = grab(".frow .fname");
+    const lines = document.querySelectorAll(".dl").length;
+    const text = [...home, `changes: ${files.join(", ") || "(clean)"}`, `diff lines: ${lines}`].join("\n");
+    const ok = !!home.length && (files.length ? lines > 0 : !!document.querySelector(".clean"));
+    await invoke("smoke_report", { ok, text });
   } catch (e) {
     await invoke("smoke_report", { ok: false, text: String(e) });
   }
