@@ -20,6 +20,8 @@ fn color(c: char) -> Option<Color> {
         'g' => Some(Color::Rgb(86, 195, 123)),
         'm' => Some(Color::Rgb(47, 143, 85)),
         't' => Some(Color::Rgb(201, 178, 138)),
+        // A glint of light on the highlights (the mini logo's animation).
+        'w' => Some(Color::Rgb(214, 250, 220)),
         _ => None,
     }
 }
@@ -29,9 +31,29 @@ pub fn lines(scale: usize) -> Vec<Line<'static>> {
     grown(scale, 1.0)
 }
 
-/// The mini tree: 6x2 cells.
-pub fn mini() -> Vec<Line<'static>> {
-    let rows: Vec<Vec<char>> = MINI.iter().map(|r| r.chars().collect()).collect();
+/// The mini tree (6x2 cells) with light moving through the leaves: every few frames a
+/// glint drifts diagonally across the canopy. `frame` is the UI tick.
+pub fn mini_animated(frame: u64) -> Vec<Line<'static>> {
+    // One sweep every 32 frames (about 3 s at 10 frames a second), then a
+    // pause so it doesn't nag.
+    let phase = (frame / 2) % 16;
+    let rows: Vec<Vec<char>> = MINI
+        .iter()
+        .enumerate()
+        .map(|(y, r)| {
+            r.chars()
+                .enumerate()
+                .map(|(x, c)| {
+                    let on_glint = (x + y) as u64 == phase;
+                    match c {
+                        'g' | 'm' if on_glint => 'h',
+                        'h' if on_glint => 'w',
+                        c => c,
+                    }
+                })
+                .collect()
+        })
+        .collect();
     fold(&rows)
 }
 
@@ -95,7 +117,7 @@ mod tests {
 
     #[test]
     fn mini_tree() {
-        let m = mini();
+        let m = mini_animated(0);
         assert_eq!(m.len(), 2);
         assert!(m.iter().all(|l| l.width() == 6));
     }
@@ -114,5 +136,33 @@ mod tests {
                 assert!(s.content.chars().all(|c| c == ' ' || ('\u{2580}'..='\u{259F}').contains(&c)));
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod animation_tests {
+    use super::*;
+
+    fn text(lines: &[Line]) -> String {
+        lines
+            .iter()
+            .map(|l| l.spans.iter().map(|s| s.content.as_ref()).collect::<String>())
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    #[test]
+    fn the_mini_logo_shimmers_without_changing_shape() {
+        let frames: Vec<Vec<Line>> = (0..32).map(mini_animated).collect();
+        // The same cells are filled every frame (only colors move; a cell
+        // can switch between █ and ▀ as the glint passes).
+        let shape = |f: &Vec<Line>| text(f).chars().map(|c| c == ' ').collect::<Vec<_>>();
+        assert!(frames.iter().all(|f| shape(f) == shape(&frames[0])));
+        assert!(frames.iter().all(|f| f.len() == 2 && f.iter().all(|l| l.width() == 6)));
+        let styles = |f: &Vec<Line>| f.iter().flat_map(|l| l.spans.iter().map(|s| s.style)).collect::<Vec<_>>();
+        let distinct: std::collections::HashSet<_> = frames.iter().map(|f| format!("{:?}", styles(f))).collect();
+        assert!(distinct.len() > 4, "the glint should move: {} distinct frames", distinct.len());
+        // Frame 0 of the sweep is the plain logo.
+        assert_eq!(format!("{:?}", styles(&mini_animated(31))), format!("{:?}", styles(&mini_animated(30))));
     }
 }
