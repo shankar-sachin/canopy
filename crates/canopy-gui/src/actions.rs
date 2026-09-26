@@ -18,12 +18,12 @@ pub struct Done {
     pub output: String,
 }
 
-fn done(o: Output) -> Done {
+pub fn done(o: Output) -> Done {
     let output = if o.stdout.trim().is_empty() { o.stderr } else { o.stdout };
     Done { cmd: o.cmd, output: output.trim().to_string() }
 }
 
-fn err(e: GitError) -> String {
+pub fn err(e: GitError) -> String {
     match e {
         GitError::Failed { cmd, stderr, .. } => format!("{cmd}\n{}", stderr.trim()),
         e => e.to_string(),
