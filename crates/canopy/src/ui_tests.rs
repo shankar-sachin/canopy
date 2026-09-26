@@ -262,6 +262,24 @@ async fn palette_help_workspace_stash() {
 }
 
 #[tokio::test]
+async fn get_canopy_desktop_from_the_palette() {
+    let dir = demo_repo();
+    let mut app = app_for(dir.path()).await;
+    press(&mut app, KeyCode::Char(':')).await;
+    chars(&mut app, "desktop").await;
+    let s = render(&mut app, 120, 34);
+    assert!(s.contains("get Canopy Desktop"), "{s}");
+    press(&mut app, KeyCode::Enter).await;
+    let s = render(&mut app, 120, 34);
+    if cfg!(windows) {
+        assert!(s.contains("coming soon"), "{s}");
+    } else {
+        assert!(s.contains("release preview") && s.contains("Open the download page"), "{s}");
+        assert_eq!(cfg!(target_os = "macos"), s.contains("Copy the Homebrew command"), "{s}");
+    }
+}
+
+#[tokio::test]
 async fn merge_conflict_resolution() {
     let dir = demo_repo();
     sh(

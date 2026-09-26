@@ -140,6 +140,7 @@ pub enum Action {
     RawGit,
     ToggleTeach,
     CycleTheme,
+    GetDesktop,
     StashPush,
     // Navigation
     Up,
@@ -276,6 +277,7 @@ impl Action {
             RawGit => "run git command",
             ToggleTeach => "toggle teach mode",
             CycleTheme => "cycle theme",
+            GetDesktop => "get Canopy Desktop, the desktop app (preview)",
             StashPush => "stash changes",
             Up => "up",
             Down => "down",
@@ -496,6 +498,7 @@ pub static GLOBAL: &[Binding] = &[
     b(&["!", "alt-g"], Action::RawGit, false),
     b(&["T"], Action::ToggleTeach, false),
     b(&["ctrl-t", "alt-t"], Action::CycleTheme, false),
+    b(&["alt-d"], Action::GetDesktop, false),
     b(&["k", "up"], Action::Up, false),
     b(&["j", "down"], Action::Down, false),
     b(&["ctrl-u", "pageup"], Action::PageUp, false),

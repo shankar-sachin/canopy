@@ -87,6 +87,15 @@ async fn main() -> anyhow::Result<()> {
     }
     if first_run {
         app.modal = modal::Modal::Welcome;
+    } else if app.config.desktop_tip && app.toast.is_none() && !cfg!(windows) {
+        // Now and then, mention the desktop app (off with desktop_tip = false).
+        let stamp = config::Config::path().and_then(|p| p.parent().map(|d| d.join("desktop-tip")));
+        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
+        if stamp.is_some_and(|s| input::desktop_tip_due(&s, now)) {
+            let key = app.keymap.key_for(&[keymap::Ctx::Global], keymap::Action::GetDesktop).map(keymap::pretty_key);
+            let how = key.map_or("search \"desktop\" in the palette".to_string(), |k| format!("press {k}"));
+            app.toast_for(app::Level::Info, format!("Tired of the terminal? Try Canopy Desktop (preview): {how}"), 12);
+        }
     }
 
     let mut terminal = terminal::init();

@@ -66,6 +66,12 @@ pub enum Pending {
     Reopen(crate::github::Target),
     /// Open the compose dialog for a review of this kind.
     PrReview(u64, canopy_gh::ReviewKind),
+    /// Copy text to the clipboard; `what` names it in the toast.
+    CopyText {
+        text: String,
+        what: String,
+    },
+    OpenUrl(String),
 }
 
 #[derive(Debug, Clone)]
