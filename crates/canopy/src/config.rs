@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use serde::Deserialize;
@@ -20,8 +21,18 @@ pub struct Config {
     pub workspace_depth: usize,
     /// User-defined commands bound to keys.
     pub custom_commands: Vec<CustomCommand>,
+    /// Key remaps: action name -> key or list of keys.
+    pub keys: BTreeMap<String, KeySpec>,
     /// Number of commits loaded per log page.
     pub log_page_size: usize,
+}
+
+/// `commit = "C"` or `commit = ["C", "ctrl-s"]`
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum KeySpec {
+    One(String),
+    Many(Vec<String>),
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -46,12 +57,26 @@ impl Default for Config {
             workspace_dirs: Vec::new(),
             workspace_depth: 3,
             custom_commands: Vec::new(),
+            keys: BTreeMap::new(),
             log_page_size: 300,
         }
     }
 }
 
 impl Config {
+    pub fn key_overrides(&self) -> BTreeMap<String, Vec<String>> {
+        self.keys
+            .iter()
+            .map(|(k, v)| {
+                let keys = match v {
+                    KeySpec::One(s) => vec![s.clone()],
+                    KeySpec::Many(v) => v.clone(),
+                };
+                (k.clone(), keys)
+            })
+            .collect()
+    }
+
     pub fn path() -> Option<PathBuf> {
         if let Ok(p) = std::env::var("CANOPY_CONFIG") {
             return Some(PathBuf::from(p));
@@ -86,6 +111,12 @@ confirm_destructive = true
 workspace_dirs = ["~/code"] # scanned by the Workspace view (tab 6)
 workspace_depth = 3
 
+# Remap any action. Names are snake_case: toggle_stage, commit, push,
+# goto_history, stage_line, ... (press ? in Canopy to see actions).
+# [keys]
+# toggle_stage = "s"
+# commit = ["c", "ctrl-s"]
+
 # [[custom_commands]]
 # key = "X"
 # cmd = "git push --force-with-lease"
@@ -118,6 +149,10 @@ mod tests {
     fn custom_commands_parse() {
         let c: Config = toml::from_str("[[custom_commands]]\nkey = \"X\"\ncmd = \"echo hi\"\n").unwrap();
         assert_eq!(c.custom_commands[0].key, "X");
+        let c: Config = toml::from_str("[keys]\ncommit = \"C\"\npush = [\"P\", \"ctrl-p\"]\n").unwrap();
+        let o = c.key_overrides();
+        assert_eq!(o["commit"], vec!["C"]);
+        assert_eq!(o["push"], vec!["P", "ctrl-p"]);
         assert!(c.teach_mode);
     }
 }

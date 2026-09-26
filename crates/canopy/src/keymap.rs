@@ -1,6 +1,8 @@
 //! Every user-facing action and its default key. Key dispatch, the hint bar,
 //! the help overlay and the command palette are all generated from this table.
 
+use std::collections::{BTreeMap, HashMap};
+
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -43,7 +45,7 @@ pub enum Focus {
 }
 
 /// Which bindings apply.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Ctx {
     Global,
     Screen(Screen),
@@ -359,7 +361,7 @@ pub static REFLOG: &[Binding] = &[b(&["enter", "l"], Action::Enter, true), b(&["
 
 pub static HOME: &[Binding] = &[];
 
-pub fn bindings(ctx: Ctx) -> &'static [Binding] {
+pub fn defaults(ctx: Ctx) -> &'static [Binding] {
     match ctx {
         Ctx::Global => GLOBAL,
         Ctx::Diff => DIFF,
@@ -403,9 +405,171 @@ pub fn key_name(ev: &KeyEvent) -> String {
     }
 }
 
-/// Resolve a key: the most specific context wins.
-pub fn lookup(contexts: &[Ctx], key: &str) -> Option<Action> {
-    contexts.iter().flat_map(|c| bindings(*c).iter()).find(|b| b.keys.contains(&key)).map(|b| b.action)
+pub const ALL_CTX: [Ctx; 9] = [
+    Ctx::Global,
+    Ctx::Diff,
+    Ctx::Screen(Screen::Home),
+    Ctx::Screen(Screen::Status),
+    Ctx::Screen(Screen::Log),
+    Ctx::Screen(Screen::Branches),
+    Ctx::Screen(Screen::Stash),
+    Ctx::Screen(Screen::Workspace),
+    Ctx::Screen(Screen::Reflog),
+];
+
+impl Action {
+    /// Stable snake_case name used in the `[keys]` config table,
+    /// e.g. `ToggleStage` -> `toggle_stage`, `Goto(Log)` -> `goto_history`.
+    pub fn name(self) -> String {
+        if let Action::Goto(s) = self {
+            return format!("goto_{}", s.title().to_lowercase());
+        }
+        let debug = format!("{self:?}");
+        let mut out = String::new();
+        for (i, c) in debug.chars().enumerate() {
+            if c.is_uppercase() {
+                if i > 0 {
+                    out.push('_');
+                }
+                out.extend(c.to_lowercase());
+            } else {
+                out.push(c);
+            }
+        }
+        out
+    }
+}
+
+/// A binding at runtime (defaults with user overrides applied).
+#[derive(Debug, Clone)]
+pub struct Bind {
+    pub keys: Vec<String>,
+    pub action: Action,
+    pub hint: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct Keymap {
+    map: HashMap<Ctx, Vec<Bind>>,
+}
+
+impl Default for Keymap {
+    fn default() -> Self {
+        let map = ALL_CTX
+            .iter()
+            .map(|&ctx| {
+                let binds = defaults(ctx)
+                    .iter()
+                    .map(|b| Bind {
+                        keys: b.keys.iter().map(|k| k.to_string()).collect(),
+                        action: b.action,
+                        hint: b.hint,
+                    })
+                    .collect();
+                (ctx, binds)
+            })
+            .collect();
+        Keymap { map }
+    }
+}
+
+impl Keymap {
+    /// Apply `[keys]` overrides (action name -> keys). Returns warnings for
+    /// unknown actions or keys. An override replaces the action's keys in every
+    /// context it appears in, and takes those keys away from other actions there.
+    pub fn with_overrides(overrides: &BTreeMap<String, Vec<String>>) -> (Keymap, Vec<String>) {
+        let mut km = Keymap::default();
+        let mut warnings = Vec::new();
+        for (name, keys) in overrides {
+            let found =
+                ALL_CTX.iter().flat_map(|c| km.map[c].iter()).find(|b| b.action.name() == *name).map(|b| b.action);
+            let Some(action) = found else {
+                warnings.push(format!("unknown action `{name}` in [keys]"));
+                continue;
+            };
+            let keys: Vec<String> = keys
+                .iter()
+                .filter(|k| {
+                    let ok = is_valid_key(k);
+                    if !ok {
+                        warnings.push(format!("unknown key `{k}` for `{name}`"));
+                    }
+                    ok
+                })
+                .cloned()
+                .collect();
+            if keys.is_empty() {
+                continue;
+            }
+            // A global action is active on every screen, so its keys must be
+            // freed everywhere; otherwise only where the action lives.
+            let global = km.map[&Ctx::Global].iter().any(|b| b.action == action);
+            for binds in km.map.values_mut() {
+                if !global && !binds.iter().any(|b| b.action == action) {
+                    continue;
+                }
+                for b in binds.iter_mut() {
+                    if b.action == action {
+                        b.keys = keys.clone();
+                    } else if !b.keys.is_empty() {
+                        b.keys.retain(|k| !keys.contains(k));
+                        if b.keys.is_empty() && !overrides.contains_key(&b.action.name()) {
+                            warnings.push(format!("`{}` has no key left (given to `{name}`)", b.action.name()));
+                        }
+                    }
+                }
+            }
+        }
+        (km, warnings)
+    }
+
+    pub fn bindings(&self, ctx: Ctx) -> &[Bind] {
+        self.map.get(&ctx).map(Vec::as_slice).unwrap_or(&[])
+    }
+
+    /// Resolve a key: the most specific context wins.
+    pub fn lookup(&self, contexts: &[Ctx], key: &str) -> Option<Action> {
+        contexts
+            .iter()
+            .flat_map(|c| self.bindings(*c).iter())
+            .find(|b| b.keys.iter().any(|k| k == key))
+            .map(|b| b.action)
+    }
+
+    /// First key bound to `action` in any of `contexts`, for hints.
+    pub fn key_for(&self, contexts: &[Ctx], action: Action) -> Option<&str> {
+        contexts
+            .iter()
+            .flat_map(|c| self.bindings(*c).iter())
+            .find(|b| b.action == action)
+            .and_then(|b| b.keys.first())
+            .map(String::as_str)
+    }
+}
+
+const NAMED_KEYS: &[&str] = &[
+    "space",
+    "enter",
+    "esc",
+    "tab",
+    "backtab",
+    "backspace",
+    "up",
+    "down",
+    "left",
+    "right",
+    "pageup",
+    "pagedown",
+    "home",
+    "end",
+    "delete",
+];
+
+fn is_valid_key(k: &str) -> bool {
+    let base = k.strip_prefix("ctrl-").unwrap_or(k);
+    base.chars().count() == 1
+        || NAMED_KEYS.contains(&base)
+        || base.strip_prefix('f').is_some_and(|n| n.parse::<u8>().is_ok_and(|n| (1..=12).contains(&n)))
 }
 
 /// Display form of a key for hints, e.g. `space` -> `␣`.
@@ -431,10 +595,11 @@ mod tests {
 
     #[test]
     fn screen_context_shadows_global() {
+        let km = Keymap::default();
         let ctx = [Ctx::Screen(Screen::Stash), Ctx::Global];
         // `g` is "top" globally but "pop" on the stash screen.
-        assert_eq!(lookup(&ctx, "g"), Some(Action::StashPop));
-        assert_eq!(lookup(&[Ctx::Global], "g"), Some(Action::Top));
+        assert_eq!(km.lookup(&ctx, "g"), Some(Action::StashPop));
+        assert_eq!(km.lookup(&[Ctx::Global], "g"), Some(Action::Top));
     }
 
     #[test]
@@ -450,12 +615,48 @@ mod tests {
             Ctx::Screen(Screen::Reflog),
         ] {
             let mut seen = std::collections::HashSet::new();
-            for b in bindings(ctx) {
+            for b in defaults(ctx) {
                 for k in b.keys {
                     assert!(seen.insert(*k), "duplicate key {k} in {ctx:?}");
                 }
             }
         }
+    }
+
+    #[test]
+    fn action_names() {
+        assert_eq!(Action::ToggleStage.name(), "toggle_stage");
+        assert_eq!(Action::Goto(Screen::Log).name(), "goto_history");
+        assert_eq!(Action::Quit.name(), "quit");
+        // Names must be unique so config entries are unambiguous.
+        let mut by_name: HashMap<String, Action> = HashMap::new();
+        for ctx in ALL_CTX {
+            for b in defaults(ctx) {
+                let prev = by_name.insert(b.action.name(), b.action);
+                assert!(prev.is_none_or(|p| p == b.action), "name clash: {}", b.action.name());
+            }
+        }
+    }
+
+    #[test]
+    fn overrides_replace_and_steal_keys() {
+        let mut o = BTreeMap::new();
+        o.insert("toggle_stage".to_string(), vec!["s".to_string()]);
+        // `a` is stage-all by default; give it to commit instead.
+        o.insert("commit".to_string(), vec!["a".to_string(), "ctrl-enter".to_string()]);
+        o.insert("bogus".to_string(), vec!["x".to_string()]);
+        o.insert("quit".to_string(), vec!["nope-key".to_string()]);
+        let (km, warnings) = Keymap::with_overrides(&o);
+        let status = [Ctx::Screen(Screen::Status), Ctx::Global];
+        assert_eq!(km.lookup(&status, "s"), Some(Action::ToggleStage));
+        assert_eq!(km.lookup(&status, "space"), None);
+        // Global remaps win on every screen, even over a screen's own key.
+        assert_eq!(km.lookup(&status, "a"), Some(Action::Commit));
+        assert_eq!(km.lookup(&[Ctx::Global], "c"), None);
+        // Quit keeps its defaults because the only key given was invalid.
+        assert_eq!(km.lookup(&[Ctx::Global], "q"), Some(Action::Quit));
+        // bogus action, bad key, and stage_all losing `a`.
+        assert_eq!(warnings.len(), 3, "{warnings:?}");
     }
 
     #[test]

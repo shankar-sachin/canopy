@@ -281,3 +281,66 @@ git merge other >/dev/null 2>&1 || true
     assert!(!dir.path().join(".git/MERGE_HEAD").exists());
     render(&mut app, 130, 30);
 }
+
+#[tokio::test]
+async fn history_loads_more_pages() {
+    let dir = TempDir::new().unwrap();
+    sh(
+        dir.path(),
+        "git init -q -b main && git config user.name T && git config user.email t@t.io && \
+         for i in $(seq 1 130); do git commit -q --allow-empty -m \"c$i\"; done",
+    );
+    let git = canopy_git::Git::open(dir.path()).await.unwrap();
+    let config = Config { log_page_size: 50, ..Config::default() };
+    let mut app = App::new(Some(git), config, dir.path().to_path_buf());
+    app.refresh();
+    app.settle().await;
+    assert_eq!(app.data.log.len(), 50);
+    assert!(app.log_has_more());
+    press(&mut app, KeyCode::Char('3')).await;
+    let s = render(&mut app, 120, 20);
+    assert!(s.contains("History · 50+ commits"), "{s}");
+
+    // Moving down near the end fetches the next pages.
+    press(&mut app, KeyCode::Char('j')).await;
+    assert_eq!(app.data.log.len(), 100);
+    press(&mut app, KeyCode::Char('G')).await;
+    press(&mut app, KeyCode::Char('G')).await;
+    assert_eq!(app.data.log.len(), 130);
+    assert!(!app.log_has_more());
+    assert_eq!(app.data.log.last().unwrap().subject, "c1");
+
+    // A refresh keeps everything loaded.
+    app.refresh();
+    app.settle().await;
+    assert_eq!(app.data.log.len(), 130);
+}
+
+#[tokio::test]
+async fn remapped_keys_work_and_show_in_hints() {
+    let dir = demo_repo();
+    let git = canopy_git::Git::open(dir.path()).await.unwrap();
+    let config: Config = toml::from_str("[keys]\ncommit = \"C\"\ntoggle_stage = \"s\"\n").unwrap();
+    let mut app = App::new(Some(git), config, dir.path().to_path_buf());
+    app.refresh();
+    app.settle().await;
+    // `C` was "continue" on Changes; the user is told it lost its key.
+    assert!(app.toast.as_ref().unwrap().text.contains("`continue_op` has no key left"));
+    app.toast = None;
+    let s = render(&mut app, 130, 30);
+    assert!(s.contains("Press C to commit"), "{s}");
+    assert!(s.contains(" C  commit"), "hint bar:\n{s}");
+
+    press(&mut app, KeyCode::Char('2')).await;
+    let s = render(&mut app, 130, 30);
+    assert!(s.contains(" s  stage"), "{s}");
+    // Old key does nothing; new key stages.
+    press(&mut app, KeyCode::Char(' ')).await;
+    let unstaged_before = app.data.status.unstaged().count();
+    press(&mut app, KeyCode::Char('s')).await;
+    assert_eq!(app.data.status.unstaged().count(), unstaged_before - 1);
+    press(&mut app, KeyCode::Char('c')).await;
+    assert!(!app.modal.is_open());
+    press(&mut app, KeyCode::Char('C')).await;
+    assert!(matches!(app.modal, Modal::Commit { .. }));
+}

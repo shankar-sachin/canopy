@@ -149,11 +149,11 @@ impl Modal {
 }
 
 /// Entries listed in the command palette.
-pub fn palette_actions(screen: Screen) -> Vec<(Action, String)> {
-    use crate::keymap::{bindings, Ctx};
+pub fn palette_actions(keymap: &crate::keymap::Keymap, screen: Screen) -> Vec<(Action, String)> {
+    use crate::keymap::Ctx;
     let mut out: Vec<(Action, String)> = Vec::new();
     let mut push = |ctx: Ctx| {
-        for b in bindings(ctx) {
+        for b in keymap.bindings(ctx) {
             if matches!(
                 b.action,
                 Action::Up

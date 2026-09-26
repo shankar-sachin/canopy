@@ -78,7 +78,17 @@ pub fn draw(f: &mut Frame, area: Rect, app: &mut App) {
     if focused {
         if let Some(mode) = view.mode {
             let verb = if mode == PatchMode::Stage { "stage" } else { "unstage" };
-            let hint = format!(" space {verb} line · ⏎ {verb} hunk · v range ");
+            let k = |a| {
+                let key = app.keymap.key_for(&[crate::keymap::Ctx::Diff], a).unwrap_or("?");
+                crate::keymap::pretty_key(key)
+            };
+            use crate::keymap::Action;
+            let hint = format!(
+                " {} {verb} line · {} {verb} hunk · {} range ",
+                k(Action::StageLine),
+                k(Action::StageHunk),
+                k(Action::RangeSelect)
+            );
             let w = hint.chars().count() as u16;
             if area.width > w + 4 {
                 let r = Rect { x: area.x + area.width - w - 2, y: area.y + area.height - 1, width: w, height: 1 };

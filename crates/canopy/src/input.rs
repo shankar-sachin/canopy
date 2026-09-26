@@ -30,7 +30,7 @@ pub fn handle_key(app: &mut App, key: KeyEvent) {
         do_action(app, Action::Custom(i));
         return;
     }
-    if let Some(action) = keymap::lookup(&contexts(app), &name) {
+    if let Some(action) = app.keymap.lookup(&contexts(app), &name) {
         do_action(app, action);
     }
 }
@@ -68,6 +68,9 @@ fn move_list(app: &mut App, delta: isize) {
     if next != cur as usize || app.lists.get(&s).and_then(|l| l.selected()).is_none() {
         app.set_selected(s, next);
         diff::load_for_selection(app);
+    }
+    if s == Screen::Log {
+        app.maybe_load_more_log();
     }
 }
 
@@ -952,7 +955,7 @@ fn modal_key(app: &mut App, key: KeyEvent) {
 }
 
 pub fn palette_matches(app: &App, query: &str) -> Vec<(Action, String)> {
-    let mut entries: Vec<(i64, Action, String)> = palette_actions(app.screen)
+    let mut entries: Vec<(i64, Action, String)> = palette_actions(&app.keymap, app.screen)
         .into_iter()
         .chain(app.config.custom_commands.iter().enumerate().map(|(i, c)| (Action::Custom(i), c.key.clone())))
         .filter_map(|(a, k)| {

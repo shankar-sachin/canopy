@@ -69,16 +69,34 @@ pub fn draw(f: &mut Frame, area: Rect, app: &mut App) {
 // ------------------------------------------------------------------ home
 
 struct Suggestion {
-    key: &'static str,
+    key: String,
     text: String,
     level: u8, // 0 ok, 1 info, 2 warn
 }
 
 fn suggestions(app: &App) -> Vec<Suggestion> {
+    use crate::keymap::{Action, Ctx};
+    // Look keys up in the keymap so remapped keys show correctly.
+    let key = |a: Action, screen: Screen| -> String {
+        let k = app.keymap.key_for(&[Ctx::Screen(screen), Ctx::Global], a).unwrap_or("?");
+        crate::keymap::pretty_key(k)
+    };
+    let (commit, push, pull, raw) = (
+        key(Action::Commit, Screen::Home),
+        key(Action::Push, Screen::Home),
+        key(Action::Pull, Screen::Home),
+        key(Action::RawGit, Screen::Home),
+    );
+    let (changes, branches) =
+        (key(Action::Goto(Screen::Status), Screen::Home), key(Action::Goto(Screen::Branches), Screen::Home));
+    let (cont, abort) = (key(Action::ContinueOp, Screen::Status), key(Action::AbortOp, Screen::Status));
+    let stage = key(Action::ToggleStage, Screen::Status);
+    let new_branch = key(Action::BranchFromCommit, Screen::Log);
+
     let s = &app.data.status;
     let b = &s.branch;
     let mut out = Vec::new();
-    let mut add = |key, text: String, level| out.push(Suggestion { key, text, level });
+    let mut add = |key: &str, text: String, level| out.push(Suggestion { key: key.to_string(), text, level });
     let staged = s.staged().count();
     let unstaged = s.unstaged().count() - s.conflicted().count();
     let conflicts = s.conflicted().count();
@@ -86,45 +104,57 @@ fn suggestions(app: &App) -> Vec<Suggestion> {
     if let Some(state) = app.data.state.filter(|s| *s != RepoState::Clean && *s != RepoState::Bisecting) {
         let w = state_word(state);
         if conflicts > 0 {
-            add("2", format!("A {w} is in progress with {conflicts} conflict(s). Resolve them in Changes, then press C to continue (or X to abort)."), 2);
+            add(&changes, format!("A {w} is in progress with {conflicts} conflict(s). Resolve them in Changes, then press {cont} to continue (or {abort} to abort)."), 2);
         } else {
-            add("C", format!("A {w} is in progress and has no conflicts left. Press C (in Changes) to continue."), 2);
+            add(
+                &cont,
+                format!("A {w} is in progress and has no conflicts left. Press {cont} (in Changes) to continue."),
+                2,
+            );
         }
     } else if conflicts > 0 {
-        add("2", format!("{conflicts} file(s) have conflicts. Open Changes to resolve them."), 2);
+        add(&changes, format!("{conflicts} file(s) have conflicts. Open Changes to resolve them."), 2);
     }
     if b.head.is_none() && b.oid.is_some() {
-        add("4", "You're on a detached HEAD (not on a branch). Check out a branch in Branches, or create one with n in History.".into(), 2);
+        add(&branches, format!("You're on a detached HEAD (not on a branch). Check out a branch in Branches, or create one with {new_branch} in History."), 2);
     }
     if staged > 0 {
-        add("c", format!("{staged} file(s) staged and ready. Press c to commit."), 1);
+        add(&commit, format!("{staged} file(s) staged and ready. Press {commit} to commit."), 1);
     } else if unstaged > 0 {
         add(
-            "2",
-            format!("{unstaged} changed file(s). Open Changes, stage what you want with space, then commit with c."),
+            &changes,
+            format!("{unstaged} changed file(s). Open Changes, stage what you want with {stage}, then commit with {commit}."),
             1,
         );
     }
     if b.upstream.is_some() {
         if b.ahead > 0 && b.behind > 0 {
-            add("P", format!("Your branch has diverged ({} ahead, {} behind). P shows options.", b.ahead, b.behind), 2);
+            add(
+                &push,
+                format!("Your branch has diverged ({} ahead, {} behind). {push} shows options.", b.ahead, b.behind),
+                2,
+            );
         } else if b.ahead > 0 {
-            add("P", format!("{} commit(s) not pushed yet. Press P to push.", b.ahead), 1);
+            add(&push, format!("{} commit(s) not pushed yet. Press {push} to push.", b.ahead), 1);
         } else if b.behind > 0 {
-            add("p", format!("{} new commit(s) on the remote. Press p to pull.", b.behind), 1);
+            add(&pull, format!("{} new commit(s) on the remote. Press {pull} to pull.", b.behind), 1);
         }
     } else if b.head.is_some() && !app.data.log.is_empty() {
         if app.data.remotes.is_empty() {
-            add("!", "No remote configured. Add one with ! then: remote add origin <url>".into(), 1);
+            add(&raw, format!("No remote configured. Add one with {raw} then: remote add origin <url>"), 1);
         } else {
-            add("P", "This branch isn't on the remote yet. Press P to publish it.".into(), 1);
+            add(&push, format!("This branch isn't on the remote yet. Press {push} to publish it."), 1);
         }
     }
     if app.data.log.is_empty() && app.loaded {
-        add("c", "Fresh repository. Create some files, then press c to make your first commit.".into(), 1);
+        add(&commit, format!("Fresh repository. Create some files, then press {commit} to make your first commit."), 1);
     }
     if out.is_empty() {
-        out.push(Suggestion { key: "✓", text: "All clear: everything is committed and in sync.".into(), level: 0 });
+        out.push(Suggestion {
+            key: "✓".into(),
+            text: "All clear: everything is committed and in sync.".into(),
+            level: 0,
+        });
     }
     out
 }
@@ -469,9 +499,18 @@ fn log(f: &mut Frame, area: Rect, app: &mut App) {
         })
         .collect();
     let focused = app.focus == Focus::List;
-    let mut title = format!(" History · {} commits ", vis.len());
+    let more = if app.log_loading {
+        " · loading more…"
+    } else if app.log_has_more() {
+        "+"
+    } else {
+        ""
+    };
+    let mut title = format!(" History · {}{more} commits ", vis.len());
     if let Some(flt) = app.filters.get(&Screen::Log) {
-        title = format!(" History · filter: {flt} · {} matches ", vis.len());
+        // Filtering only covers what's loaded so far.
+        let scope = if app.log_has_more() { format!(" of {} loaded", app.data.log.len()) } else { String::new() };
+        title = format!(" History · filter: {flt} · {} matches{scope} ", vis.len());
     }
     let table = Table::new(
         rows,
