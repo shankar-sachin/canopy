@@ -282,7 +282,14 @@ fn strip_caret_codes(s: &str) -> String {
         out.push_str(&rest[..i]);
         let after = &rest[i + 3..];
         match after.find(|c: char| c.is_ascii_alphabetic()) {
-            Some(j) if after[..j].chars().all(|c| c.is_ascii_digit() || c == ';') => rest = &after[j + 1..],
+            // A color code: digits and semicolons, then "m" (or any letter
+            // after at least one digit).
+            Some(j)
+                if after[..j].chars().all(|c| c.is_ascii_digit() || c == ';')
+                    && (j > 0 || after[j..].starts_with('m')) =>
+            {
+                rest = &after[j + 1..]
+            }
             _ => {
                 out.push_str("^[[");
                 rest = after;
