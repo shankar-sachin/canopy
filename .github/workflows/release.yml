@@ -101,7 +101,7 @@ jobs:
         run: cargo install tauri-cli --version "^2" --locked
       - name: Build
         working-directory: crates/canopy-gui
-        run: cargo tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+        run: cargo tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --features custom-protocol
       - name: Collect
         shell: bash
         run: |
