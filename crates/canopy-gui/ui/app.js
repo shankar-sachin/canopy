@@ -222,7 +222,7 @@ function render() {
   $("#repo-branch").textContent = b.head || "detached HEAD";
   $("#page-title").textContent = PAGES[state.page].title;
   $("#sync").innerHTML = syncPills(b);
-  document.title = `${o.name} · Canopy`;
+  document.title = `${o.name} · canopy`;
   renderNav();
   const view = $("#view");
   const page = PAGES[state.page];
@@ -441,7 +441,7 @@ function onProgress(line) {
 
 async function showWelcome() {
   state.overview = null;
-  document.title = "Canopy";
+  document.title = "canopy";
   $("#shell").hidden = true;
   $("#welcome").hidden = false;
   const repos = await invoke("recent_repos");
@@ -546,7 +546,7 @@ async function start() {
   else for (const k of document.querySelectorAll(".k")) k.textContent = k.textContent.replace("⌘", "Ctrl+");
   applyTheme(savedTheme());
   await loadSettings();
-  $("#version").textContent = "Canopy " + (await invoke("app_version"));
+  $("#version").textContent = "canopy " + (await invoke("app_version"));
   const initial = await invoke("initial_path");
   if (await invoke("smoke_mode")) return smoke(initial);
   if (initial) {
@@ -586,13 +586,14 @@ async function smoke(path) {
     const branches = await wait(".brow, .blist .diff-empty");
     go("stash");
     const stash = await wait(".srow, .clean");
+    const stashes = document.querySelectorAll(".srow").length;
     // GitHub: either the pull request list or the setup card (no gh login).
     go("prs");
     for (let i = 0; i < 150 && !(gh.status && (gh.status.state !== "ready" || gh.prs.list)); i++) await new Promise((r) => setTimeout(r, 100));
     const github = gh.status?.state === "ready" ? `${gh.prs.list?.length ?? "?"} open pull requests` : `setup card (${gh.status?.state})`;
     const text = [...home, `changes: ${files.join(", ") || "(clean)"}`, `diff lines: ${lines}`,
       `history: ${commits} commits, ${graphs} graph rows, details ${detail ? "loaded" : "missing"}`,
-      `branches: ${branches} rows`, `stash: ${document.querySelectorAll(".srow").length} stashes`, `github: ${github}`].join("\n");
+      `branches: ${branches} rows`, `stash: ${stashes} stashes`, `github: ${github}`].join("\n");
     const ok = !!home.length && changesOk
       && commits > 0 && graphs === commits && detail > 0 && branches > 0 && stash > 0
       && !!gh.status && (gh.status.state !== "ready" || !!gh.prs.list);

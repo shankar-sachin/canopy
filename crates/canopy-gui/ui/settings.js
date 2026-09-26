@@ -113,7 +113,7 @@ function settingsBody() {
     case "updates":
       return updateHtml();
     case "about":
-      return `<div class="about"><img src="logo.svg" alt="" width="64" height="64"><h3>Canopy ${esc(setts.env?.version || "")}</h3>
+      return `<div class="about"><img src="logo.svg" alt="" width="64" height="64"><h3>canopy ${esc(setts.env?.version || "")}</h3>
         <p>A beautiful, powerful git dashboard. MIT licensed.</p>
         <div class="row-btns">
           <button class="btn small" data-s2="open" data-url="https://shankar-sachin.github.io/canopy/">Website</button>

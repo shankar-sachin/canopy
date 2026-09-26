@@ -8,19 +8,20 @@ cask "canopy-desktop" do
          intel: "@SHA_INTEL@"
 
   url "https://github.com/shankar-sachin/canopy/releases/download/v#{version}/canopy-desktop-v#{version}-#{arch}-apple-darwin.dmg"
-  name "Canopy"
+  name "canopy"
   desc "Beautiful, powerful git dashboard"
   homepage "https://shankar-sachin.github.io/canopy/"
 
   depends_on macos: ">= :catalina"
 
-  app "Canopy.app"
+  app "canopy.app"
 
   zap trash: "~/.config/canopy/desktop.json"
 
   caveats <<~EOS
-    Canopy isn't notarized by Apple yet. If macOS says it can't be opened,
-    open System Settings → Privacy & Security and click "Open Anyway", or run:
-      xattr -dr com.apple.quarantine /Applications/Canopy.app
+    This cask isn't notarized by Apple yet since it's a release preview.
+    If macOS says canopy can't be opened, open System Settings → Privacy &
+    Security and click "Open Anyway", or run:
+      xattr -dr com.apple.quarantine /Applications/canopy.app
   EOS
 end

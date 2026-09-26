@@ -22,3 +22,9 @@ serde_json = "1.0.151"
 
 [dev-dependencies]
 tempfile.workspace = true
+
+[features]
+# Serve the UI from inside the app (release builds). The Tauri CLI turns it
+# on for `cargo tauri build`; a plain `cargo build --features custom-protocol`
+# works too.
+custom-protocol = ["tauri/custom-protocol"]

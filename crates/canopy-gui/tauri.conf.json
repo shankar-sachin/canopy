@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Canopy",
+  "productName": "canopy",
   "mainBinaryName": "canopy-desktop",
   "identifier": "io.github.shankar-sachin.canopy",
   "build": {
@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "Canopy",
+        "title": "canopy",
         "width": 1200,
         "height": 780,
         "minWidth": 820,
