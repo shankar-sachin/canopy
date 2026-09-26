@@ -10,7 +10,7 @@ use crate::keymap::{pretty_key, Ctx, Screen};
 use crate::modal::{Modal, TodoAction};
 use crate::textarea::TextArea;
 use crate::theme::Theme;
-use crate::ui::util::{ago, centered, key_hint, modal_block, trunc};
+use crate::ui::util::{ago, centered, key_hint, modal_block, modal_extra, trunc};
 
 pub fn draw(f: &mut Frame, app: &App) {
     let area = f.area();
@@ -21,7 +21,8 @@ pub fn draw(f: &mut Frame, app: &App) {
         Modal::Welcome => welcome(f, area, t),
         Modal::Confirm { title, lines, danger, .. } => {
             let w = lines.iter().map(|l| l.chars().count()).max().unwrap_or(20).max(title.len() + 4) as u16 + 8;
-            let r = centered(area, w.max(44), lines.len() as u16 + 6);
+            let (ew, eh) = modal_extra();
+            let r = centered(area, w.max(44) + ew, lines.len() as u16 + 6 + eh);
             f.render_widget(Clear, r);
             let mut text: Vec<Line> = lines.iter().map(|l| Line::raw(l.clone())).collect();
             text.push(Line::default());
@@ -34,7 +35,8 @@ pub fn draw(f: &mut Frame, app: &App) {
             let w = items.iter().map(|i| i.label.len() + i.detail.len() + 10).max().unwrap_or(30).max(title.len() + 6)
                 as u16
                 + 6;
-            let r = centered(area, w, items.len() as u16 + 5);
+            let (ew, eh) = modal_extra();
+            let r = centered(area, w + ew, items.len() as u16 + 5 + eh);
             f.render_widget(Clear, r);
             let lines: Vec<Line> = items
                 .iter()
@@ -64,7 +66,8 @@ pub fn draw(f: &mut Frame, app: &App) {
             f.render_widget(Paragraph::new(text).block(modal_block(t, format!(" {title} "), false)), r);
         }
         Modal::Input { title, hint, input, .. } => {
-            let r = centered(area, 64, 7);
+            let (ew, eh) = modal_extra();
+            let r = centered(area, 64 + ew, 7 + eh);
             f.render_widget(Clear, r);
             let block = modal_block(t, format!(" {title} "), false);
             let inner = block.inner(r);
@@ -124,7 +127,8 @@ pub fn draw(f: &mut Frame, app: &App) {
         Modal::Blame(v) => blame(f, area, t, v),
         Modal::Compose(c) => compose(f, area, t, c),
         Modal::Rebase { items, sel, .. } => {
-            let r = centered(area, 90, items.len() as u16 + 9);
+            let (ew, eh) = modal_extra();
+            let r = centered(area, 90 + ew, items.len() as u16 + 9 + eh);
             f.render_widget(Clear, r);
             let mut lines =
                 vec![Line::styled("Oldest first: git replays these top to bottom.", t.muted()), Line::default()];
@@ -189,7 +193,8 @@ fn draw_text(f: &mut Frame, area: Rect, input: &TextArea, t: &Theme, focused: bo
 
 fn commit(f: &mut Frame, area: Rect, app: &App, subject: &TextArea, body: &TextArea, on_body: bool, amend: bool) {
     let t = &app.theme;
-    let r = centered(area, 80, 20);
+    let (ew, eh) = modal_extra();
+    let r = centered(area, 80 + ew, 20 + eh);
     f.render_widget(Clear, r);
     let staged = app.data.status.staged().count();
     let title = if amend { " Amend last commit ".to_string() } else { format!(" Commit · {staged} staged file(s) ") };
@@ -332,7 +337,8 @@ fn blame(f: &mut Frame, area: Rect, t: &Theme, v: &crate::modal::BlameView) {
 }
 
 fn compose(f: &mut Frame, area: Rect, t: &Theme, c: &crate::modal::Compose) {
-    let r = centered(area, 84, 20);
+    let (ew, eh) = modal_extra();
+    let r = centered(area, 84 + ew, 20 + eh);
     f.render_widget(Clear, r);
     let block = modal_block(t, format!(" {} ", c.heading), false);
     let inner = block.inner(r);
@@ -373,7 +379,8 @@ fn compose(f: &mut Frame, area: Rect, t: &Theme, c: &crate::modal::Compose) {
 }
 
 fn welcome(f: &mut Frame, area: Rect, t: &Theme) {
-    let r = centered(area, 72, 26);
+    let (ew, eh) = modal_extra();
+    let r = centered(area, 72 + ew, 26 + eh);
     f.render_widget(Clear, r);
     let path = crate::config::Config::path().map(|p| p.display().to_string()).unwrap_or_default();
     let k = |s: &str| Span::styled(format!(" {s} "), t.key());

@@ -203,6 +203,7 @@ impl App {
         let (tx, rx) = unbounded_channel();
         let theme = Theme::by_name(&config.theme);
         let (keymap, key_warnings) = Keymap::with_overrides(&config.key_overrides());
+        crate::ui::util::set_compact(config.compact);
         if let Some(on) = config.mac_key_symbols {
             crate::keymap::set_mac_key_symbols(on);
         }

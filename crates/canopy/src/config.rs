@@ -21,6 +21,8 @@ pub struct Config {
     pub workspace_depth: usize,
     /// User-defined commands bound to keys.
     pub custom_commands: Vec<CustomCommand>,
+    /// Tighter layout: less padding and no gaps between panels.
+    pub compact: bool,
     /// Show modifier keys as ⌃ ⌥ ⇧ (default on macOS) instead of ctrl-/alt-.
     pub mac_key_symbols: Option<bool>,
     /// Path to the GitHub CLI, if not `gh` on PATH.
@@ -64,6 +66,7 @@ impl Default for Config {
             keys: BTreeMap::new(),
             gh_program: None,
             mac_key_symbols: None,
+            compact: false,
             log_page_size: 300,
         }
     }
@@ -114,6 +117,7 @@ theme = "canopy"            # canopy | catppuccin | gruvbox | nord | light
 nerd_font = false           # true if your terminal font has Nerd Font glyphs
 teach_mode = true           # show the git command behind every action
 confirm_destructive = true
+compact = false             # true: tighter layout, no gaps between panels
 workspace_dirs = ["~/code"] # scanned by the Workspace view (tab 6)
 workspace_depth = 3
 
