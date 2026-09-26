@@ -13,6 +13,7 @@ use crate::textarea::TextArea;
 use crate::theme::Theme;
 use crate::views::diff;
 use canopy_git::parse::bisect::BisectStep;
+use canopy_git::parse::submodule::SubmoduleState;
 
 /// The key context for the current screen (and Branches sub-view).
 pub fn screen_ctx(app: &App) -> Ctx {
@@ -20,6 +21,7 @@ pub fn screen_ctx(app: &App) -> Ctx {
         (Screen::Branches, RefsView::Tags) => Ctx::Tags,
         (Screen::Branches, RefsView::Remotes) => Ctx::Remotes,
         (Screen::Branches, RefsView::Worktrees) => Ctx::Worktrees,
+        (Screen::Branches, RefsView::Submodules) => Ctx::Submodules,
         (s, _) => Ctx::Screen(s),
     }
 }
@@ -729,6 +731,26 @@ fn repo_action(app: &mut App, action: Action) {
         }
         PruneWorktrees => {
             app.run_op("Prune worktrees", Then::Refresh, async move { git.prune_worktrees().await });
+        }
+        OpenSubmodule => {
+            let Some(s) = app.selected_submodule().cloned() else { return };
+            if s.state == SubmoduleState::Uninitialized {
+                app.toast(Level::Info, "Not checked out yet: press u to initialize it first");
+            } else {
+                app.open_repo(git.repo.root.join(&s.path));
+            }
+        }
+        UpdateSubmodule => {
+            let Some(s) = app.selected_submodule().cloned() else { return };
+            let path = s.path.clone();
+            app.run_op(format!("Update {path}"), Then::Refresh, async move { git.submodule_update(Some(&path)).await });
+        }
+        UpdateAllSubmodules => {
+            if app.data.submodules.is_empty() {
+                app.toast(Level::Info, "This repository has no submodules");
+                return;
+            }
+            app.run_op("Update all submodules", Then::Refresh, async move { git.submodule_update(None).await });
         }
         StashApply | StashPop => {
             let Some(s) = app.data.stashes.get(app.selected(Screen::Stash)).cloned() else { return };

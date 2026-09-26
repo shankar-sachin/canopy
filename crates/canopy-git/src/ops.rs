@@ -472,6 +472,25 @@ impl Git {
         self.run(&["bisect", "reset"]).await
     }
 
+    pub async fn submodules(&self) -> Result<Vec<crate::parse::submodule::Submodule>> {
+        // No .gitmodules means no submodules; skip spawning git.
+        if !self.repo.root.join(".gitmodules").exists() {
+            return Ok(Vec::new());
+        }
+        let out = self.run(&["submodule", "status", "--recursive"]).await?;
+        Ok(crate::parse::submodule::parse(&out.stdout))
+    }
+
+    /// Initialize (if needed) and check out the recorded commit of one
+    /// submodule, or all of them with `None`, recursively.
+    pub async fn submodule_update(&self, path: Option<&str>) -> Result<Output> {
+        let mut args = vec!["submodule", "update", "--init", "--recursive"];
+        if let Some(p) = path {
+            args.extend(["--", p]);
+        }
+        self.run(&args).await
+    }
+
     pub async fn worktrees(&self) -> Result<Vec<crate::parse::worktree::Worktree>> {
         let out = self.run(&["worktree", "list", "--porcelain"]).await?;
         Ok(crate::parse::worktree::parse(&out.stdout))

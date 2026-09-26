@@ -55,6 +55,7 @@ pub enum Ctx {
     Tags,
     Remotes,
     Worktrees,
+    Submodules,
     /// The conflict panel on the Changes tab.
     Conflict,
 }
@@ -67,10 +68,12 @@ pub enum RefsView {
     Tags,
     Remotes,
     Worktrees,
+    Submodules,
 }
 
 impl RefsView {
-    pub const ALL: [RefsView; 4] = [RefsView::Branches, RefsView::Tags, RefsView::Remotes, RefsView::Worktrees];
+    pub const ALL: [RefsView; 5] =
+        [RefsView::Branches, RefsView::Tags, RefsView::Remotes, RefsView::Worktrees, RefsView::Submodules];
 
     pub fn title(self) -> &'static str {
         match self {
@@ -78,6 +81,7 @@ impl RefsView {
             RefsView::Tags => "Tags",
             RefsView::Remotes => "Remotes",
             RefsView::Worktrees => "Worktrees",
+            RefsView::Submodules => "Submodules",
         }
     }
 }
@@ -178,6 +182,9 @@ pub enum Action {
     NewWorktree,
     RemoveWorktree,
     PruneWorktrees,
+    OpenSubmodule,
+    UpdateSubmodule,
+    UpdateAllSubmodules,
     // Conflicts / in-progress operations
     TakeOurs,
     TakeTheirs,
@@ -283,6 +290,9 @@ impl Action {
             NewWorktree => "new worktree for a branch",
             RemoveWorktree => "remove worktree",
             PruneWorktrees => "prune missing worktrees",
+            OpenSubmodule => "open submodule in Canopy",
+            UpdateSubmodule => "update submodule to recorded commit",
+            UpdateAllSubmodules => "update all submodules",
             Custom(_) => "custom command",
         }
     }
@@ -344,6 +354,9 @@ impl Action {
             NewWorktree => "new",
             RemoveWorktree => "remove",
             PruneWorktrees => "prune",
+            OpenSubmodule => "open",
+            UpdateSubmodule => "update",
+            UpdateAllSubmodules => "update all",
             ToggleSideBySide => "split",
             _ => self.label(),
         }
@@ -486,6 +499,14 @@ pub static WORKTREES: &[Binding] = &[
     b(&["["], Action::PrevRefsView, false),
 ];
 
+pub static SUBMODULES: &[Binding] = &[
+    b(&["enter", "space"], Action::OpenSubmodule, true),
+    b(&["u"], Action::UpdateSubmodule, true),
+    b(&["U"], Action::UpdateAllSubmodules, true),
+    b(&["]"], Action::NextRefsView, true),
+    b(&["["], Action::PrevRefsView, false),
+];
+
 pub static TAGS: &[Binding] = &[
     b(&["space", "enter"], Action::CheckoutTag, true),
     b(&["n"], Action::NewTag, true),
@@ -521,6 +542,7 @@ pub fn defaults(ctx: Ctx) -> &'static [Binding] {
         Ctx::Conflict => CONFLICT,
         Ctx::Remotes => REMOTES,
         Ctx::Worktrees => WORKTREES,
+        Ctx::Submodules => SUBMODULES,
     }
 }
 
@@ -554,7 +576,7 @@ pub fn key_name(ev: &KeyEvent) -> String {
     }
 }
 
-pub const ALL_CTX: [Ctx; 13] = [
+pub const ALL_CTX: [Ctx; 14] = [
     Ctx::Global,
     Ctx::Diff,
     Ctx::Screen(Screen::Home),
@@ -567,6 +589,7 @@ pub const ALL_CTX: [Ctx; 13] = [
     Ctx::Tags,
     Ctx::Remotes,
     Ctx::Worktrees,
+    Ctx::Submodules,
     Ctx::Conflict,
 ];
 

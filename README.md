@@ -37,7 +37,7 @@ canopy -w ~/code       # workspace view: every repo under ~/code
 | **1 Home** | Branch and sync status, "next steps" suggestions, recent commits with a graph, activity, branches |
 | **2 Changes** | Staged / unstaged / conflicted files with a live diff. Stage files, hunks, or single lines |
 | **3 History** | Commit graph with search. Checkout, cherry-pick, revert, reset, tag, fixup, interactive rebase |
-| **4 Branches** | Branches, tags, remotes, and worktrees (`[` / `]` to switch). Checkout, create, rename, delete, merge, rebase; tag and push tags; add and edit remotes; open a branch in its own worktree folder |
+| **4 Branches** | Branches, tags, remotes, worktrees, and submodules (`[` / `]` to switch). Checkout, create, rename, delete, merge, rebase; tag and push tags; add and edit remotes; open a branch in its own worktree folder |
 | **5 Stash** | Apply, pop, drop, and preview stashes |
 | **6 Workspace** | Every repo in your workspace dirs: branch, dirty state, sync. Open any, or fetch them all |
 | **7 Reflog** | Everywhere HEAD has been: your safety net for recovering anything |
@@ -118,7 +118,7 @@ crates/canopy       the TUI (Ratatui): app loop, screens, keymap, themes
 - [x] File history and blame
 - [x] Worktrees
 - [x] Bisect
-- [ ] Submodules
+- [x] Submodules
 
 ## Develop
 

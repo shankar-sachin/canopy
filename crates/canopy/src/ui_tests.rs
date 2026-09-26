@@ -580,3 +580,39 @@ async fn bisect_flow_finds_culprit() {
     assert_eq!(app.selected_commit().unwrap().subject, "c5");
     assert_eq!(app.current_branch(), Some("main"));
 }
+
+#[tokio::test]
+async fn submodules_view() {
+    let lib = TempDir::new().unwrap();
+    sh(lib.path(), "git init -q -b main && git config user.name T && git config user.email t@t.io && echo v1 > lib.txt && git add -A && git commit -qm v1");
+    let dir = TempDir::new().unwrap();
+    sh(
+        dir.path(),
+        &format!(
+            "git init -q -b main && git config user.name T && git config user.email t@t.io && \
+             git -c protocol.file.allow=always submodule add -q {} vendor/lib && git commit -qm 'add lib'",
+            lib.path().display()
+        ),
+    );
+    let mut app = app_for(dir.path()).await;
+    press(&mut app, KeyCode::Char('4')).await;
+    for _ in 0..4 {
+        press(&mut app, KeyCode::Char(']')).await;
+    }
+    let s = render(&mut app, 130, 24);
+    assert!(s.contains("vendor/lib") && s.contains("✓ in sync"), "{s}");
+
+    // Move the submodule; it shows as moved, then u restores it.
+    sh(&dir.path().join("vendor/lib"), "echo v2 > lib.txt && git -c user.name=T -c user.email=t@t.io commit -qam v2");
+    app.refresh();
+    app.settle().await;
+    let s = render(&mut app, 130, 24);
+    assert!(s.contains("● moved") && s.contains("Press u"), "{s}");
+    press(&mut app, KeyCode::Char('u')).await;
+    let s = render(&mut app, 130, 24);
+    assert!(s.contains("✓ in sync"), "{s}");
+
+    // Open it in Canopy.
+    press(&mut app, KeyCode::Enter).await;
+    assert!(app.git.as_ref().unwrap().repo.root.ends_with("vendor/lib"));
+}

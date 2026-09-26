@@ -571,14 +571,26 @@ fn log(f: &mut Frame, area: Rect, app: &mut App) {
 // -------------------------------------------------------------- branches
 
 /// Panel title with a Branches · Tags · Remotes switcher and a summary.
-fn refs_title<'a>(app: &App, theme: &Theme, summary: String) -> Line<'a> {
+/// Panel title with a view switcher and a summary. Shows every view name
+/// when it fits in `width`, otherwise a compact `‹ Tags 2/5 ›`.
+fn refs_title<'a>(app: &App, theme: &Theme, summary: String, width: u16) -> Line<'a> {
+    let names: usize = RefsView::ALL.iter().map(|v| v.title().len() + 3).sum();
+    let full = names + summary.chars().count() + 6 <= width as usize;
     let mut spans = vec![Span::raw(" ")];
-    for (i, v) in RefsView::ALL.iter().enumerate() {
-        if i > 0 {
-            spans.push(Span::styled(" · ", theme.muted()));
+    if full {
+        for (i, v) in RefsView::ALL.iter().enumerate() {
+            if i > 0 {
+                spans.push(Span::styled(" · ", theme.muted()));
+            }
+            let style =
+                if *v == app.refs_view { theme.accent().add_modifier(Modifier::UNDERLINED) } else { theme.muted() };
+            spans.push(Span::styled(v.title(), style));
         }
-        let style = if *v == app.refs_view { theme.accent().add_modifier(Modifier::UNDERLINED) } else { theme.muted() };
-        spans.push(Span::styled(v.title(), style));
+    } else {
+        let i = RefsView::ALL.iter().position(|v| *v == app.refs_view).unwrap_or(0);
+        spans.push(Span::styled("‹ ", theme.muted()));
+        spans.push(Span::styled(app.refs_view.title(), theme.accent()));
+        spans.push(Span::styled(format!(" {}/{} ›", i + 1, RefsView::ALL.len()), theme.muted()));
     }
     spans.push(Span::styled(format!("  {summary} "), theme.muted()));
     Line::from(spans)
@@ -590,14 +602,63 @@ fn branches(f: &mut Frame, area: Rect, app: &mut App) {
         RefsView::Tags => tags(f, area, app),
         RefsView::Remotes => remotes(f, area, app),
         RefsView::Worktrees => worktrees(f, area, app),
+        RefsView::Submodules => submodules(f, area, app),
     }
+}
+
+fn submodules(f: &mut Frame, area: Rect, app: &mut App) {
+    use canopy_git::parse::submodule::SubmoduleState::*;
+    let theme = app.theme.clone();
+    let (la, da) = split(area, 50);
+    let focused = app.focus == Focus::List;
+    let title = refs_title(app, &theme, format!("{} submodules", app.data.submodules.len()), la.width);
+    if app.data.submodules.is_empty() {
+        let lines = vec![
+            Line::styled("No submodules.", theme.muted()),
+            Line::styled("A submodule is another git repository embedded at a", theme.muted()),
+            Line::styled("pinned commit inside this one (added with", theme.muted()),
+            Line::styled("`git submodule add <url> <path>`).", theme.muted()),
+        ];
+        f.render_widget(Paragraph::new(lines).block(panel(&theme, title, focused)), la);
+        diff::draw(f, da, app);
+        return;
+    }
+    let rows: Vec<Row> = app
+        .data
+        .submodules
+        .iter()
+        .map(|s| {
+            let state = match s.state {
+                InSync => Span::styled("✓ in sync", theme.fg(theme.added)),
+                Uninitialized => Span::styled("not checked out", theme.muted()),
+                Modified => Span::styled("● moved", theme.fg(theme.modified)),
+                Conflict => Span::styled("! conflict", theme.fg(theme.conflict)),
+            };
+            Row::new(vec![
+                Cell::from(Span::styled(s.path.clone(), theme.fg(theme.fg).add_modifier(Modifier::BOLD))),
+                Cell::from(Span::styled(s.oid.get(..7).unwrap_or(&s.oid).to_string(), theme.fg(theme.hash))),
+                Cell::from(Span::styled(s.describe.clone().unwrap_or_default(), theme.fg(theme.tag))),
+                Cell::from(state),
+            ])
+        })
+        .collect();
+    let table =
+        Table::new(rows, [Constraint::Fill(1), Constraint::Length(8), Constraint::Length(16), Constraint::Length(16)])
+            .column_spacing(1)
+            .block(panel(&theme, title, focused))
+            .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
+    let sel = app.selected(Screen::Branches);
+    let mut st = TableState::default().with_offset(app.list(Screen::Branches).offset()).with_selected(Some(sel));
+    f.render_stateful_widget(table, la, &mut st);
+    *app.list(Screen::Branches).offset_mut() = st.offset();
+    diff::draw(f, da, app);
 }
 
 fn worktrees(f: &mut Frame, area: Rect, app: &mut App) {
     let theme = app.theme.clone();
     let (la, da) = split(area, 50);
     let focused = app.focus == Focus::List;
-    let title = refs_title(app, &theme, format!("{} worktrees", app.data.worktrees.len()));
+    let title = refs_title(app, &theme, format!("{} worktrees", app.data.worktrees.len()), la.width);
     let current = app.git.as_ref().map(|g| g.repo.root.clone());
     let rows: Vec<Row> = app
         .data
@@ -647,7 +708,7 @@ fn tags(f: &mut Frame, area: Rect, app: &mut App) {
     let vis = app.visible_tags();
     let (la, da) = split(area, 50);
     let focused = app.focus == Focus::List;
-    let title = refs_title(app, &theme, format!("{} tags", app.data.tags.len()));
+    let title = refs_title(app, &theme, format!("{} tags", app.data.tags.len()), la.width);
     if vis.is_empty() {
         let msg = if app.data.tags.is_empty() {
             "No tags yet. Tags mark releases: press n to tag HEAD."
@@ -688,7 +749,7 @@ fn remotes(f: &mut Frame, area: Rect, app: &mut App) {
     let theme = app.theme.clone();
     let (la, da) = split(area, 50);
     let focused = app.focus == Focus::List;
-    let title = refs_title(app, &theme, format!("{} remotes", app.data.remotes.len()));
+    let title = refs_title(app, &theme, format!("{} remotes", app.data.remotes.len()), la.width);
     if app.data.remotes.is_empty() {
         let lines = vec![
             Line::styled("No remotes yet.", theme.muted()),
@@ -792,7 +853,7 @@ fn branch_list(f: &mut Frame, area: Rect, app: &mut App) {
     .column_spacing(1)
     .block(panel(
         &theme,
-        refs_title(app, &theme, format!("{nl} local · {} remote", app.data.branches.len() - nl)),
+        refs_title(app, &theme, format!("{nl} local · {} remote", app.data.branches.len() - nl), la.width),
         focused,
     ))
     .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });

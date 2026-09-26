@@ -35,6 +35,7 @@ pub struct Snapshot {
     pub reflog: Vec<ReflogEntry>,
     pub state: Option<RepoState>,
     pub worktrees: Vec<canopy_git::parse::worktree::Worktree>,
+    pub submodules: Vec<canopy_git::parse::submodule::Submodule>,
     /// How many commits were requested; fewer means we reached the root.
     pub log_limit: usize,
 }
@@ -310,6 +311,7 @@ impl App {
                 RefsView::Tags => self.visible_tags().len(),
                 RefsView::Remotes => self.data.remotes.len(),
                 RefsView::Worktrees => self.data.worktrees.len(),
+                RefsView::Submodules => self.data.submodules.len(),
             },
             Screen::Stash => self.data.stashes.len(),
             Screen::Workspace => self.visible_workspace().len(),
@@ -349,6 +351,13 @@ impl App {
             return None;
         }
         self.data.worktrees.get(self.selected(Screen::Branches))
+    }
+
+    pub fn selected_submodule(&self) -> Option<&canopy_git::parse::submodule::Submodule> {
+        if self.refs_view != RefsView::Submodules {
+            return None;
+        }
+        self.data.submodules.get(self.selected(Screen::Branches))
     }
 
     pub fn selected_branch(&self) -> Option<&Branch> {
@@ -403,7 +412,7 @@ impl App {
         let path = self.log_path.clone();
         self.spawn(async move {
             let q = LogQuery { limit, follow: path.is_some(), path, ..Default::default() };
-            let (status, log, branches, stashes, remotes, tags, reflog, worktrees) = tokio::join!(
+            let (status, log, branches, stashes, remotes, tags, reflog, worktrees, submodules) = tokio::join!(
                 git.status(),
                 git.log(&q),
                 git.branches(),
@@ -412,6 +421,7 @@ impl App {
                 git.tags(),
                 git.reflog(200),
                 git.worktrees(),
+                git.submodules(),
             );
             let snap = (|| -> Result<Snapshot, GitError> {
                 Ok(Snapshot {
@@ -423,6 +433,7 @@ impl App {
                     tags: tags.unwrap_or_default(),
                     reflog: reflog.unwrap_or_default(),
                     worktrees: worktrees.unwrap_or_default(),
+                    submodules: submodules.unwrap_or_default(),
                     state: Some(git.state()),
                     log_limit: limit,
                 })
