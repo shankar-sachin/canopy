@@ -22,6 +22,11 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+      - name: Install the desktop app's Linux libraries (WebKitGTK)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev librsvg2-dev xvfb
       - name: Configure git for tests
         run: |
           git config --global user.name "CI"
@@ -32,6 +37,13 @@ jobs:
       - run: cargo test --workspace --no-fail-fast
       - name: Run the binary
         run: cargo run --release -- --version
+      # Opens the desktop app on this repo, renders Home, and quits.
+      - name: Desktop app smoke test (macOS)
+        if: runner.os == 'macOS'
+        run: cargo run -p canopy-desktop -- --smoke .
+      - name: Desktop app smoke test (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a cargo run -p canopy-desktop -- --smoke .
 
   # Releases ship a Windows on Arm build; make sure it still builds.
   windows-arm64:

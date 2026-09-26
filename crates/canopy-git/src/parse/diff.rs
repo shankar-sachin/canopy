@@ -117,6 +117,7 @@ pub fn parse_hunk_header(line: &str) -> Option<Hunk> {
 
 /// Which way a patch will be applied.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum PatchMode {
     /// Stage selected lines from an unstaged diff (`git apply --cached`).
     Stage,

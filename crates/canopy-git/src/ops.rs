@@ -8,6 +8,7 @@ use crate::model::*;
 use crate::parse::{self, diff::PatchMode};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ResetMode {
     Soft,
     Mixed,
@@ -25,6 +26,7 @@ impl ResetMode {
 }
 
 #[derive(Debug, Clone, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LogQuery {
     pub rev: Option<String>,
     pub all: bool,
@@ -38,6 +40,7 @@ pub struct LogQuery {
 }
 
 #[derive(Debug, Clone, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CommitOpts {
     pub amend: bool,
     pub signoff: bool,

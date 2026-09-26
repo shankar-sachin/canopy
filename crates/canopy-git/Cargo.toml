@@ -11,6 +11,11 @@ authors.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
+serde = { version = "1.0.229", features = ["derive"], optional = true }
+
+[features]
+# Serialize/Deserialize on the models, for the desktop app.
+serde = ["dep:serde"]
 
 [dev-dependencies]
 tempfile.workspace = true

@@ -1,6 +1,9 @@
 [workspace]
 resolver = "2"
-members = ["crates/canopy", "crates/canopy-git", "crates/canopy-gh"]
+members = ["crates/canopy", "crates/canopy-git", "crates/canopy-gh", "crates/canopy-gui"]
+# Plain `cargo build` / `cargo run` stay on the terminal app; the desktop app
+# builds with `-p canopy-desktop` (or `--workspace`).
+default-members = ["crates/canopy", "crates/canopy-git", "crates/canopy-gh"]
 
 [workspace.package]
 version = "1.0.1"
