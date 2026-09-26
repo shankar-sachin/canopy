@@ -228,17 +228,17 @@ function render() {
   const page = PAGES[state.page];
   // Pages with their own state (like a half-written commit message) update
   // in place instead of being redrawn.
-  if (page.update && view.dataset.page === state.page) {
+  if (page.update && view.dataset.shown === state.page) {
     page.update(o, view);
     return;
   }
-  const same = view.dataset.page === state.page;
+  const same = view.dataset.shown === state.page;
   const top = same ? view.scrollTop : 0;
   // A new page gets a fresh element, so listeners from the last one go away.
   const fresh = same ? view : view.cloneNode(false);
   fresh.className = "view" + (page.full ? " full" : "");
   fresh.innerHTML = page.render(o);
-  fresh.dataset.page = state.page;
+  fresh.dataset.shown = state.page;
   if (fresh !== view) view.replaceWith(fresh);
   fresh.scrollTop = top;
   if (!same) page.mounted?.(o, fresh);
@@ -247,7 +247,7 @@ function render() {
 function go(page) {
   if (!PAGES[page]) return;
   state.page = page;
-  delete $("#view").dataset.page;
+  delete $("#view").dataset.shown;
   render();
 }
 
@@ -488,7 +488,9 @@ async function refresh({ quiet = false } = {}) {
 // ---------------------------------------------------------------- events
 
 document.addEventListener("click", (e) => {
-  const t = e.target.closest("[data-page],[data-action],[data-forget],[data-path],[data-theme-choice]");
+  // Only the sidebar links, "next steps" buttons and the recent-repo list;
+  // page content handles its own clicks.
+  const t = e.target.closest(".nav-item[data-page],.step [data-action],[data-forget],.recent-item[data-path],[data-theme-choice]");
   if (!t) return;
   if (t.dataset.forget) {
     e.stopPropagation();
@@ -572,6 +574,16 @@ async function smoke(path) {
     const files = grab(".frow .fname");
     const lines = document.querySelectorAll(".dl").length;
     const changesOk = files.length ? lines > 0 : !!document.querySelector(".clean");
+    // Clicking into the commit box keeps it (and what you typed): a click in
+    // the page must not redraw the page.
+    const view0 = $("#view");
+    const summary = $("#c-summary");
+    summary.focus();
+    summary.value = "typed";
+    summary.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 50));
+    const typingOk = $("#view") === view0 && $("#c-summary") === summary && summary.value === "typed";
+    summary.value = "";
     const wait = async (sel) => {
       for (let i = 0; i < 50 && !document.querySelector(sel); i++) await new Promise((r) => setTimeout(r, 100));
       return document.querySelectorAll(sel).length;
@@ -593,8 +605,8 @@ async function smoke(path) {
     const github = gh.status?.state === "ready" ? `${gh.prs.list?.length ?? "?"} open pull requests` : `setup card (${gh.status?.state})`;
     const text = [...home, `changes: ${files.join(", ") || "(clean)"}`, `diff lines: ${lines}`,
       `history: ${commits} commits, ${graphs} graph rows, details ${detail ? "loaded" : "missing"}`,
-      `branches: ${branches} rows`, `stash: ${stashes} stashes`, `github: ${github}`].join("\n");
-    const ok = !!home.length && changesOk
+      `branches: ${branches} rows`, `stash: ${stashes} stashes`, `github: ${github}`, `commit box keeps focus: ${typingOk}`].join("\n");
+    const ok = !!home.length && changesOk && typingOk
       && commits > 0 && graphs === commits && detail > 0 && branches > 0 && stash > 0
       && !!gh.status && (gh.status.state !== "ready" || !!gh.prs.list);
     await invoke("smoke_report", { ok, text });

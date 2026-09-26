@@ -449,7 +449,7 @@ function ghHomeCard() {
       if (!ready) return;
       gh.home = await invoke("gh_home").catch(() => null);
       if (state.page === "home") {
-        delete $("#view").dataset.page;
+        delete $("#view").dataset.shown;
         render();
       }
     });

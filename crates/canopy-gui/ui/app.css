@@ -544,3 +544,14 @@ html[data-theme="light"] .dl.add .code, html[data-theme="light"] .dl.add .sign {
 .scope { font: 11.5px var(--mono); padding: 1px 7px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--border); }
 .abody .cmd { margin: 6px 0; }
 .abody .small { margin: 8px 0 4px; }
+
+/* ---------- scrollbars: thin and quiet, in the theme's own colors ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--muted) 26%, transparent);
+  border: 3px solid transparent; background-clip: padding-box; border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--muted) 48%, transparent); }
+::-webkit-scrollbar-thumb:active { background-color: color-mix(in srgb, var(--green) 55%, transparent); }
+::-webkit-scrollbar-button { display: none; height: 0; width: 0; }
