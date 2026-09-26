@@ -155,6 +155,7 @@ function renderHome(o) {
       <div class="card-h"><h3>Next steps</h3></div>
       <ul class="steps">${steps}</ul>
     </div>
+    ${typeof ghFailureBanner === "function" ? ghFailureBanner() : ""}
     ${typeof ghHomeCard === "function" ? ghHomeCard() : ""}
     <div class="card span-7">
       <div class="card-h"><h3>Recent commits</h3><span class="sub">${o.log.length ? esc(o.log[0].author) + " · " + ago(o.log[0].time) : ""}</span></div>

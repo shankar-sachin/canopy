@@ -9,7 +9,32 @@ const gh = {
   prs: { filter: "open", list: null, sel: null, detail: null },
   issues: { filter: "open", list: null, sel: null, detail: null },
   runs: { all: false, list: null, sel: null, jobs: null, log: null, loadedAt: 0 },
+  ai: null, // { installed, chosen } from ai_status
+  failure: undefined, // latest_failure for HEAD (null = none), undefined = not checked
+  failureFor: "",
+  failureAt: 0,
 };
+
+async function aiStatus() {
+  if (!gh.ai) gh.ai = await invoke("ai_status").catch(() => ({ installed: [], chosen: null }));
+  return gh.ai;
+}
+
+/// Write the prompt for run `id` and open the AI assistant on it.
+async function fixWithAi(id) {
+  const ai = await aiStatus();
+  if (!ai.chosen) {
+    toast("No AI assistant set up yet: install Claude Code or Codex, or pick one in Settings.");
+    return openSettings("general");
+  }
+  toast(`Asking ${ai.chosen}… gathering the failure from GitHub`);
+  try {
+    const r = await invoke("fix_with_ai", { id });
+    toast(`Opened ${r.assistant} in ${r.opened}`, { detail: state.settings.show_commands ? `prompt: ${r.prompt_file}` : "" });
+  } catch (e) {
+    toast("Couldn't open the AI assistant", { error: true, detail: String(e) });
+  }
+}
 
 const openUrl = (url) => invoke("open_url", { url }).catch((e) => toast(String(e), { error: true }));
 
@@ -246,7 +271,8 @@ function runDetailHtml() {
     <div class="gmeta">${checkIcon(RUN_ICON[run.state])}<span>${esc(run.workflowName)} #${run.number}</span><code>${esc(run.headBranch)}</code><span class="faint">${esc(run.event)} · ${ago(run.createdAt)}</span></div>
     <div class="cactions">
       <button class="btn small" data-g="open" data-url="${esc(run.url)}">Open on GitHub</button>
-      ${run.state === "failed" ? `<button class="btn small primary" data-g="run-rerun">Re-run failed jobs</button>` : ""}
+      ${run.state === "failed" ? `<button class="btn small" data-g="run-rerun">Re-run failed jobs</button>
+        <button class="btn small primary" data-g="fix-ai" title="Write a prompt from this failure and open your AI assistant with it">✦ Fix with ${esc(gh.ai?.chosen || "AI")}</button>` : ""}
     </div>
     ${jobs}${log}
   </div>`;
@@ -254,6 +280,7 @@ function runDetailHtml() {
 
 async function loadRuns() {
   if (!(await ghReady())) return drawGh("runs");
+  await aiStatus();
   try {
     gh.runs.list = await invoke("gh_runs", { all: gh.runs.all });
   } catch (e) {
@@ -401,6 +428,8 @@ async function ghAction(ns, what, el) {
     case "issue-close":
     case "issue-reopen":
       return after(await run(what === "issue-close" ? `Closed #${issue.number}` : `Reopened #${issue.number}`, "gh_op", { op: what, args: [String(issue.number)] }));
+    case "fix-ai":
+      return fixWithAi(gh.runs.sel);
     case "run-rerun":
       return after(await run("Re-running failed jobs", "gh_op", { op: "run-rerun", args: [String(gh.runs.sel)] }));
   }
@@ -440,6 +469,45 @@ addPage("issues", ghPage("issues", "Issues", "issue"), 1);
 addPage("runs", ghPage("runs", "Actions", "actions"), 1);
 
 // ---------------------------------------------------------------- Home card
+
+/// "Canopy found an error in your latest commit": shown on Home when CI failed
+/// for the commit you're on. Checked when HEAD moves, and every minute.
+function ghFailureBanner() {
+  const head = state.overview?.status.branch.oid || "";
+  if (gh.failureFor !== head || Date.now() - gh.failureAt > 60000) {
+    gh.failureFor = head;
+    gh.failureAt = Date.now();
+    ghReady().then(async (ready) => {
+      if (!ready) return;
+      const [f] = await Promise.all([invoke("latest_failure").catch(() => null), aiStatus()]);
+      const changed = JSON.stringify(f) !== JSON.stringify(gh.failure);
+      gh.failure = f;
+      if (changed && state.page === "home") {
+        delete $("#view").dataset.shown;
+        render();
+      }
+    });
+  }
+  const f = gh.failure;
+  if (!f) return "";
+  const who = gh.ai?.chosen;
+  return `<div class="card span-12 fail-banner">
+    <div class="fail-icon">✗</div>
+    <div class="fail-text"><b>Canopy found an error in your latest commit.</b><p>${esc(f.headline)} <span class="faint">(${esc(f.workflow)})</span></p></div>
+    <div class="fail-actions">
+      <button class="btn small" data-fail="open" data-url="${esc(f.url)}">See the run</button>
+      ${who ? `<button class="btn small primary" data-fail="fix" title="Write a prompt from this failure and open ${esc(who)} with it">✦ Fix with ${esc(who)}</button>`
+            : `<button class="btn small" data-fail="setup">Set up an AI assistant</button>`}
+    </div></div>`;
+}
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-fail]");
+  if (!b) return;
+  if (b.dataset.fail === "open") openUrl(b.dataset.url);
+  else if (b.dataset.fail === "fix") fixWithAi(gh.failure.run_id);
+  else openSettings("general");
+});
 
 /// Drawn by Home from the cache; refreshed in the background every minute.
 function ghHomeCard() {

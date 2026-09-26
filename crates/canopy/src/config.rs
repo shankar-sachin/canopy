@@ -35,6 +35,11 @@ pub struct Config {
     pub log_page_size: usize,
     /// Now and then, mention Canopy Desktop when Canopy starts.
     pub desktop_tip: bool,
+    /// "Fix with AI" (A on a failed run): auto, claude, codex, off, or a
+    /// command line with {prompt} where the prompt goes.
+    pub ai: String,
+    /// Where it opens: tab (a new tab when the terminal can), window, here.
+    pub ai_open: String,
 }
 
 /// `commit = "C"` or `commit = ["C", "ctrl-s"]`
@@ -74,6 +79,8 @@ impl Default for Config {
             splash: true,
             log_page_size: 300,
             desktop_tip: true,
+            ai: "auto".into(),
+            ai_open: "tab".into(),
         }
     }
 }
@@ -126,6 +133,8 @@ confirm_destructive = true
 compact = false             # true: tighter layout, no gaps between panels
 splash = true               # the tree animation when Canopy starts
 desktop_tip = true          # now and then, mention Canopy Desktop at startup
+ai = "auto"                 # Fix with AI (A on a failed run): auto | claude | codex | off | "my-ai {prompt}"
+ai_open = "tab"             # where it opens: tab | window | here
 workspace_dirs = ["~/code"] # scanned by the Workspace view (tab 6)
 workspace_depth = 3
 

@@ -86,6 +86,20 @@ function updateHtml() {
     ${status}`;
 }
 
+/// "Fix with AI": which assistant opens when CI fails.
+function aiRow(s) {
+  const ai = gh.ai || { installed: [] };
+  const known = ["auto", "claude", "codex", "off"];
+  const custom = !known.includes(s.ai_assistant);
+  const detected = ai.installed.length ? `found: ${ai.installed.join(", ")}` : "none found on this computer";
+  const opts = [["auto", `Auto (${ai.installed[0] || "none found"})`], ["claude", "Claude Code"], ["codex", "Codex"], ["custom", "Custom command…"], ["off", "Off"]];
+  return row("AI assistant",
+    `When CI fails, "Fix with AI" writes a prompt from the error and opens this in a new terminal window (${esc(detected)}).`,
+    `<select class="input small-select" id="ai-pick">${opts.map(([v, l]) => `<option value="${v}"${(custom ? "custom" : s.ai_assistant) === v ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`)
+    + (custom ? `<div class="srow2"><div><b>Command</b><p>Your assistant's command line. <code>{prompt}</code> marks where the prompt goes (otherwise it's added at the end).</p></div>
+       <div class="sctl"><input class="input" id="ai-cmd" value="${esc(s.ai_assistant === "custom" ? "" : s.ai_assistant)}" placeholder="aider --message {prompt}" spellcheck="false"></div></div>` : "");
+}
+
 function settingsBody() {
   const s = state.settings;
   switch (setts.section) {
@@ -95,6 +109,7 @@ function settingsBody() {
         ${row("Show git commands", "After each action, show the git command Canopy ran, so you learn git as you go.", toggle("show_commands", s.show_commands))}
         ${row("Refresh", "How often Canopy looks for changes made outside it. It also refreshes when you switch back to the window.", seg("refresh_secs", s.refresh_secs, [[2, "2s"], [5, "5s"], [15, "15s"], [60, "1m"], [0, "Off"]]))}
         ${row("Pull", "What Pull does when your branch and the remote both have new commits. Default follows your git config (pull.rebase).", seg("pull_mode", s.pull_mode, [["default", "Default"], ["merge", "Merge"], ["rebase", "Rebase"]]))}
+        ${aiRow(s)}
         ${row("Recent repositories", "The list on the welcome screen.", `<button class="btn small" data-s2="clear-recent">Clear list</button>`)}`;
     case "updates":
       return updateHtml();
@@ -175,13 +190,27 @@ async function openSettings(section) {
         return drawSettings();
     }
   });
-  wrap.addEventListener("change", (e) => {
+  wrap.addEventListener("change", async (e) => {
     const t = e.target.closest("input[data-set]");
     if (t) saveSettings({ [t.dataset.set]: t.checked });
+    if (e.target.id === "ai-pick") {
+      const v = e.target.value;
+      await saveSettings({ ai_assistant: v === "custom" ? "custom" : v });
+      gh.ai = null;
+      await aiStatus();
+      drawSettings();
+    }
+    if (e.target.id === "ai-cmd" && e.target.value.trim()) {
+      await saveSettings({ ai_assistant: e.target.value.trim() });
+      gh.ai = null;
+      await aiStatus();
+      toast("Saved the AI assistant command");
+    }
   });
   document.addEventListener("keydown", onKey, true);
   document.body.append(wrap);
   drawSettings();
+  if (!gh.ai) aiStatus().then(drawSettings);
   if (!setts.env) {
     setts.env = await invoke("environment").catch(() => null);
     drawSettings();

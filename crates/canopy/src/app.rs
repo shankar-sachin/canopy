@@ -67,6 +67,8 @@ pub enum Msg {
     Progress(String),
     Workspace(Vec<RepoSummary>),
     RepoOpened(Result<Git, String>),
+    /// A fix-it prompt is written; open the AI assistant.
+    AiReady(Result<AiLaunch, String>),
     /// `git init` finished (setup.rs).
     SetupCreated(Result<(Git, Vec<String>), String>),
     /// Full message of HEAD, fetched to prefill the amend dialog.
@@ -129,6 +131,14 @@ pub enum Level {
     Success,
     Warn,
     Error,
+}
+
+/// What "Fix with AI" opens (see `App::launch_ai`).
+pub struct AiLaunch {
+    pub assistant: String,
+    pub root: std::path::PathBuf,
+    pub argv: Vec<String>,
+    pub headline: String,
 }
 
 pub struct Toast {
@@ -563,6 +573,33 @@ impl App {
         });
     }
 
+    /// Open the AI assistant: a new tab or window when the terminal can,
+    /// else right here (Canopy steps aside until it exits).
+    pub fn launch_ai(&mut self, l: AiLaunch) {
+        use canopy_gh::assist::{launch, Launched, OpenIn};
+        // Tests check what would open instead of opening terminals.
+        #[cfg(test)]
+        {
+            self.toast(Level::Success, format!("would run: {}", l.argv.join(" ")));
+            return;
+        }
+        #[allow(unreachable_code)]
+        let open_in = OpenIn::from_setting(&self.config.ai_open);
+        match launch(&l.root, &l.argv, open_in, true) {
+            Launched::Opened(place) => {
+                self.toast_for(Level::Success, format!("{}  Opened {} in {place}", l.headline, l.assistant), 10);
+            }
+            Launched::RunHere(argv) => {
+                let status = self
+                    .suspend(|| std::process::Command::new(&argv[0]).args(&argv[1..]).current_dir(&l.root).status());
+                if let Err(e) = status {
+                    self.toast(Level::Error, format!("Couldn't run {}: {e}", argv[0]));
+                }
+                self.refresh();
+            }
+        }
+    }
+
     /// Switch to `git` (a repository just opened or created) and load it.
     pub fn set_repo(&mut self, git: Git) {
         self.github = Default::default();
@@ -740,6 +777,13 @@ impl App {
                 self.set_repo(git);
             }
             Msg::SetupCreated(res) => crate::setup::created(self, res),
+            Msg::AiReady(res) => {
+                self.busy = None;
+                match res {
+                    Err(e) => self.toast(Level::Error, e),
+                    Ok(l) => self.launch_ai(l),
+                }
+            }
             Msg::RepoOpened(Err(e)) => self.toast(Level::Error, e),
             Msg::Blame(Ok(view)) => {
                 self.busy = None;

@@ -5,6 +5,7 @@
 //! if `gh` is missing or logged out, [`Gh::detect`] says so and the UI shows
 //! a setup card instead.
 
+pub mod assist;
 pub mod model;
 mod time;
 
@@ -59,7 +60,8 @@ const ISSUE_FIELDS: &str = "number,title,author,state,labels,url,updatedAt,comme
 const ISSUE_DETAIL_FIELDS: &str = "number,title,author,state,labels,url,updatedAt,comments,body";
 const RELEASE_FIELDS: &str = "tagName,name,publishedAt,createdAt,isLatest,isDraft,isPrerelease";
 const RELEASE_DETAIL_FIELDS: &str = "tagName,name,publishedAt,createdAt,isDraft,isPrerelease,body,url,author,assets";
-const RUN_FIELDS: &str = "databaseId,number,displayTitle,workflowName,headBranch,status,conclusion,event,createdAt,url";
+const RUN_FIELDS: &str =
+    "databaseId,number,displayTitle,workflowName,headBranch,headSha,status,conclusion,event,createdAt,url";
 
 impl Gh {
     /// A handle that runs `gh` (or `program`, for tests) in `root`.
@@ -368,6 +370,13 @@ impl Gh {
     pub async fn run_log(&self, id: u64) -> Result<String> {
         let id = id.to_string();
         Ok(self.run(&["run", "view", &id, "--log"]).await?.stdout)
+    }
+
+    /// `gh run view` as text: the summary, annotations (like why a workflow
+    /// file is invalid) and jobs.
+    pub async fn run_summary(&self, id: u64) -> Result<String> {
+        let id = id.to_string();
+        Ok(self.run(&["run", "view", &id]).await?.stdout)
     }
 
     pub async fn run_rerun_failed(&self, id: u64) -> Result<Output> {

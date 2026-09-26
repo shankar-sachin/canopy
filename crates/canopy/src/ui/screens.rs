@@ -177,7 +177,10 @@ fn suggestions(app: &App) -> Vec<Suggestion> {
         if c.failed > 0 {
             add(
                 &runs_key,
-                format!("Checks are failing on #{} ({} failed). Press {runs_key} to see why.", pr.number, c.failed),
+                format!(
+                    "Checks are failing on #{} ({} failed). Press {runs_key} to see why, then A to fix it with AI.",
+                    pr.number, c.failed
+                ),
                 2,
             );
         } else if pr.review_decision == "CHANGES_REQUESTED" {

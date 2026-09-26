@@ -210,6 +210,105 @@ pub async fn gh_op(op: String, args: Vec<String>, state: State<'_, AppState>) ->
     res.map(done).map_err(err)
 }
 
+// ------------------------------------------------------------------ fix with AI
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AiStatus {
+    /// Assistants found on this computer.
+    pub installed: Vec<String>,
+    /// The one "Fix with AI" would open, if any.
+    pub chosen: Option<String>,
+}
+
+#[tauri::command]
+pub async fn ai_status() -> AiStatus {
+    let setting = crate::settings::load().ai_assistant;
+    tauri::async_runtime::spawn_blocking(move || AiStatus {
+        installed: canopy_gh::assist::installed().iter().map(|a| a.name()).collect(),
+        chosen: canopy_gh::assist::pick(&setting).map(|a| a.name()),
+    })
+    .await
+    .unwrap_or(AiStatus { installed: vec![], chosen: None })
+}
+
+/// The latest run for the commit you're on, if it failed.
+#[derive(Debug, Clone, Serialize)]
+pub struct LatestFailure {
+    pub run_id: u64,
+    pub headline: String,
+    pub url: String,
+    pub workflow: String,
+}
+
+#[tauri::command]
+pub async fn latest_failure(state: State<'_, AppState>) -> Res<Option<LatestFailure>> {
+    let git = current(&state).await?;
+    let status = git.status().await.map_err(|e| e.to_string())?;
+    let (Some(branch), Some(head)) = (status.branch.head, status.branch.oid) else { return Ok(None) };
+    let gh = Gh::new(&git.repo.root, None);
+    let runs = gh.run_list(Some(&branch), 5).await.unwrap_or_default();
+    let Some(run) = runs.into_iter().find(|r| r.head_sha == head) else { return Ok(None) };
+    if run.state() != CheckState::Failed {
+        return Ok(None);
+    }
+    let jobs = gh.run_jobs(run.database_id).await.unwrap_or_default();
+    let f = canopy_gh::assist::Failure { branch, jobs, run: Some(run.clone()), ..Default::default() };
+    Ok(Some(LatestFailure {
+        run_id: run.database_id,
+        headline: f.headline(),
+        url: run.url,
+        workflow: run.workflow_name,
+    }))
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct FixLaunched {
+    pub assistant: String,
+    /// Where it opened, like "a new Terminal window".
+    pub opened: String,
+    /// The prompt file, relative to the repository.
+    pub prompt_file: String,
+}
+
+/// Write the fix-it prompt for run `id` and open the AI assistant on it.
+#[tauri::command]
+pub async fn fix_with_ai(id: u64, state: State<'_, AppState>) -> Res<FixLaunched> {
+    use canopy_gh::assist;
+    let git = current(&state).await?;
+    let setting = crate::settings::load().ai_assistant;
+    let assistant = tauri::async_runtime::spawn_blocking(move || assist::pick(&setting)).await.ok().flatten().ok_or(
+        "No AI assistant is set up. Install Claude Code or Codex, or choose a command in Settings → AI assistant.",
+    )?;
+    let gh = Gh::new(&git.repo.root, None);
+    let runs = gh.run_list(None, 50).await.map_err(err)?;
+    let run = runs.into_iter().find(|r| r.database_id == id).ok_or("That run wasn't found.")?;
+    let repo = match gh.detect().await {
+        GhStatus::Ready(info) => info.name_with_owner,
+        _ => git.repo.root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
+    };
+    let branch = run.head_branch.clone();
+    let failure = assist::gather(&gh, &repo, &branch, run).await;
+    let file = assist::write_prompt(&git.repo.git_dir, &failure.prompt()).map_err(|e| e.to_string())?;
+    let root = git.repo.root.clone();
+    let argv = assistant.argv(&assist::kickoff(&file, &root));
+    let launched =
+        tauri::async_runtime::spawn_blocking(move || assist::launch(&root, &argv, assist::OpenIn::Window, false))
+            .await
+            .map_err(|e| e.to_string())?;
+    let opened = match launched {
+        assist::Launched::Opened(w) => w.to_string(),
+        assist::Launched::RunHere(_) => "nothing: no terminal app was found".into(),
+    };
+    if opened.starts_with("nothing") {
+        return Err(format!("Couldn't open a terminal. The prompt is saved in {}.", file.display()));
+    }
+    Ok(FixLaunched {
+        assistant: assistant.name(),
+        opened,
+        prompt_file: file.strip_prefix(&git.repo.root).unwrap_or(&file).display().to_string(),
+    })
+}
+
 /// Open a web page in the default browser (GitHub links only).
 #[tauri::command]
 pub fn open_url(url: String) -> Res<()> {
