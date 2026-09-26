@@ -560,7 +560,9 @@ async function smoke(path) {
     const graphs = document.querySelectorAll(".hrow .graph").length;
     const detail = await wait(".cdetails .dfile, .cdetails .diff-empty");
     go("branches");
-    const branches = await wait(".brow");
+    // CI checks out a detached HEAD with no local branches: the empty
+    // state counts too.
+    const branches = await wait(".brow, .blist .diff-empty");
     go("stash");
     const stash = await wait(".srow, .clean");
     const text = [...home, `changes: ${files.join(", ") || "(clean)"}`, `diff lines: ${lines}`,
