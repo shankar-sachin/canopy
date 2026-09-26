@@ -87,19 +87,25 @@ pub fn draw(f: &mut Frame, area: Rect, app: &mut App) {
 
     // Hint about the action this diff supports.
     if focused {
-        if let Some(mode) = view.mode {
-            let verb = if mode == PatchMode::Stage { "stage" } else { "unstage" };
-            let k = |a| {
-                let key = app.keymap.key_for(&[crate::keymap::Ctx::Diff], a).unwrap_or("?");
-                crate::keymap::pretty_key(key)
-            };
-            use crate::keymap::Action;
-            let hint = format!(
-                " {} {verb} line · {} {verb} hunk · {} range ",
-                k(Action::StageLine),
-                k(Action::StageHunk),
-                k(Action::RangeSelect)
-            );
+        let k = |a| {
+            let key = app.keymap.key_for(&[crate::keymap::Ctx::Diff], a).unwrap_or("?");
+            crate::keymap::pretty_key(key)
+        };
+        use crate::keymap::Action;
+        let hint = match view.mode {
+            Some(mode) => {
+                let verb = if mode == PatchMode::Stage { "stage" } else { "unstage" };
+                Some(format!(
+                    " {} {verb} line · {} {verb} hunk · {} range ",
+                    k(Action::StageLine),
+                    k(Action::StageHunk),
+                    k(Action::RangeSelect)
+                ))
+            }
+            None if view.key.starts_with("pr:") => Some(format!(" {} comment on line ", k(Action::LineComment))),
+            None => None,
+        };
+        if let Some(hint) = hint {
             let w = hint.chars().count() as u16;
             if area.width > w + 4 {
                 let r = Rect { x: area.x + area.width - w - 2, y: area.y + area.height - 1, width: w, height: 1 };
@@ -170,6 +176,17 @@ fn render_row<'a>(view: &DiffView, row: Row, theme: &Theme, gw: usize) -> Line<'
                 Span::styled(format!(" {sign}"), style),
                 Span::styled(content, style),
             ])
+        }
+        Row::Note(n, k) => {
+            // A review comment, indented under its line: header, then text.
+            let text = view.notes[n].text[k].clone();
+            let bar = Span::styled(format!("{}│ ", " ".repeat(gw * 2 + 2)), theme.fg(theme.accent_alt));
+            let body = if k == 0 {
+                Span::styled(text, theme.fg(theme.accent_alt).add_modifier(Modifier::BOLD))
+            } else {
+                Span::styled(text, Style::default().fg(theme.fg))
+            };
+            Line::from(vec![bar, body])
         }
     }
 }
@@ -258,7 +275,14 @@ fn draw_split(f: &mut Frame, area: Rect, view: &DiffView, theme: &Theme, focused
                 }
                 i = j;
             }
+            Row::Note(n, _) if view.notes[n].right => {
+                // Comments on the new side sit under the right column.
+                let l = render_row(view, view.rows[i], theme, 0);
+                vrows.push(VRow { left: Line::default(), right: l, rows: vec![i] });
+                i += 1;
+            }
             row => {
+                let gw = if matches!(row, Row::Note(..)) { 0 } else { gw };
                 let l = render_row(view, row, theme, gw);
                 vrows.push(VRow { left: l, right: Line::default(), rows: vec![i] });
                 i += 1;

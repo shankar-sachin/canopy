@@ -103,6 +103,8 @@ pub enum Msg {
         gen: u64,
         detail: Result<Box<canopy_gh::PullRequest>, String>,
         diff: Option<String>,
+        /// Review comments on diff lines (fetched along with the diff).
+        comments: Vec<canopy_gh::ReviewComment>,
     },
     Blame(Result<crate::modal::BlameView, String>),
 }
@@ -857,13 +859,13 @@ impl App {
                     Err(e) => self.toast(Level::Error, e),
                 }
             }
-            Msg::PrDetail { gen, detail, diff } => {
+            Msg::PrDetail { gen, detail, diff, comments } => {
                 if gen != self.diff_gen || self.screen != Screen::Pulls {
                     return;
                 }
                 match detail {
                     Ok(pr) => {
-                        let mut v = crate::github::pr_view(&pr, diff.as_deref(), self.last_diff_width);
+                        let mut v = crate::github::pr_view(&pr, diff.as_deref(), &comments, self.last_diff_width);
                         if let Some(old) = self.diff.as_ref().filter(|o| o.key == v.key) {
                             v.cursor = old.cursor.min(v.rows.len().saturating_sub(1));
                         }

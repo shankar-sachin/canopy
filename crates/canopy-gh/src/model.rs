@@ -187,6 +187,28 @@ pub struct PullRequest {
     /// MERGEABLE / CONFLICTING / UNKNOWN
     #[serde(default, deserialize_with = "null_default")]
     pub mergeable: String,
+    /// Head commit (needed to comment on a line).
+    #[serde(default, deserialize_with = "null_default")]
+    pub head_ref_oid: String,
+}
+
+/// A comment on a line of a pull request's diff (REST shape).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct ReviewComment {
+    pub id: u64,
+    pub path: String,
+    /// Line in the file on `side`; `None` when the line is no longer in the diff.
+    #[serde(default)]
+    pub line: Option<u32>,
+    /// RIGHT = the new version (added or unchanged lines), LEFT = removed lines.
+    #[serde(default, deserialize_with = "null_default")]
+    pub side: String,
+    #[serde(default, deserialize_with = "null_default")]
+    pub body: String,
+    #[serde(default)]
+    pub user: Author,
+    #[serde(default, deserialize_with = "ts")]
+    pub created_at: i64,
 }
 
 impl PullRequest {

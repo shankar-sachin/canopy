@@ -14,6 +14,20 @@ pub enum Row {
     File(usize),
     Hunk(usize, usize),
     Line(usize, usize, usize),
+    /// A review comment under a line: (note, line of the note's text).
+    Note(usize, usize),
+}
+
+/// A PR review comment attached to a diff line.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Note {
+    pub file: usize,
+    /// Line number on the side the comment is on.
+    pub line: u32,
+    /// true = new side (added/unchanged lines), false = removed lines.
+    pub right: bool,
+    /// First line is "author · age", then the comment text.
+    pub text: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -32,20 +46,13 @@ pub struct DiffView {
     pub side_by_side: bool,
     /// The commit this diff shows, when it's a commit (for blame).
     pub rev: Option<String>,
+    /// Review comments shown under their lines (PR diffs).
+    pub notes: Vec<Note>,
 }
 
 impl DiffView {
     pub fn new(key: String, title: String, meta: Vec<String>, files: Vec<FileDiff>, mode: Option<PatchMode>) -> Self {
-        let mut rows: Vec<Row> = (0..meta.len()).map(Row::Meta).collect();
-        for (fi, f) in files.iter().enumerate() {
-            rows.push(Row::File(fi));
-            for (hi, h) in f.hunks.iter().enumerate() {
-                rows.push(Row::Hunk(fi, hi));
-                for li in 0..h.lines.len() {
-                    rows.push(Row::Line(fi, hi, li));
-                }
-            }
-        }
+        let rows = build_rows(meta.len(), &files, &[]);
         let mut v = DiffView {
             key,
             title,
@@ -58,12 +65,32 @@ impl DiffView {
             scroll: 0,
             side_by_side: false,
             rev: None,
+            notes: Vec::new(),
         };
         if v.mode.is_some() {
             // Start on the first change so `space` does something useful.
             v.cursor = v.rows.iter().position(|r| v.is_change(*r)).unwrap_or(0);
         }
         v
+    }
+
+    /// Show review comments under the lines they're about.
+    pub fn attach_notes(&mut self, notes: Vec<Note>) {
+        self.rows = build_rows(self.meta.len(), &self.files, &notes);
+        self.notes = notes;
+        self.snap_cursor();
+    }
+
+    /// The diff line under the cursor as (file index, line number, new side?),
+    /// for commenting on it. Removed lines are on the old side.
+    pub fn line_target(&self) -> Option<(usize, u32, bool)> {
+        let Row::Line(fi, hi, li) = *self.rows.get(self.cursor)? else { return None };
+        let l = &self.files[fi].hunks[hi].lines[li];
+        match l.kind {
+            DiffLineKind::Removed => l.old_no.map(|n| (fi, n, false)),
+            DiffLineKind::NoNewline => None,
+            _ => l.new_no.map(|n| (fi, n, true)),
+        }
     }
 
     pub fn is_change(&self, r: Row) -> bool {
@@ -134,6 +161,7 @@ impl DiffView {
     pub fn current_file(&self) -> Option<&str> {
         let fi = match self.rows.get(self.cursor)? {
             Row::File(fi) | Row::Hunk(fi, _) | Row::Line(fi, _, _) => *fi,
+            Row::Note(n, _) => self.notes[*n].file,
             Row::Meta(_) => return self.files.first().map(|f| f.new_path.as_str()),
         };
         let f = &self.files[fi];
@@ -163,6 +191,33 @@ impl DiffView {
         }
         (a, r)
     }
+}
+
+/// Rows for meta lines, then each file, hunk and line, with any review
+/// comments inserted right after the line they belong to.
+fn build_rows(meta: usize, files: &[FileDiff], notes: &[Note]) -> Vec<Row> {
+    let mut rows: Vec<Row> = (0..meta).map(Row::Meta).collect();
+    for (fi, f) in files.iter().enumerate() {
+        rows.push(Row::File(fi));
+        for (hi, h) in f.hunks.iter().enumerate() {
+            rows.push(Row::Hunk(fi, hi));
+            for (li, l) in h.lines.iter().enumerate() {
+                rows.push(Row::Line(fi, hi, li));
+                let (new, old) = match l.kind {
+                    DiffLineKind::Added | DiffLineKind::Context => (l.new_no, None),
+                    DiffLineKind::Removed => (None, l.old_no),
+                    DiffLineKind::NoNewline => (None, None),
+                };
+                for (ni, n) in notes.iter().enumerate() {
+                    let at = if n.right { new } else { old };
+                    if n.file == fi && at == Some(n.line) {
+                        rows.extend((0..n.text.len()).map(|k| Row::Note(ni, k)));
+                    }
+                }
+            }
+        }
+    }
+    rows
 }
 
 fn remote_view(app: &App, r: &canopy_git::Remote) -> DiffView {

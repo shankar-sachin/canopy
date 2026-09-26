@@ -199,6 +199,7 @@ pub enum Action {
     PrCreate,
     PrReview,
     Comment,
+    LineComment,
     PrMerge,
     CloseItem,
     IssueCreate,
@@ -328,6 +329,7 @@ impl Action {
             PrCreate => "create a pull request for this branch",
             PrReview => "review: approve / comment / request changes",
             Comment => "comment",
+            LineComment => "comment on this line of a pull request",
             IssueCreate => "new issue",
             RerunFailed => "re-run failed jobs",
             ReleaseCreate => "create a release",
@@ -419,6 +421,7 @@ impl Action {
             MarkAllRead => "all read",
             ToggleUnread => "unread/all",
             Comment => "comment",
+            LineComment => "comment on line",
             CloseItem => "close",
             OpenInBrowser => "browser",
             CycleFilter => "filter",
@@ -525,6 +528,7 @@ pub static DIFF: &[Binding] = &[
     b(&["h", "left"], Action::Back, true),
     b(&["L"], Action::FileHistory, false),
     b(&["B"], Action::Blame, false),
+    b(&["C"], Action::LineComment, false),
 ];
 
 pub static LOG: &[Binding] = &[

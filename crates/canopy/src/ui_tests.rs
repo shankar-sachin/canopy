@@ -643,7 +643,7 @@ case "$1 $2" in
   "run list") cat "{f}/run_list.json" ;;
   "release list") cat "{f}/release_list.json" ;;
   "release view") cat "{f}/release_view.json" ;;
-  "api --method") case "$*" in *GET*notifications*) cat "{f}/notifications.json" ;; *) : ;; esac ;;
+  "api --method") case "$*" in *GET*notifications*) cat "{f}/notifications.json" ;; *GET*pulls*comments*) cat "{f}/review_comments.json" ;; *) : ;; esac ;;
   "run view") case "$*" in *--log-failed*) printf 'check (ubuntu)\tRun cargo test\t2026-09-26T00:32:32.4188517Z thread main panicked at src/lib.rs:10\n' ;; *) cat "{f}/run_jobs.json" ;; esac ;;
   "pr diff") printf 'diff --git a/csv.rs b/csv.rs\n--- a/csv.rs\n+++ b/csv.rs\n@@ -0,0 +1 @@\n+fn parse() {{}}\n' ;;
   *) : ;;
@@ -728,6 +728,63 @@ async fn pull_requests_tab() {
     // Checkout.
     press(&mut app, KeyCode::Char(' ')).await;
     assert!(gh_calls(bin.path()).contains(&"pr checkout 12".to_string()));
+}
+
+#[tokio::test]
+async fn pr_line_comments() {
+    use crate::views::diff::Row;
+    let dir = demo_repo();
+    let bin = TempDir::new().unwrap();
+    let gh = fake_gh(bin.path(), true);
+    let mut app = github_app(dir.path(), &gh).await;
+    press(&mut app, KeyCode::Char('8')).await;
+
+    press(&mut app, KeyCode::Char('D')).await;
+    let s = render(&mut app, 140, 40);
+    // The review comment sits under its line; the outdated one is left out.
+    assert!(s.contains("bob · ") && s.contains("Should this handle quoted fields?"), "{s}");
+    assert!(!s.contains("(outdated)"), "{s}");
+    let v = app.diff.as_ref().unwrap();
+    let line = v.rows.iter().position(|r| matches!(r, Row::Line(..))).unwrap();
+    assert!(matches!(v.rows[line + 1], Row::Note(0, 0)), "note right under its line: {:?}", v.rows);
+
+    // Enter focuses the diff; C on the added line comments on csv.rs:1.
+    press(&mut app, KeyCode::Enter).await;
+    app.diff.as_mut().unwrap().cursor = line;
+    let s = render(&mut app, 140, 40);
+    assert!(s.contains("comment on line"), "hint: {s}");
+    press(&mut app, KeyCode::Char('C')).await;
+    let s = render(&mut app, 140, 40);
+    assert!(s.contains("Comment on csv.rs:1"), "{s}");
+    crate::input::handle_key(&mut app, KeyEvent::new(KeyCode::Char('s'), KeyModifiers::CONTROL));
+    assert!(matches!(app.modal, Modal::Compose(_)), "empty comment must not send");
+    chars(&mut app, "Quoted fields too").await;
+    crate::input::handle_key(&mut app, KeyEvent::new(KeyCode::Char('s'), KeyModifiers::CONTROL));
+    app.settle().await;
+    let want = "api --method POST repos/{owner}/{repo}/pulls/12/comments -f commit_id=4f2a9c1d0e7b -f path=csv.rs \
+                -F line=1 -f side=RIGHT -f body=Quoted fields too";
+    assert!(gh_calls(bin.path()).iter().any(|c| c == want), "{:?}", gh_calls(bin.path()));
+
+    // On a note row (not a diff line) C asks for a line instead.
+    app.focus = crate::keymap::Focus::Diff;
+    app.diff.as_mut().unwrap().cursor = line + 1;
+    press(&mut app, KeyCode::Char('C')).await;
+    assert!(app.toast.as_ref().unwrap().text.contains("Move to a line"), "{:?}", app.toast.as_ref().map(|t| &t.text));
+}
+
+#[tokio::test]
+async fn line_comment_needs_a_pr_diff() {
+    let dir = demo_repo();
+    let mut app = app_for(dir.path()).await;
+    press(&mut app, KeyCode::Char('2')).await;
+    press(&mut app, KeyCode::Enter).await;
+    assert_eq!(app.focus, crate::keymap::Focus::Diff);
+    press(&mut app, KeyCode::Char('C')).await;
+    assert!(
+        app.toast.as_ref().unwrap().text.contains("pull request's diff"),
+        "{:?}",
+        app.toast.as_ref().map(|t| &t.text)
+    );
 }
 
 #[tokio::test]
