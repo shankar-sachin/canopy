@@ -45,13 +45,18 @@
   </div>
 </header>
 <main class="wrap doc">
-  <aside class="toc"><b>On this page</b><a href="#brew">Homebrew</a><a href="#cargo">With Cargo</a><a href="#source">From source</a><a href="#windows">Windows</a><a href="#first">First run</a><a href="#config">Configuration</a><a href="#themes">Themes</a><a href="#update">Updating</a></aside>
+  <aside class="toc"><b>On this page</b><a href="#brew">Homebrew</a><a href="#script">Install script</a><a href="#cargo">With Cargo</a><a href="#source">From source</a><a href="#windows">Windows</a><a href="#first">First run</a><a href="#config">Configuration</a><a href="#themes">Themes</a><a href="#update">Updating</a></aside>
   <article class="prose">
 
 <h2 id="brew">Install with Homebrew</h2>
 <p>The easiest way on a Mac:</p>
 <pre class="code"><span class="p">$ </span>brew install shankar-sachin/canopy/canopy<button class="copy" data-copy-text="brew install shankar-sachin/canopy/canopy" type="button">Copy</button></pre>
 <p>Then run <code>canopy</code> inside any git repository.</p>
+
+<h2 id="script">Install without Homebrew</h2>
+<p>On macOS or Linux (x86_64), this script downloads the latest release, checks its SHA-256, and puts <code>canopy</code> in <code>~/.local/bin</code>. It doesn't need sudo. Read it first if you like: <a href="https://github.com/shankar-sachin/canopy/blob/main/scripts/install.sh">scripts/install.sh</a>.</p>
+<pre class="code"><span class="p">$ </span>curl -fsSL https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts/install.sh | sh<button class="copy" data-copy-text="curl -fsSL https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts/install.sh | sh" type="button">Copy</button></pre>
+<p>A specific version: <code>… | sh -s -- v1.0.0</code>. Somewhere else: <code>CANOPY_INSTALL_DIR=~/bin</code>. To remove it: <code>… | sh -s -- --uninstall</code> (your config stays).</p>
 
 <h2 id="cargo">Install with Cargo</h2>
 <p>If you have Rust installed (<a href="https://rustup.rs">rustup.rs</a>), Cargo can build and install Canopy straight from GitHub. It lands in <code>~/.cargo/bin</code>, which rustup already put on your <code>PATH</code>:</p>
@@ -75,6 +80,10 @@
 <pre class="code"><span class="p">PS&gt; </span>winget install --id Git.Git -e
 <span class="p">PS&gt; </span>winget install --id GitHub.cli -e    <span class="m"># only for the GitHub tabs</span>
 <span class="p">PS&gt; </span>gh auth login</pre>
+<h3>2. Install Canopy</h3>
+<p>The install script downloads the latest release, checks it, installs it to <code>%LOCALAPPDATA%\Programs\canopy</code>, and adds that folder to your <code>PATH</code>. It doesn't need admin rights (<a href="https://github.com/shankar-sachin/canopy/blob/main/scripts/install.ps1">read it</a>):</p>
+<pre class="code"><span class="p">PS&gt; </span>irm https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts/install.ps1 | iex<button class="copy" data-copy-text="irm https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts/install.ps1 | iex" type="button">Copy</button></pre>
+<p>Open a new terminal, then run <code>canopy</code>. Or do it by hand:</p>
 <h3>2a. Download Canopy</h3>
 <p>From version 1.0.0, every <a href="https://github.com/shankar-sachin/canopy/releases">release</a> includes <code>canopy-&lt;version&gt;-x86_64-pc-windows-msvc.zip</code>. Unzip it and put <code>canopy.exe</code> somewhere on your <code>PATH</code>, for example:</p>
 <pre class="code"><span class="m"># in PowerShell, from the folder you unzipped</span>
@@ -119,6 +128,7 @@ confirm = true</pre>
 
 <h2 id="update">Updating</h2>
 <pre class="code"><span class="p">$ </span>brew upgrade canopy                      <span class="m"># Homebrew</span>
+<span class="p">$ </span>curl -fsSL https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts/install.sh | sh   <span class="m"># install script: run it again</span>
 <span class="p">$ </span>cargo install --locked --force --git https://github.com/shankar-sachin/canopy canopy-git-tui   <span class="m"># Cargo</span></pre>
 
 <div class="next-links"><a href="github.html"><small>Previous</small>GitHub</a><a href="keys.html" style="text-align:right"><small>Next</small>Keys</a></div>
