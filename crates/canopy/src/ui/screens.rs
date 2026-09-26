@@ -570,7 +570,57 @@ fn branches(f: &mut Frame, area: Rect, app: &mut App) {
         RefsView::Branches => branch_list(f, area, app),
         RefsView::Tags => tags(f, area, app),
         RefsView::Remotes => remotes(f, area, app),
+        RefsView::Worktrees => worktrees(f, area, app),
     }
+}
+
+fn worktrees(f: &mut Frame, area: Rect, app: &mut App) {
+    let theme = app.theme.clone();
+    let (la, da) = split(area, 50);
+    let focused = app.focus == Focus::List;
+    let title = refs_title(app, &theme, format!("{} worktrees", app.data.worktrees.len()));
+    let current = app.git.as_ref().map(|g| g.repo.root.clone());
+    let rows: Vec<Row> = app
+        .data
+        .worktrees
+        .iter()
+        .enumerate()
+        .map(|(i, w)| {
+            let is_cur = current.as_ref() == Some(&w.path);
+            let branch = match (&w.branch, w.bare) {
+                (Some(b), _) => Span::styled(b.clone(), theme.fg(theme.branch)),
+                (None, true) => Span::styled("(bare)", theme.muted()),
+                (None, false) => Span::styled("(detached)", theme.fg(theme.warn)),
+            };
+            let state = if w.prunable.is_some() {
+                Span::styled("missing", theme.fg(theme.error))
+            } else if w.locked.is_some() {
+                Span::styled("locked", theme.fg(theme.warn))
+            } else if i == 0 {
+                Span::styled("main", theme.muted())
+            } else {
+                Span::raw("")
+            };
+            Row::new(vec![
+                Cell::from(Span::styled(if is_cur { "●" } else { " " }, theme.fg(theme.accent))),
+                Cell::from(branch),
+                Cell::from(Span::styled(w.path.display().to_string(), theme.fg(theme.fg))),
+                Cell::from(state),
+            ])
+        })
+        .collect();
+    let table = Table::new(
+        rows,
+        [Constraint::Length(1), Constraint::Percentage(30), Constraint::Fill(1), Constraint::Length(8)],
+    )
+    .column_spacing(1)
+    .block(panel(&theme, title, focused))
+    .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
+    let sel = app.selected(Screen::Branches);
+    let mut st = TableState::default().with_offset(app.list(Screen::Branches).offset()).with_selected(Some(sel));
+    f.render_stateful_widget(table, la, &mut st);
+    *app.list(Screen::Branches).offset_mut() = st.offset();
+    diff::draw(f, da, app);
 }
 
 fn tags(f: &mut Frame, area: Rect, app: &mut App) {

@@ -184,6 +184,31 @@ fn remote_view(app: &App, r: &canopy_git::Remote) -> DiffView {
     DiffView::new(format!("remote:{}", r.name), format!("remote {}", r.name), meta, Vec::new(), None)
 }
 
+fn worktree_view(app: &App, w: &canopy_git::parse::worktree::Worktree) -> DiffView {
+    let current = app.git.as_ref().is_some_and(|g| g.repo.root == w.path);
+    let mut meta = vec![
+        format!("Worktree {}", w.path.display()),
+        String::new(),
+        format!("Branch: {}", w.branch.as_deref().unwrap_or(if w.bare { "(bare)" } else { "(detached HEAD)" })),
+    ];
+    if let Some(h) = &w.head {
+        let subject = app.data.log.iter().find(|c| &c.oid == h).map(|c| c.subject.as_str()).unwrap_or("");
+        meta.push(format!("HEAD:   {} {subject}", h.get(..7).unwrap_or(h)));
+    }
+    meta.push(String::new());
+    if current {
+        meta.push("This is the worktree Canopy has open.".into());
+    }
+    if let Some(r) = &w.locked {
+        meta.push(format!("Locked{}", if r.is_empty() { String::new() } else { format!(": {r}") }));
+    }
+    if let Some(r) = &w.prunable {
+        meta.push(format!("Missing on disk ({r}). Press x to prune it."));
+    }
+    let key = format!("worktree:{}", w.path.display());
+    DiffView::new(key, format!("worktree {}", w.path.display()), meta, Vec::new(), None)
+}
+
 /// Load the diff that matches the current screen's selection.
 pub fn load_for_selection(app: &mut App) {
     let Some(git) = app.git.clone() else { return };
@@ -214,6 +239,10 @@ pub fn load_for_selection(app: &mut App) {
             RefsView::Remotes => {
                 // Remote details come from data we already have; no git call.
                 app.diff = app.selected_remote().map(|r| remote_view(app, r));
+                return;
+            }
+            RefsView::Worktrees => {
+                app.diff = app.selected_worktree().map(|w| worktree_view(app, w));
                 return;
             }
         },

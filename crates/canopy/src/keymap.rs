@@ -54,6 +54,7 @@ pub enum Ctx {
     /// Sub-views of the Branches tab.
     Tags,
     Remotes,
+    Worktrees,
     /// The conflict panel on the Changes tab.
     Conflict,
 }
@@ -65,16 +66,18 @@ pub enum RefsView {
     Branches,
     Tags,
     Remotes,
+    Worktrees,
 }
 
 impl RefsView {
-    pub const ALL: [RefsView; 3] = [RefsView::Branches, RefsView::Tags, RefsView::Remotes];
+    pub const ALL: [RefsView; 4] = [RefsView::Branches, RefsView::Tags, RefsView::Remotes, RefsView::Worktrees];
 
     pub fn title(self) -> &'static str {
         match self {
             RefsView::Branches => "Branches",
             RefsView::Tags => "Tags",
             RefsView::Remotes => "Remotes",
+            RefsView::Worktrees => "Worktrees",
         }
     }
 }
@@ -170,6 +173,10 @@ pub enum Action {
     RenameRemote,
     EditRemoteUrl,
     FetchRemote,
+    OpenWorktree,
+    NewWorktree,
+    RemoveWorktree,
+    PruneWorktrees,
     // Conflicts / in-progress operations
     TakeOurs,
     TakeTheirs,
@@ -270,6 +277,10 @@ impl Action {
             RenameRemote => "rename remote",
             EditRemoteUrl => "change remote URL",
             FetchRemote => "fetch this remote",
+            OpenWorktree => "open worktree in Canopy",
+            NewWorktree => "new worktree for a branch",
+            RemoveWorktree => "remove worktree",
+            PruneWorktrees => "prune missing worktrees",
             Custom(_) => "custom command",
         }
     }
@@ -327,6 +338,10 @@ impl Action {
             RemoveRemote => "remove",
             EditRemoteUrl => "edit url",
             FetchRemote => "fetch",
+            OpenWorktree => "open",
+            NewWorktree => "new",
+            RemoveWorktree => "remove",
+            PruneWorktrees => "prune",
             ToggleSideBySide => "split",
             _ => self.label(),
         }
@@ -459,6 +474,15 @@ pub static CONFLICT: &[Binding] = &[
     b(&["h", "left"], Action::Back, true),
 ];
 
+pub static WORKTREES: &[Binding] = &[
+    b(&["enter", "space"], Action::OpenWorktree, true),
+    b(&["n"], Action::NewWorktree, true),
+    b(&["d"], Action::RemoveWorktree, true),
+    b(&["x"], Action::PruneWorktrees, false),
+    b(&["]"], Action::NextRefsView, true),
+    b(&["["], Action::PrevRefsView, false),
+];
+
 pub static TAGS: &[Binding] = &[
     b(&["space", "enter"], Action::CheckoutTag, true),
     b(&["n"], Action::NewTag, true),
@@ -493,6 +517,7 @@ pub fn defaults(ctx: Ctx) -> &'static [Binding] {
         Ctx::Tags => TAGS,
         Ctx::Conflict => CONFLICT,
         Ctx::Remotes => REMOTES,
+        Ctx::Worktrees => WORKTREES,
     }
 }
 
@@ -526,7 +551,7 @@ pub fn key_name(ev: &KeyEvent) -> String {
     }
 }
 
-pub const ALL_CTX: [Ctx; 12] = [
+pub const ALL_CTX: [Ctx; 13] = [
     Ctx::Global,
     Ctx::Diff,
     Ctx::Screen(Screen::Home),
@@ -538,6 +563,7 @@ pub const ALL_CTX: [Ctx; 12] = [
     Ctx::Screen(Screen::Reflog),
     Ctx::Tags,
     Ctx::Remotes,
+    Ctx::Worktrees,
     Ctx::Conflict,
 ];
 

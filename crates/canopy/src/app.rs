@@ -33,6 +33,7 @@ pub struct Snapshot {
     pub tags: Vec<Tag>,
     pub reflog: Vec<ReflogEntry>,
     pub state: Option<RepoState>,
+    pub worktrees: Vec<canopy_git::parse::worktree::Worktree>,
     /// How many commits were requested; fewer means we reached the root.
     pub log_limit: usize,
 }
@@ -287,6 +288,7 @@ impl App {
                 RefsView::Branches => self.visible_branches().len(),
                 RefsView::Tags => self.visible_tags().len(),
                 RefsView::Remotes => self.data.remotes.len(),
+                RefsView::Worktrees => self.data.worktrees.len(),
             },
             Screen::Stash => self.data.stashes.len(),
             Screen::Workspace => self.visible_workspace().len(),
@@ -319,6 +321,13 @@ impl App {
             return None;
         }
         self.data.remotes.get(self.selected(Screen::Branches))
+    }
+
+    pub fn selected_worktree(&self) -> Option<&canopy_git::parse::worktree::Worktree> {
+        if self.refs_view != RefsView::Worktrees {
+            return None;
+        }
+        self.data.worktrees.get(self.selected(Screen::Branches))
     }
 
     pub fn selected_branch(&self) -> Option<&Branch> {
@@ -365,7 +374,7 @@ impl App {
         let path = self.log_path.clone();
         self.spawn(async move {
             let q = LogQuery { limit, follow: path.is_some(), path, ..Default::default() };
-            let (status, log, branches, stashes, remotes, tags, reflog) = tokio::join!(
+            let (status, log, branches, stashes, remotes, tags, reflog, worktrees) = tokio::join!(
                 git.status(),
                 git.log(&q),
                 git.branches(),
@@ -373,6 +382,7 @@ impl App {
                 git.remotes(),
                 git.tags(),
                 git.reflog(200),
+                git.worktrees(),
             );
             let snap = (|| -> Result<Snapshot, GitError> {
                 Ok(Snapshot {
@@ -383,6 +393,7 @@ impl App {
                     remotes: remotes.unwrap_or_default(),
                     tags: tags.unwrap_or_default(),
                     reflog: reflog.unwrap_or_default(),
+                    worktrees: worktrees.unwrap_or_default(),
                     state: Some(git.state()),
                     log_limit: limit,
                 })
