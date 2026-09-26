@@ -912,9 +912,11 @@ fn frame_html(app: &mut App, w: u16, h: u16) -> String {
                 '&' => out.push_str("&amp;"),
                 '<' => out.push_str("&lt;"),
                 '>' => out.push_str("&gt;"),
-                // Box drawing and block elements are exact in the web font;
-                // pinning them would clip vertical lines into dashes.
-                c if c.is_ascii() || ('\u{2500}'..='\u{259F}').contains(&c) => out.push(c),
+                // These come from JetBrains Mono (the site loads them with a
+                // `text=` font request), so they're already exactly one column.
+                c if c.is_ascii() || ('\u{2500}'..='\u{259F}').contains(&c) || "·…✓✗●○•↑↓←→↵‹›—⌃⌥⇧".contains(c) => {
+                    out.push(c)
+                }
                 c => out.push_str(&format!("<i class=\"g\">{c}</i>")),
             }
         }
