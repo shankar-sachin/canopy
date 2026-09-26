@@ -23,6 +23,7 @@ pub fn screen_ctx(app: &App) -> Ctx {
         (Screen::Branches, RefsView::Worktrees) => Ctx::Worktrees,
         (Screen::Branches, RefsView::Submodules) => Ctx::Submodules,
         (Screen::Issues, _) if app.github.issues_view == crate::github::IssuesView::Notifications => Ctx::Notifications,
+        (Screen::Runs, _) if app.github.runs_view == crate::github::RunsView::Releases => Ctx::Releases,
         (s, _) => Ctx::Screen(s),
     }
 }
@@ -580,6 +581,20 @@ fn repo_action(app: &mut App, action: Action) {
                 InputKind::SetUpstream,
             );
         }
+        NextRefsView | PrevRefsView if app.screen == Screen::Runs => {
+            use crate::github::RunsView;
+            app.github.runs_view = match app.github.runs_view {
+                RunsView::Actions => RunsView::Releases,
+                RunsView::Releases => RunsView::Actions,
+            };
+            app.focus = Focus::List;
+            let st = app.list(Screen::Runs);
+            *st.offset_mut() = 0;
+            st.select(Some(0));
+            app.clamp_selections();
+            diff::load_for_selection(app);
+            crate::github::on_enter(app, Screen::Runs);
+        }
         NextRefsView | PrevRefsView if app.screen == Screen::Issues => {
             use crate::github::IssuesView;
             app.github.issues_view = match app.github.issues_view {
@@ -701,7 +716,9 @@ fn repo_action(app: &mut App, action: Action) {
         }
         Bisect => bisect(app),
         PrCheckout | PrCreate | PrReview | Comment | PrMerge | CloseItem | IssueCreate | OpenInBrowser
-        | CycleFilter | ToggleDiff | RerunFailed | MarkRead | MarkAllRead | ToggleUnread => github_action(app, action),
+        | CycleFilter | ToggleDiff | RerunFailed | MarkRead | MarkAllRead | ToggleUnread | ReleaseCreate => {
+            github_action(app, action)
+        }
         FileHistory => {
             let Some((path, _)) = target_file(app) else { return };
             app.set_log_path(Some(path));
@@ -1007,6 +1024,15 @@ fn github_action(app: &mut App, action: Action) {
             *app.list(Screen::Issues).offset_mut() = 0;
             crate::github::load_notifications(app);
         }
+        Action::ReleaseCreate => {
+            let latest = app.github.releases.iter().find(|r| !r.is_draft).map(|r| r.tag_name.clone());
+            let suggestion = crate::github::next_tag(latest.as_deref());
+            let hint = match &latest {
+                Some(t) => format!("tag for the release · latest is {t}"),
+                None => "tag for the release, e.g. v1.0.0".into(),
+            };
+            app.modal = Modal::input("New release", hint, &suggestion, InputKind::ReleaseTag);
+        }
         Action::MarkRead => {
             let Some(n) = crate::github::selected_notification(app).cloned() else { return };
             if !n.unread {
@@ -1066,6 +1092,16 @@ fn github_action(app: &mut App, action: Action) {
             diff::load_for_selection(app);
         }
         Action::OpenInBrowser => {
+            if let Some(r) = crate::github::selected_release(app) {
+                let url = match app.github.status.as_ref() {
+                    Some(canopy_gh::GhStatus::Ready(info)) => format!("{}/releases/tag/{}", info.url, r.tag_name),
+                    _ => return,
+                };
+                if crate::terminal::open_url(&url) {
+                    app.toast(Level::Info, format!("Opened {url}"));
+                }
+                return;
+            }
             if let Some(n) = crate::github::selected_notification(app) {
                 let url = n.web_url();
                 if crate::terminal::open_url(&url) {
@@ -1203,6 +1239,14 @@ fn submit_compose(app: &mut App, c: &crate::modal::Compose) -> Result<(), String
             }
             app.run_op("Create pull request", Then::GitHub, async move {
                 gh.pr_create(&title, &body, Some(&base), false).await
+            });
+        }
+        ComposeFor::NewRelease { tag } => {
+            if title.is_empty() {
+                return Err("Give the release a title".into());
+            }
+            app.run_op(format!("Create release {tag}"), Then::GitHub, async move {
+                gh.release_create(&tag, &title, &body, false).await
             });
         }
         ComposeFor::NewIssue => {
@@ -1780,6 +1824,16 @@ fn submit_input(app: &mut App, text: String, kind: InputKind) {
                 Then::Refresh,
                 async move { git.set_remote_url(&name, &text).await },
             );
+        }
+        InputKind::ReleaseTag => {
+            let tag = text.replace(' ', "");
+            let mut compose = crate::modal::Compose::new(
+                format!("New release {tag} · notes empty = generated from merged PRs"),
+                true,
+                crate::modal::ComposeFor::NewRelease { tag: tag.clone() },
+            );
+            compose.title = Some(TextArea::single(&tag));
+            app.modal = Modal::Compose(compose);
         }
         InputKind::NewWorktree => {
             let git = git.expect("repo");

@@ -24,4 +24,11 @@ async fn against_this_repository() {
     let issues = gh.issue_list(IssueFilter::All, 5).await.unwrap();
     println!("issues: {}", issues.len());
     println!("viewer: {}", gh.viewer().await.unwrap());
+    let releases = gh.release_list(5).await.unwrap();
+    println!("releases: {:?}", releases.iter().map(|r| (&r.tag_name, r.is_latest)).collect::<Vec<_>>());
+    if let Some(r) = releases.first() {
+        let r = gh.release_view(&r.tag_name).await.unwrap();
+        println!("latest: {} with {} assets, notes {} chars", r.name, r.assets.len(), r.body.len());
+    }
+    println!("notifications here: {}", gh.notifications(true, true).await.unwrap().len());
 }

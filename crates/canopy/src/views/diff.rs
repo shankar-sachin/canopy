@@ -296,7 +296,11 @@ pub fn load_for_selection(app: &mut App) {
             return;
         }
         Screen::Runs => {
-            crate::github::load_run_detail(app, gen);
+            if app.github.runs_view == crate::github::RunsView::Releases {
+                crate::github::load_release_detail(app, gen);
+            } else {
+                crate::github::load_run_detail(app, gen);
+            }
             return;
         }
         Screen::Home | Screen::Workspace => None,

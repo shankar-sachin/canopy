@@ -86,6 +86,8 @@ pub enum InputKind {
     EditRemoteUrl(String),
     /// Branch name; the folder is derived from it.
     NewWorktree,
+    /// Tag for a new GitHub release.
+    ReleaseTag,
 }
 
 #[derive(Debug, Clone)]
@@ -177,6 +179,7 @@ pub enum Modal {
 pub enum ComposeFor {
     NewPullRequest { base: String },
     NewIssue,
+    NewRelease { tag: String },
     Comment(crate::github::Target),
     Review(u64, canopy_gh::ReviewKind),
 }

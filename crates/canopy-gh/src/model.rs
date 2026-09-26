@@ -278,6 +278,43 @@ pub struct Step {
     pub number: u64,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Release {
+    pub tag_name: String,
+    #[serde(default, deserialize_with = "null_default")]
+    pub name: String,
+    #[serde(default, deserialize_with = "ts")]
+    pub published_at: i64,
+    #[serde(default, deserialize_with = "ts")]
+    pub created_at: i64,
+    #[serde(default)]
+    pub is_latest: bool,
+    #[serde(default)]
+    pub is_draft: bool,
+    #[serde(default)]
+    pub is_prerelease: bool,
+    // Only from `release view`:
+    #[serde(default, deserialize_with = "null_default")]
+    pub body: String,
+    #[serde(default, deserialize_with = "null_default")]
+    pub url: String,
+    #[serde(default)]
+    pub author: Author,
+    #[serde(default, deserialize_with = "null_default")]
+    pub assets: Vec<ReleaseAsset>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReleaseAsset {
+    pub name: String,
+    #[serde(default)]
+    pub size: u64,
+    #[serde(default)]
+    pub download_count: u64,
+}
+
 /// A GitHub notification thread (REST API shape, snake_case).
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct Notification {
