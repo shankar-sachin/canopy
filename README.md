@@ -42,7 +42,7 @@ Canopy needs `git` on your `PATH`.
 **On Windows** (x64 and Arm), with winget (installs git too):
 
 ```powershell
-winget install ShankarS.Canopy
+winget install shankars.canopy
 ```
 
 or with the install script, in PowerShell:

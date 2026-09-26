@@ -69,9 +69,14 @@
   .install .prompt { color: var(--green); user-select: none; }
   .install code { overflow-x: auto; white-space: nowrap; }
   .copy {
-    flex: none; border: 1px solid var(--border-2); background: var(--surface-2); color: var(--muted);
-    border-radius: 8px; padding: 6px 10px; font: 600 12px var(--sans); cursor: pointer;
+    flex: none; display: inline-grid; place-items: center; width: 32px; height: 30px; padding: 0;
+    border: 1px solid var(--border-2); background: var(--surface-2); color: var(--muted);
+    border-radius: 8px; cursor: pointer; transition: color .12s, border-color .12s;
   }
+  .copy svg { grid-area: 1 / 1; transition: opacity .12s, transform .12s; }
+  .copy .i-done { opacity: 0; transform: scale(.6); }
+  .copy.done .i-copy { opacity: 0; transform: scale(.6); }
+  .copy.done .i-done { opacity: 1; transform: none; }
   .copy:hover { color: var(--text); border-color: var(--green); }
   .copy.done { color: var(--green); border-color: var(--green); }
   .cta { display: flex; gap: 12px; justify-content: center; margin-top: 22px; flex-wrap: wrap; }

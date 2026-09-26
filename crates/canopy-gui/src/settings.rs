@@ -113,7 +113,7 @@ pub fn detect_install() -> Install {
 pub fn update_command(install: Install) -> Option<&'static str> {
     match install {
         Install::Homebrew => Some("brew upgrade --cask canopy-desktop"),
-        Install::Winget => Some("winget upgrade ShankarS.CanopyDesktop"),
+        Install::Winget => Some("winget upgrade shankars.canopy-desktop"),
         _ => None,
     }
 }
@@ -407,7 +407,7 @@ mod tests {
     #[test]
     fn update_commands() {
         assert_eq!(update_command(Install::Homebrew), Some("brew upgrade --cask canopy-desktop"));
-        assert_eq!(update_command(Install::Winget), Some("winget upgrade ShankarS.CanopyDesktop"));
+        assert_eq!(update_command(Install::Winget), Some("winget upgrade shankars.canopy-desktop"));
         assert_eq!(update_command(Install::Manual), None);
     }
 }
