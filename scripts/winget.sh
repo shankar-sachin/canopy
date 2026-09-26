@@ -39,7 +39,7 @@ sha_arm64=$(sha aarch64-pc-windows-msvc)
 date=$(gh release view "$tag" --repo shankar-sachin/canopy --json publishedAt -q '.publishedAt[0:10]')
 
 out="target/winget/$version"
-mkdir -p "$out"
+rm -rf "$out" && mkdir -p "$out"
 for tpl in packaging/winget/*.yaml.in; do
   f=$(basename "$tpl" .in)
   sed -e "s|@VERSION@|$version|g" -e "s|@DATE@|$date|g" \
