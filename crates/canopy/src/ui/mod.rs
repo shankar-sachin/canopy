@@ -32,13 +32,13 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     }
     f.render_widget(Block::default().style(app.theme.base()), area);
     let teach = app.config.teach_mode && app.git.is_some();
-    // Spacious (default): a side gutter, a row between the header and the
+    // Spacious (default) adds vertical room: a row between the title and the
     // tabs (the mini logo's second row), air around the body, and a row
-    // between the teach line and the key hints.
+    // between the teach line and the key hints. Panels use the full width;
+    // text rows are indented one column so they don't touch the edge.
     let roomy = !util::compact() && area.height >= 20;
-    let gutter: u16 = if util::compact() { 0 } else { 2 };
-    let inset = |r: Rect| Rect { x: r.x + gutter, width: r.width.saturating_sub(gutter * 2), ..r };
-    let area_in = inset(area);
+    let gutter: u16 = 1;
+    let text = |r: Rect| Rect { x: r.x + gutter, width: r.width.saturating_sub(gutter * 2), ..r };
     let [header, header_gap, tabs, _, body, _, teach_area, _, footer] = Layout::vertical([
         Constraint::Length(1),
         Constraint::Length(roomy as u16),
@@ -50,7 +50,9 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         Constraint::Length(roomy as u16),
         Constraint::Length(1),
     ])
-    .areas(area_in);
+    .areas(area);
+    let (header, header_gap, tabs, teach_area, footer) =
+        (text(header), text(header_gap), text(tabs), text(teach_area), text(footer));
 
     // The mini tree in the top-right corner, across the header and the gap.
     let logo_w = 6;
