@@ -1,39 +1,12 @@
 /* Canopy wiki: a docs layout (top bar, sidebar, content, on-this-page). */
 
-/* ---------- tokens (dark default, light via system or toggle) ---------- */
+/* ---------- tokens: the site's theme tokens, so light/dark match everywhere ---------- */
 body.wiki {
-  --w-top: 64px;
-  --w-side: 288px;
-  --w-toc: 240px;
-  --w-bg: #0b100c;
-  --w-panel: #0d140f;
-  --w-hover: #152018;
-  --w-line: #1c2a20;
-  --w-text: #dde8dc;
-  --w-muted: #93a694;
-  --w-faint: #62756a;
-  --w-link: #8fd68d;
-  --w-accent: #7ac878;
-  --w-banner-bg: #7ac878;
-  --w-banner-fg: #0b100c;
-  --w-code-bg: #152018;
-  --w-shadow: 0 30px 80px -20px rgba(0, 0, 0, .7);
-}
-html[data-theme="light"] body.wiki {
-  --w-bg: #fbfcfa; --w-panel: #f3f6f1; --w-hover: #e8efe6; --w-line: #dfe6dc;
-  --w-text: #17221a; --w-muted: #536657; --w-faint: #7b8c7d; --w-link: #1f7a39;
-  --w-accent: #2e8c46; --w-banner-bg: #cfeccd; --w-banner-fg: #16361f; --w-code-bg: #eaf0e8;
-  --w-shadow: 0 30px 80px -24px rgba(20, 40, 25, .28);
-  color-scheme: light;
-}
-@media (prefers-color-scheme: light) {
-  html:not([data-theme="dark"]) body.wiki {
-    --w-bg: #fbfcfa; --w-panel: #f3f6f1; --w-hover: #e8efe6; --w-line: #dfe6dc;
-    --w-text: #17221a; --w-muted: #536657; --w-faint: #7b8c7d; --w-link: #1f7a39;
-    --w-accent: #2e8c46; --w-banner-bg: #cfeccd; --w-banner-fg: #16361f; --w-code-bg: #eaf0e8;
-    --w-shadow: 0 30px 80px -24px rgba(20, 40, 25, .28);
-    color-scheme: light;
-  }
+  --w-top: 64px; --w-side: 288px; --w-toc: 240px;
+  --w-bg: var(--bg); --w-panel: var(--bg-2); --w-hover: var(--surface); --w-line: var(--border);
+  --w-text: var(--text); --w-muted: var(--muted); --w-faint: var(--faint); --w-link: var(--green-2);
+  --w-accent: var(--green); --w-banner-bg: var(--green); --w-banner-fg: var(--on-accent);
+  --w-code-bg: var(--surface-2); --w-shadow: 0 30px 80px -20px rgba(0, 0, 0, .55);
 }
 
 body.wiki { background: var(--w-bg); color: var(--w-text); overflow-x: hidden; }
@@ -41,45 +14,6 @@ body.wiki a { color: var(--w-link); }
 .skip { position: absolute; left: -999px; top: 8px; z-index: 50; background: var(--w-accent); color: var(--w-bg); padding: 8px 12px; border-radius: 8px; }
 .skip:focus { left: 12px; }
 body.wiki :focus-visible { outline: 2px solid var(--w-accent); outline-offset: 2px; border-radius: 6px; }
-
-/* ---------- top bar ---------- */
-.wtop {
-  position: sticky; top: 0; z-index: 20; height: var(--w-top);
-  display: grid; grid-template-columns: var(--w-side) minmax(0, 1fr) auto; align-items: center;
-  padding-inline: 20px 24px; gap: 16px;
-  background: color-mix(in srgb, var(--w-bg) 86%, transparent); backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--w-line);
-}
-.wbrand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--w-text) !important; }
-.wbrand img { border-radius: 8px; }
-.wbrand span { font-weight: 800; font-size: 20px; letter-spacing: -.03em; }
-.wbrand em { font: 600 12px var(--mono); font-style: normal; color: var(--w-faint); border: 1px solid var(--w-line); border-radius: 999px; padding: 1px 8px; }
-.wsearch {
-  justify-self: center; width: min(460px, 100%); height: 42px; display: flex; align-items: center; gap: 10px;
-  padding: 0 10px 0 14px; border-radius: 10px; border: 1px solid var(--w-line); background: var(--w-panel);
-  color: var(--w-muted); font: 500 15px var(--sans); cursor: pointer; transition: border-color .15s, background .15s;
-}
-.wsearch:hover { border-color: color-mix(in srgb, var(--w-accent) 50%, var(--w-line)); background: var(--w-hover); }
-.wsearch span { flex: 1; text-align: left; }
-.wsearch kbd, .wsearch-box kbd {
-  font: 600 12px var(--mono); color: var(--w-muted); background: var(--w-bg); border: 1px solid var(--w-line);
-  border-radius: 6px; padding: 2px 7px; box-shadow: none;
-}
-.wactions { display: flex; align-items: center; gap: 6px; }
-.wlink { color: var(--w-muted) !important; font-weight: 600; font-size: 15px; padding: 8px 10px; border-radius: 8px; text-decoration: none; }
-.wlink:hover, .wicon:hover { color: var(--w-text) !important; background: var(--w-hover); }
-.wicon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 8px; color: var(--w-muted) !important; }
-.wtheme {
-  display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px 0 10px; margin-left: 6px;
-  border: 0; border-left: 1px solid var(--w-line); border-radius: 0; background: none; color: var(--w-muted);
-  font: 600 14px var(--sans); cursor: pointer;
-}
-.wtheme:hover { color: var(--w-text); }
-.wtheme-icon { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset -5px -2px 0 1px currentColor; }
-.wtheme[data-mode="light"] .wtheme-icon { box-shadow: none; background: currentColor; transform: scale(.8); }
-.wtheme[data-mode="system"] .wtheme-icon { box-shadow: none; background: linear-gradient(90deg, currentColor 50%, transparent 50%); border: 1.5px solid currentColor; }
-.wmenu { display: none; background: none; border: 0; padding: 8px; cursor: pointer; }
-.wmenu span { display: block; width: 18px; height: 2px; margin: 4px 0; border-radius: 2px; background: var(--w-text); }
 
 /* ---------- three columns ---------- */
 .wlayout { display: grid; grid-template-columns: var(--w-side) minmax(0, 1fr) var(--w-toc); }
@@ -147,7 +81,7 @@ body.wiki :focus-visible { outline: 2px solid var(--w-accent); outline-offset: 2
 .wprose .wiki-cards { gap: 16px; margin: 16px 0 12px; }
 .wprose .wiki-cards .card { background: var(--w-panel); border-color: var(--w-line); text-decoration: none; }
 .wprose .wiki-cards .card:hover { border-color: color-mix(in srgb, var(--w-accent) 50%, var(--w-line)); }
-.wprose .wiki-cards .card h3 { color: var(--w-text); font-size: 17px; }
+.wprose .wiki-cards .card .ctitle { display: block; color: var(--w-text); font-size: 17px; font-weight: 700; margin-bottom: 6px; }
 .wprose .wiki-cards .card p { color: var(--w-muted); font-size: 15px; line-height: 1.55; }
 .wprose .swatch { color: var(--w-muted); }
 .pager { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 72px; }
@@ -164,24 +98,6 @@ body.wiki :focus-visible { outline: 2px solid var(--w-accent); outline-offset: 2
 .wtoc nav a:hover { color: var(--w-text) !important; }
 .wtoc nav a.active { color: var(--w-accent) !important; border-left-color: var(--w-accent); }
 
-/* ---------- search ---------- */
-.wsearch-dialog { position: fixed; inset: 0; z-index: 40; background: color-mix(in srgb, #000 55%, transparent); display: grid; justify-items: center; align-items: start; padding: 12vh 16px 16px; backdrop-filter: blur(3px); }
-.wsearch-dialog[hidden] { display: none; }
-.wsearch-box { width: min(640px, 100%); background: var(--w-panel); border: 1px solid var(--w-line); border-radius: 14px; box-shadow: var(--w-shadow); overflow: hidden; }
-.wsearch-input { display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--w-line); color: var(--w-muted); }
-.wsearch-input input { flex: 1; height: 56px; border: 0; background: none; color: var(--w-text); font: 500 17px var(--sans); outline: none; }
-.wsearch-input input::-webkit-search-cancel-button { display: none; }
-.wsearch-results { list-style: none; margin: 0; padding: 8px; max-height: 56vh; overflow-y: auto; }
-.wsearch-results li a { display: block; padding: 10px 12px; border-radius: 9px; text-decoration: none; color: var(--w-text) !important; }
-.wsearch-results li a .t { font-weight: 600; }
-.wsearch-results li a .s { font: 600 11.5px var(--mono); color: var(--w-faint); text-transform: uppercase; letter-spacing: .06em; margin-left: 8px; }
-.wsearch-results li a .x { display: block; color: var(--w-muted); font-size: 14px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.wsearch-results li a mark { background: color-mix(in srgb, var(--w-accent) 30%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
-.wsearch-results li[aria-selected="true"] a { background: color-mix(in srgb, var(--w-accent) 14%, transparent); box-shadow: inset 2px 0 0 var(--w-accent); }
-.wsearch-results .empty { color: var(--w-faint); padding: 18px 12px; }
-.wsearch-foot { display: flex; gap: 18px; padding: 10px 16px; border-top: 1px solid var(--w-line); color: var(--w-faint); font-size: 13px; }
-.wsearch-foot kbd { margin-right: 4px; }
-
 /* ---------- responsive ---------- */
 @media (max-width: 1240px) {
   .wlayout { grid-template-columns: var(--w-side) minmax(0, 1fr); }
@@ -189,18 +105,16 @@ body.wiki :focus-visible { outline: 2px solid var(--w-accent); outline-offset: 2
   .wmain { border-right: 0; }
 }
 @media (max-width: 900px) {
-  .wtop { grid-template-columns: auto minmax(0, 1fr) auto; padding-inline: 12px 16px; }
-  .wmenu { display: block; }
-  .wbrand em, .hide-md, .wlink { display: none; }
-  .wsearch span { display: none; }
-  .wsearch { width: 44px; justify-self: end; padding: 0; justify-content: center; }
-  .wsearch kbd { display: none; }
   .wlayout { grid-template-columns: minmax(0, 1fr); }
-  .wside { position: fixed; top: var(--w-top); left: 0; bottom: 0; width: min(320px, 86vw); height: auto; z-index: 30; transform: translateX(-100%); transition: transform .2s ease; box-shadow: var(--w-shadow); }
+  .wside { position: fixed; top: var(--w-top); left: 0; bottom: 0; width: min(320px, 86vw); height: auto; z-index: 25; transform: translateX(-100%); transition: transform .2s ease; box-shadow: var(--w-shadow); }
   body.wiki.nav-open .wside { transform: none; }
-  .wprose { padding: 32px 20px 72px; font-size: 16.5px; }
-  .wtheme-label { display: none; }
+  .wprose { padding: 28px 20px 72px; font-size: 16.5px; }
+  .wpages-btn { display: inline-flex; }
+}
+.wpages-btn {
+  display: none; align-items: center; gap: 8px; margin: 16px 20px 0; padding: 8px 14px; border-radius: 9px;
+  border: 1px solid var(--w-line); background: var(--w-panel); color: var(--w-text); font: 600 14px var(--sans); cursor: pointer;
 }
 @media (prefers-reduced-motion: reduce) {
-  .wside, .wside-nav .chev, .wsearch, .pager a { transition: none; }
+  .wside, .wside-nav .chev, .pager a { transition: none; }
 }
