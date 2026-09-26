@@ -203,6 +203,9 @@ impl App {
         let (tx, rx) = unbounded_channel();
         let theme = Theme::by_name(&config.theme);
         let (keymap, key_warnings) = Keymap::with_overrides(&config.key_overrides());
+        if let Some(on) = config.mac_key_symbols {
+            crate::keymap::set_mac_key_symbols(on);
+        }
         let screen = if git.is_some() { Screen::Home } else { Screen::Workspace };
         let mut app = App {
             git,

@@ -21,6 +21,8 @@ pub struct Config {
     pub workspace_depth: usize,
     /// User-defined commands bound to keys.
     pub custom_commands: Vec<CustomCommand>,
+    /// Show modifier keys as ⌃ ⌥ ⇧ (default on macOS) instead of ctrl-/alt-.
+    pub mac_key_symbols: Option<bool>,
     /// Path to the GitHub CLI, if not `gh` on PATH.
     pub gh_program: Option<String>,
     /// Key remaps: action name -> key or list of keys.
@@ -61,6 +63,7 @@ impl Default for Config {
             custom_commands: Vec::new(),
             keys: BTreeMap::new(),
             gh_program: None,
+            mac_key_symbols: None,
             log_page_size: 300,
         }
     }

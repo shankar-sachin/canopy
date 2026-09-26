@@ -1130,7 +1130,8 @@ fn keys_html() -> String {
 /// elements (sparklines) and a short list of widely supported symbols.
 #[tokio::test]
 async fn only_single_width_glyphs() {
-    const SAFE: &str = "·…✓✗●○•↑↓←→↵‹›—▌";
+    // ⌃⌥⇧ only appear with Mac key symbols, and every macOS font has them.
+    const SAFE: &str = "·…✓✗●○•↑↓←→↵‹›—▌⌃⌥⇧";
     let ok = |c: char| c.is_ascii() || ('\u{2500}'..='\u{259F}').contains(&c) || SAFE.contains(c);
     let dir = demo_repo();
     let bin = TempDir::new().unwrap();

@@ -2,6 +2,7 @@
 //! the help overlay and the command palette are all generated from this table.
 
 use std::collections::{BTreeMap, HashMap};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
@@ -917,27 +918,70 @@ fn is_valid_key(k: &str) -> bool {
 }
 
 /// Display form of a key for hints, e.g. `space` -> `␣`.
+/// Show modifier keys as Mac symbols (⌃ ⌥ ⇧)? On by default on macOS, whose
+/// terminal fonts all include them; `mac_key_symbols` in the config overrides.
+static MAC_KEY_SYMBOLS: AtomicBool = AtomicBool::new(cfg!(target_os = "macos"));
+
+pub fn set_mac_key_symbols(on: bool) {
+    MAC_KEY_SYMBOLS.store(on, Ordering::Relaxed);
+}
+
+/// Display form of a key for hints and help.
 pub fn pretty_key(k: &str) -> String {
-    match k {
-        "space" => "space".into(),
-        "enter" => "↵".into(),
-        "backtab" => "shift-tab".into(),
-        "up" => "↑".into(),
-        "down" => "↓".into(),
-        "left" => "←".into(),
-        "right" => "→".into(),
-        // ctrl-x -> ^x; alt stays spelled out ("alt" is Option on a Mac).
-        _ => {
-            if let Some(r) = k.strip_prefix("ctrl-alt-") {
-                format!("^alt-{}", pretty_key(r))
-            } else if let Some(r) = k.strip_prefix("ctrl-") {
-                format!("^{r}")
-            } else if let Some(r) = k.strip_prefix("alt-") {
-                format!("alt-{}", pretty_key(r))
-            } else {
-                k.to_string()
-            }
+    pretty_key_with(k, MAC_KEY_SYMBOLS.load(Ordering::Relaxed))
+}
+
+/// `mac`: `ctrl-q` → `⌃Q`, `alt-P` → `⌥⇧P`, `alt-left` → `⌥←`.
+/// Otherwise: `ctrl-q` → `^q`, `alt-left` → `alt-←`.
+pub fn pretty_key_with(k: &str, mac: bool) -> String {
+    let named = |k: &str| -> Option<&'static str> {
+        Some(match k {
+            "space" => "space",
+            "enter" => "↵",
+            "up" => "↑",
+            "down" => "↓",
+            "left" => "←",
+            "right" => "→",
+            _ => return None,
+        })
+    };
+    if k == "backtab" {
+        return if mac { "⇧tab".into() } else { "shift-tab".into() };
+    }
+    let (ctrl, rest) = match k.strip_prefix("ctrl-") {
+        Some(r) => (true, r),
+        None => (false, k),
+    };
+    let (alt, base) = match rest.strip_prefix("alt-") {
+        Some(r) => (true, r),
+        None => (false, rest),
+    };
+    let base_shown = named(base).map(String::from).unwrap_or_else(|| base.to_string());
+    if mac && (ctrl || alt) {
+        let mut out = String::new();
+        if ctrl {
+            out.push('⌃');
         }
+        if alt {
+            out.push('⌥');
+        }
+        let mut chars = base.chars();
+        match (chars.next(), chars.next()) {
+            // Single letters read like macOS menus: ⌥⇧P, ⌃Q.
+            (Some(c), None) if c.is_ascii_uppercase() => {
+                out.push('⇧');
+                out.push(c);
+            }
+            (Some(c), None) if c.is_ascii_lowercase() => out.push(c.to_ascii_uppercase()),
+            _ => out.push_str(&base_shown),
+        }
+        return out;
+    }
+    match (ctrl, alt) {
+        (true, true) => format!("^alt-{base_shown}"),
+        (true, false) => format!("^{base_shown}"),
+        (false, true) => format!("alt-{base_shown}"),
+        (false, false) => base_shown,
     }
 }
 
@@ -1014,9 +1058,17 @@ mod tests {
         assert_eq!(k(KeyCode::Char('∏'), KeyModifiers::SHIFT), "alt-P");
         // Raw control characters.
         assert_eq!(k(KeyCode::Char('\u{11}'), KeyModifiers::NONE), "ctrl-q");
-        assert_eq!(pretty_key("ctrl-q"), "^q");
-        assert_eq!(pretty_key("alt-left"), "alt-←");
-        assert_eq!(pretty_key("ctrl-alt-x"), "^alt-x");
+        assert_eq!(pretty_key_with("ctrl-q", false), "^q");
+        assert_eq!(pretty_key_with("alt-left", false), "alt-←");
+        assert_eq!(pretty_key_with("ctrl-alt-x", false), "^alt-x");
+        assert_eq!(pretty_key_with("ctrl-q", true), "⌃Q");
+        assert_eq!(pretty_key_with("alt-P", true), "⌥⇧P");
+        assert_eq!(pretty_key_with("alt-left", true), "⌥←");
+        assert_eq!(pretty_key_with("alt-1", true), "⌥1");
+        assert_eq!(pretty_key_with("backtab", true), "⇧tab");
+        // Plain keys look the same either way.
+        assert_eq!(pretty_key_with("q", true), "q");
+        assert_eq!(pretty_key_with("enter", true), "↵");
         let km = Keymap::default();
         assert_eq!(km.lookup(&[Ctx::Screen(Screen::Pulls), Ctx::Global], "alt-q"), Some(Action::Quit));
         assert_eq!(km.lookup(&[Ctx::Global], "alt-3"), Some(Action::Goto(Screen::Log)));
