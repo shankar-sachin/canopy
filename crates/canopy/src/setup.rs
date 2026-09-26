@@ -292,7 +292,8 @@ fn connect(app: &mut App, protocol: Protocol) {
     });
 }
 
-#[cfg(test)]
+// Like ui_tests: uses App::settle, which drives the event loop on Unix.
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
     use crate::config::Config;
