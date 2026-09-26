@@ -41,6 +41,7 @@ canopy -w ~/code       # workspace view: every repo under ~/code
 | **5 Stash** | Apply, pop, drop, and preview stashes |
 | **6 Workspace** | Every repo in your workspace dirs: branch, dirty state, sync. Open any, or fetch them all |
 | **7 Reflog** | Everywhere HEAD has been: your safety net for recovering anything |
+| **8 Pull requests** | GitHub PRs (open / mine / review requested / all) with checks and reviews. Check out, create, review, comment, merge, close, open in the browser. Needs the [GitHub CLI](https://cli.github.com) logged in |
 
 ### Keys
 
@@ -112,7 +113,8 @@ crates/canopy       the TUI (Ratatui): app loop, screens, keymap, themes
 ## Roadmap
 
 - [x] Full git dashboard (v1)
-- [ ] GitHub via `gh`: pull requests, issues, Actions runs, reviews
+- [x] GitHub pull requests via `gh`
+- [ ] GitHub issues and Actions runs
 - [ ] Syntax-highlighted diffs
 - [x] Conflict editor with per-conflict ours/theirs
 - [x] File history and blame

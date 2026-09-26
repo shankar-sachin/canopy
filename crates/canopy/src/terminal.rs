@@ -30,6 +30,18 @@ pub fn enter() {
     let _ = execute!(stdout(), ratatui::crossterm::terminal::EnterAlternateScreen, EnableMouseCapture);
 }
 
+/// Open a URL in the default browser (never blocks the UI).
+pub fn open_url(url: &str) -> bool {
+    let opener = if cfg!(target_os = "macos") { "open" } else { "xdg-open" };
+    std::process::Command::new(opener)
+        .arg(url)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .is_ok()
+}
+
 /// Copy text to the clipboard: `pbcopy`/`wl-copy`/`xclip` if present,
 /// otherwise the OSC 52 escape sequence (works over SSH in most terminals).
 pub fn copy_to_clipboard(text: &str) -> bool {

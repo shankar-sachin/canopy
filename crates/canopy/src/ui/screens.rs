@@ -63,6 +63,7 @@ pub fn draw(f: &mut Frame, area: Rect, app: &mut App) {
         Screen::Stash => stash(f, area, app),
         Screen::Workspace => workspace(f, area, app),
         Screen::Reflog => reflog(f, area, app),
+        Screen::Pulls => pulls(f, area, app),
     }
 }
 
@@ -990,6 +991,127 @@ fn workspace(f: &mut Frame, area: Rect, app: &mut App) {
     let mut st = TableState::default().with_offset(app.list(Screen::Workspace).offset()).with_selected(Some(sel));
     f.render_stateful_widget(table, area, &mut st);
     *app.list(Screen::Workspace).offset_mut() = st.offset();
+}
+
+// ---------------------------------------------------------------- github
+
+/// Shown instead of a GitHub tab when `gh` can't be used. Returns true if drawn.
+fn github_setup(f: &mut Frame, area: Rect, app: &App, title: &str) -> bool {
+    use canopy_gh::GhStatus;
+    let theme = &app.theme;
+    let lines: Vec<&str> = match &app.github.status {
+        None => vec!["Checking GitHub…"],
+        Some(GhStatus::Ready(_)) => return false,
+        Some(GhStatus::NotInstalled) => vec![
+            "GitHub features need the GitHub CLI (gh)",
+            "Canopy never installs anything for you. To set it up, run in a terminal:",
+            "brew install gh",
+            "then: gh auth login",
+            "and reopen Canopy.",
+        ],
+        Some(GhStatus::NotLoggedIn) => {
+            vec!["You're not logged in to GitHub", "Run this in a terminal, then reopen Canopy:", "gh auth login"]
+        }
+        Some(GhStatus::NotGitHub) => vec![
+            "This repository isn't on GitHub",
+            "GitHub tabs work when a remote points at github.com.",
+            "Add one in Branches → Remotes (4, then ]).",
+        ],
+    };
+    empty(f, area, theme, title, &lines);
+    true
+}
+
+fn check_span<'a>(pr: &canopy_gh::PullRequest, theme: &Theme) -> Span<'a> {
+    use canopy_gh::CheckState;
+    let c = pr.checks();
+    match c.overall() {
+        None => Span::raw(""),
+        Some(CheckState::Passed) => Span::styled(format!("✓ {}/{}", c.passed, c.total), theme.fg(theme.added)),
+        Some(CheckState::Failed) => Span::styled(format!("✗ {} failed", c.failed), theme.fg(theme.error)),
+        Some(_) => Span::styled(format!("… {} running", c.pending), theme.fg(theme.warn)),
+    }
+}
+
+fn pulls(f: &mut Frame, area: Rect, app: &mut App) {
+    let theme = app.theme.clone();
+    if github_setup(f, area, app, "Pull requests") {
+        return;
+    }
+    let filter = app.github.pr_filter.label();
+    if app.github.prs.is_empty() {
+        let msg = if app.github.prs_loading || !app.github.prs_loaded {
+            vec!["Loading pull requests…".to_string()]
+        } else {
+            vec![
+                format!("No pull requests ({filter})"),
+                "f changes the filter · n opens one for the current branch".to_string(),
+            ]
+        };
+        let refs: Vec<&str> = msg.iter().map(String::as_str).collect();
+        empty(f, area, &theme, "Pull requests", &refs);
+        return;
+    }
+    let (la, da) = split(area, 50);
+    let me = app.github.viewer.clone().unwrap_or_default();
+    let rows: Vec<Row> = app
+        .github
+        .prs
+        .iter()
+        .map(|pr| {
+            let review = match pr.review_decision.as_str() {
+                "APPROVED" => Span::styled("approved", theme.fg(theme.added)),
+                "CHANGES_REQUESTED" => Span::styled("changes", theme.fg(theme.error)),
+                "REVIEW_REQUIRED" => Span::styled("review", theme.fg(theme.warn)),
+                _ => Span::raw(""),
+            };
+            let state_color = match pr.state.as_str() {
+                "MERGED" => theme.hash,
+                "CLOSED" => theme.error,
+                _ if pr.is_draft => theme.muted,
+                _ => theme.added,
+            };
+            let author_style = if pr.author.login == me { theme.fg(theme.accent) } else { theme.muted() };
+            let mut title = vec![Span::raw(pr.title.clone())];
+            if pr.is_draft {
+                title.push(Span::styled(" draft", theme.muted()));
+            }
+            Row::new(vec![
+                Cell::from(Span::styled(
+                    format!("#{}", pr.number),
+                    Style::default().fg(state_color).add_modifier(Modifier::BOLD),
+                )),
+                Cell::from(Line::from(title)),
+                Cell::from(Span::styled(trunc(&pr.author.login, 14), author_style)),
+                Cell::from(check_span(pr, &theme)),
+                Cell::from(review),
+                Cell::from(Span::styled(ago(pr.updated_at), theme.muted())),
+            ])
+        })
+        .collect();
+    let focused = app.focus == Focus::List;
+    let loading = if app.github.prs_loading { " · refreshing…" } else { "" };
+    let repo = app.github.repo_name().unwrap_or_default();
+    let title = format!(" Pull requests · {repo} · {filter} · {}{loading} ", app.github.prs.len());
+    let table = Table::new(
+        rows,
+        [
+            Constraint::Length(6),
+            Constraint::Fill(1),
+            Constraint::Length(14),
+            Constraint::Length(11),
+            Constraint::Length(8),
+            Constraint::Length(4),
+        ],
+    )
+    .column_spacing(1)
+    .block(panel(&theme, title, focused))
+    .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
+    let sel = app.selected(Screen::Pulls);
+    let mut st = TableState::default().with_offset(app.list(Screen::Pulls).offset()).with_selected(Some(sel));
+    f.render_stateful_widget(table, la, &mut st);
+    *app.list(Screen::Pulls).offset_mut() = st.offset();
+    diff::draw(f, da, app);
 }
 
 // ---------------------------------------------------------------- reflog

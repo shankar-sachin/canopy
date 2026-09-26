@@ -3,6 +3,7 @@
 mod app;
 mod config;
 mod fuzzy;
+mod github;
 mod input;
 mod keymap;
 mod modal;

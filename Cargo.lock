@@ -190,6 +190,7 @@ name = "canopy-git-tui"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "canopy-gh",
  "canopy-git",
  "clap",
  "directories",
