@@ -104,7 +104,7 @@ async fn home_dashboard() {
     assert!(s.contains("canopy"));
     assert!(s.contains("Next steps"));
     assert!(s.contains("1 file(s) staged and ready. Press c to commit."), "{s}");
-    assert!(s.contains("Merge branch 'feature/parser'"));
+    assert!(s.contains("Merge branch 'feature/pars"), "{s}");
     assert!(s.contains("(tag v0.1.0)") && s.contains("(HEAD → main)"));
     assert!(s.contains("Activity"));
     // Narrow terminal still renders.
@@ -361,7 +361,8 @@ async fn tags_and_remotes_views() {
     press(&mut app, KeyCode::Char('4')).await;
     press(&mut app, KeyCode::Char(']')).await;
     let s = render(&mut app, 130, 30);
-    assert!(s.contains("Branches · Tags · Remotes") && s.contains("v0.1.0"), "{s}");
+    // The view switcher is full or compact depending on width; either names Tags.
+    assert!((s.contains("Branches · Tags · Remotes") || s.contains("‹ Tags 2/5 ›")) && s.contains("v0.1.0"), "{s}");
     assert!(s.contains(" P  push"), "tags hint bar:\n{s}");
 
     // Annotated tag via `name: message`.
@@ -785,7 +786,7 @@ async fn issues_tab() {
     press(&mut app, KeyCode::Char('9')).await;
     let s = render(&mut app, 140, 30);
     assert!(s.contains("Issues · o/r · open · 1") && s.contains("#7") && s.contains("Crash on empty repo"), "{s}");
-    assert!(s.contains("bug") && s.contains("crashes when you press") && s.contains("ada commented"), "{s}");
+    assert!(s.contains("bug") && s.contains("crashes when you") && s.contains("ada commented"), "{s}");
 
     // New issue: title required.
     press(&mut app, KeyCode::Char('n')).await;
@@ -859,7 +860,7 @@ async fn tab_bar_fits_any_width() {
     let mid = render(&mut app, 100, 20);
     assert!(mid.contains(" 8 PRs ") && mid.contains(" 0 CI "), "{mid}");
     let narrow = render(&mut app, 60, 20);
-    let tabs = narrow.lines().nth(1).unwrap();
+    let tabs = narrow.lines().find(|l| l.contains(" 0 CI ")).unwrap_or_default();
     assert!(tabs.contains(" 0 CI ") && tabs.contains(" 8 ") && !tabs.contains("PRs"), "{tabs}");
 }
 
@@ -1330,7 +1331,7 @@ async fn spacious_layout_fits_80x24() {
         press(&mut app, KeyCode::Char(key)).await;
         let s = render(&mut app, 80, 24);
         // The footer keys and the tab bar are always visible.
-        assert!(s.lines().nth(1).unwrap().contains(" 1 "), "tabs:\n{s}");
+        assert!(s.lines().take(4).any(|l| l.contains("1 Home") || l.contains(" 1 ")), "tabs:\n{s}");
         assert!(s.lines().last().unwrap().contains("help"), "footer:\n{s}");
     }
     press(&mut app, KeyCode::Char('2')).await;

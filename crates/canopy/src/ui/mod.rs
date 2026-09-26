@@ -32,21 +32,39 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     }
     f.render_widget(Block::default().style(app.theme.base()), area);
     let teach = app.config.teach_mode && app.git.is_some();
-    // A blank row under the tabs and above the footer, when there's room.
-    let air = (!util::compact() && area.height >= 20) as u16;
-    let [header, tabs, _, body, _, teach_area, footer] = Layout::vertical([
+    // Spacious (default): a side gutter, a row between the header and the
+    // tabs (the mini logo's second row), air around the body, and a row
+    // between the teach line and the key hints.
+    let roomy = !util::compact() && area.height >= 20;
+    let gutter: u16 = if util::compact() { 0 } else { 2 };
+    let inset = |r: Rect| Rect { x: r.x + gutter, width: r.width.saturating_sub(gutter * 2), ..r };
+    let area_in = inset(area);
+    let [header, header_gap, tabs, _, body, _, teach_area, _, footer] = Layout::vertical([
         Constraint::Length(1),
+        Constraint::Length(roomy as u16),
         Constraint::Length(1),
-        Constraint::Length(air),
+        Constraint::Length(roomy as u16),
         Constraint::Fill(1),
-        Constraint::Length(air),
+        Constraint::Length((roomy && teach) as u16),
         Constraint::Length(teach as u16),
+        Constraint::Length(roomy as u16),
         Constraint::Length(1),
     ])
-    .areas(area);
+    .areas(area_in);
+
+    // The mini tree in the top-right corner, across the header and the gap.
+    let logo_w = 6;
+    let header = if roomy && area.width >= 70 {
+        let r = Rect { x: header.x + header.width - logo_w, y: header.y, width: logo_w, height: 1 + header_gap.height };
+        f.render_widget(Paragraph::new(logo::mini()), r);
+        Rect { width: header.width.saturating_sub(logo_w + 2), ..header }
+    } else {
+        header
+    };
 
     draw_header(f, header, app);
-    draw_tabs(f, tabs, app);
+    // The tab bar only needs the left gutter; its right edge can use the width.
+    draw_tabs(f, Rect { width: tabs.width + gutter, ..tabs }, app);
     screens::draw(f, body, app);
     if teach {
         draw_teach(f, teach_area, app);
@@ -61,7 +79,7 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
     let branch_glyph = if app.config.nerd_font { "\u{e725} " } else { "" };
     let mut spans = vec![
         Span::styled(" canopy ", Style::default().fg(t.bg).bg(t.accent).add_modifier(Modifier::BOLD)),
-        Span::raw("  "),
+        Span::raw("   "),
         Span::styled(app.repo_name(), Style::default().fg(t.fg).add_modifier(Modifier::BOLD)),
     ];
     if app.git.is_some() {
@@ -119,7 +137,7 @@ fn draw_tabs(f: &mut Frame, area: Rect, app: &App) {
     };
     // Full names if they fit, then short names, then just the numbers.
     let build = |names: &dyn Fn(Screen) -> &'static str| {
-        let mut spans = vec![Span::raw(" ")];
+        let mut spans = vec![];
         for (i, s) in Screen::ALL.iter().enumerate() {
             let active = *s == app.screen;
             let style = if active {
@@ -157,12 +175,12 @@ fn draw_teach(f: &mut Frame, area: Rect, app: &App) {
     let t = &app.theme;
     let line = match app.history.last() {
         Some(cmd) => Line::from(vec![
-            Span::styled(" $ ", t.fg(t.accent).add_modifier(Modifier::BOLD)),
+            Span::styled("$ ", t.fg(t.accent).add_modifier(Modifier::BOLD)),
             Span::styled(cmd.clone(), t.fg(t.accent_alt)),
             Span::styled("   ← what that just ran", t.muted()),
         ]),
         None => Line::from(vec![
-            Span::styled(" $ ", t.fg(t.accent).add_modifier(Modifier::BOLD)),
+            Span::styled("$ ", t.fg(t.accent).add_modifier(Modifier::BOLD)),
             Span::styled("teach mode: the git command behind each action appears here (T to hide)", t.muted()),
         ]),
     };
@@ -191,8 +209,8 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
     let help = Line::from(key_hint(t, &pretty_key(help_key), "help"));
     let help_w = help.width() as u16;
     let avail = area.width.saturating_sub(help_w + 1) as usize;
-    let mut spans = vec![Span::raw(" ")];
-    let mut used = 1;
+    let mut spans = vec![];
+    let mut used = 0;
     let mut seen = vec![crate::keymap::Action::Help];
     for ctx in contexts(app) {
         for b in app.keymap.bindings(ctx).iter().filter(|b| b.hint && !b.keys.is_empty()) {
