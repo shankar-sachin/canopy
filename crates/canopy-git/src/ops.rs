@@ -68,7 +68,9 @@ impl Git {
             args.push("-i".into());
         }
         if q.all {
-            args.push("--all".into());
+            // Every branch, remote branch and tag, but not refs/stash: --all
+            // would draw each stash's internal index/untracked commits.
+            args.extend(["--branches", "--remotes", "--tags", "HEAD"].map(String::from));
         } else if let Some(r) = &q.rev {
             args.push(r.clone());
         }
