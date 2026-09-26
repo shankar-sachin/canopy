@@ -15,7 +15,7 @@ use ratatui::DefaultTerminal;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 
 use crate::config::Config;
-use crate::keymap::{Focus, Keymap, Screen};
+use crate::keymap::{Focus, Keymap, RefsView, Screen};
 use crate::modal::Modal;
 use crate::theme::Theme;
 use crate::views::diff::DiffView;
@@ -122,6 +122,8 @@ pub struct App {
     pub workspace_scanning: bool,
     /// True while a History page is being fetched.
     pub log_loading: bool,
+    /// Branches, Tags, or Remotes in the Branches tab.
+    pub refs_view: RefsView,
     pub workspace_root: PathBuf,
     pub should_quit: bool,
     pub tick: u64,
@@ -167,6 +169,7 @@ impl App {
             needs_redraw_full: false,
             last_status_poll: Instant::now(),
             log_loading: false,
+            refs_view: RefsView::Branches,
         };
         if !key_warnings.is_empty() {
             app.toast(Level::Error, format!("Config [keys]: {}", key_warnings.join("; ")));
@@ -268,7 +271,11 @@ impl App {
             Screen::Home => 0,
             Screen::Status => self.status_rows().len(),
             Screen::Log => self.visible_log().len(),
-            Screen::Branches => self.visible_branches().len(),
+            Screen::Branches => match self.refs_view {
+                RefsView::Branches => self.visible_branches().len(),
+                RefsView::Tags => self.visible_tags().len(),
+                RefsView::Remotes => self.data.remotes.len(),
+            },
             Screen::Stash => self.data.stashes.len(),
             Screen::Workspace => self.visible_workspace().len(),
             Screen::Reflog => self.data.reflog.len(),
@@ -280,7 +287,32 @@ impl App {
         vis.get(self.selected(Screen::Log)).map(|&i| &self.data.log[i])
     }
 
+    /// Indexes into `data.tags` after filtering (shares the Branches filter).
+    pub fn visible_tags(&self) -> Vec<usize> {
+        let f = self.filters.get(&Screen::Branches).map(String::as_str).unwrap_or("");
+        (0..self.data.tags.len())
+            .filter(|&i| f.is_empty() || Self::matches(f, &[&self.data.tags[i].name, &self.data.tags[i].subject]))
+            .collect()
+    }
+
+    pub fn selected_tag(&self) -> Option<&Tag> {
+        if self.refs_view != RefsView::Tags {
+            return None;
+        }
+        self.visible_tags().get(self.selected(Screen::Branches)).map(|&i| &self.data.tags[i])
+    }
+
+    pub fn selected_remote(&self) -> Option<&Remote> {
+        if self.refs_view != RefsView::Remotes {
+            return None;
+        }
+        self.data.remotes.get(self.selected(Screen::Branches))
+    }
+
     pub fn selected_branch(&self) -> Option<&Branch> {
+        if self.refs_view != RefsView::Branches {
+            return None;
+        }
         let vis = self.visible_branches();
         vis.get(self.selected(Screen::Branches)).map(|&i| &self.data.branches[i])
     }

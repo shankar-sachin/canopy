@@ -78,10 +78,12 @@ async fn press(app: &mut App, code: KeyCode) {
     app.settle().await;
 }
 
+/// Type text, then settle once (typing itself starts no background work).
 async fn chars(app: &mut App, s: &str) {
     for c in s.chars() {
-        press(app, KeyCode::Char(c)).await;
+        crate::input::handle_key(app, KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE));
     }
+    app.settle().await;
 }
 
 fn git_out(dir: &Path, args: &[&str]) -> String {
@@ -343,4 +345,56 @@ async fn remapped_keys_work_and_show_in_hints() {
     assert!(!app.modal.is_open());
     press(&mut app, KeyCode::Char('C')).await;
     assert!(matches!(app.modal, Modal::Commit { .. }));
+}
+
+#[tokio::test]
+async fn tags_and_remotes_views() {
+    let dir = demo_repo();
+    let bare = TempDir::new().unwrap();
+    sh(bare.path(), "git init -q --bare -b main");
+    let mut app = app_for(dir.path()).await;
+    press(&mut app, KeyCode::Char('4')).await;
+    press(&mut app, KeyCode::Char(']')).await;
+    let s = render(&mut app, 130, 30);
+    assert!(s.contains("Branches · Tags · Remotes") && s.contains("v0.1.0"), "{s}");
+    assert!(s.contains(" P  push"), "tags hint bar:\n{s}");
+
+    // Annotated tag via `name: message`.
+    press(&mut app, KeyCode::Char('n')).await;
+    chars(&mut app, "v0.2.0: second release").await;
+    press(&mut app, KeyCode::Enter).await;
+    assert_eq!(git_out(dir.path(), &["tag", "-l", "v0.2.0", "--format=%(contents:subject)"]).trim(), "second release");
+
+    // Remotes: add, rename, edit URL.
+    press(&mut app, KeyCode::Char(']')).await;
+    let s = render(&mut app, 130, 30);
+    assert!(s.contains("No remotes yet"), "{s}");
+    press(&mut app, KeyCode::Char('n')).await;
+    chars(&mut app, &format!("up {}", bare.path().display())).await;
+    press(&mut app, KeyCode::Enter).await;
+    press(&mut app, KeyCode::Char('R')).await;
+    // Clear the prefilled name, then type the new one.
+    crate::input::handle_key(&mut app, KeyEvent::new(KeyCode::Char('u'), KeyModifiers::CONTROL));
+    chars(&mut app, "origin").await;
+    press(&mut app, KeyCode::Enter).await;
+    assert_eq!(git_out(dir.path(), &["remote"]).trim(), "origin");
+    let s = render(&mut app, 130, 30);
+    assert!(s.contains("Fetch URL:"), "remote details panel:\n{s}");
+
+    // Push a tag, then delete it here and on the remote.
+    press(&mut app, KeyCode::Char('[')).await;
+    let i = app.visible_tags().iter().position(|&i| app.data.tags[i].name == "v0.2.0").unwrap();
+    app.set_selected(Screen::Branches, i);
+    press(&mut app, KeyCode::Char('P')).await;
+    assert!(git_out(bare.path(), &["tag"]).contains("v0.2.0"));
+    press(&mut app, KeyCode::Char('d')).await;
+    press(&mut app, KeyCode::Char('D')).await;
+    assert!(!git_out(bare.path(), &["tag"]).contains("v0.2.0"));
+    assert!(!git_out(dir.path(), &["tag"]).contains("v0.2.0"));
+
+    // Remove the remote (confirmed).
+    press(&mut app, KeyCode::Char(']')).await;
+    press(&mut app, KeyCode::Char('d')).await;
+    press(&mut app, KeyCode::Char('y')).await;
+    assert_eq!(git_out(dir.path(), &["remote"]).trim(), "");
 }

@@ -394,6 +394,19 @@ impl Git {
         self.run(&["remote", "remove", name]).await
     }
 
+    pub async fn rename_remote(&self, old: &str, new: &str) -> Result<Output> {
+        self.run(&["remote", "rename", old, new]).await
+    }
+
+    pub async fn set_remote_url(&self, name: &str, url: &str) -> Result<Output> {
+        self.run(&["remote", "set-url", name, url]).await
+    }
+
+    pub async fn delete_remote_tag(&self, remote: &str, tag: &str) -> Result<Output> {
+        let refspec = format!("refs/tags/{tag}");
+        self.run(&["push", remote, "--delete", &refspec]).await
+    }
+
     pub async fn fetch(&self, remote: Option<&str>, progress: mpsc::UnboundedSender<String>) -> Result<Output> {
         let mut args = vec!["fetch", "--progress", "--prune"];
         match remote {

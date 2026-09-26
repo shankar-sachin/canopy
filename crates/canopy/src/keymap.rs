@@ -50,6 +50,30 @@ pub enum Ctx {
     Global,
     Screen(Screen),
     Diff,
+    /// Sub-views of the Branches tab.
+    Tags,
+    Remotes,
+}
+
+/// Which list the Branches tab is showing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RefsView {
+    #[default]
+    Branches,
+    Tags,
+    Remotes,
+}
+
+impl RefsView {
+    pub const ALL: [RefsView; 3] = [RefsView::Branches, RefsView::Tags, RefsView::Remotes];
+
+    pub fn title(self) -> &'static str {
+        match self {
+            RefsView::Branches => "Branches",
+            RefsView::Tags => "Tags",
+            RefsView::Remotes => "Remotes",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -122,6 +146,18 @@ pub enum Action {
     FetchAll,
     // Reflog
     ResetToEntry,
+    // Branches tab sub-views
+    NextRefsView,
+    PrevRefsView,
+    CheckoutTag,
+    NewTag,
+    DeleteTag,
+    PushTag,
+    AddRemote,
+    RemoveRemote,
+    RenameRemote,
+    EditRemoteUrl,
+    FetchRemote,
     // Conflicts / in-progress operations
     TakeOurs,
     TakeTheirs,
@@ -203,6 +239,17 @@ impl Action {
             TakeTheirs => "resolve: take theirs",
             ContinueOp => "continue merge/rebase",
             AbortOp => "abort merge/rebase",
+            NextRefsView => "next view (branches/tags/remotes)",
+            PrevRefsView => "previous view (branches/tags/remotes)",
+            CheckoutTag => "checkout tag",
+            NewTag => "new tag at HEAD",
+            DeleteTag => "delete tag",
+            PushTag => "push tag",
+            AddRemote => "add remote",
+            RemoveRemote => "remove remote",
+            RenameRemote => "rename remote",
+            EditRemoteUrl => "change remote URL",
+            FetchRemote => "fetch this remote",
             Custom(_) => "custom command",
         }
     }
@@ -246,6 +293,15 @@ impl Action {
             AbortOp => "abort",
             Quit => "quit",
             RebaseInteractive => "rebase -i",
+            NextRefsView => "switch view",
+            CheckoutTag => "checkout",
+            NewTag => "new",
+            DeleteTag => "delete",
+            PushTag => "push",
+            AddRemote => "add",
+            RemoveRemote => "remove",
+            EditRemoteUrl => "edit url",
+            FetchRemote => "fetch",
             ToggleSideBySide => "split",
             _ => self.label(),
         }
@@ -342,6 +398,8 @@ pub static BRANCHES: &[Binding] = &[
     b(&["R"], Action::RenameBranch, false),
     b(&["u"], Action::SetUpstream, false),
     b(&["/"], Action::Search, false),
+    b(&["]"], Action::NextRefsView, true),
+    b(&["["], Action::PrevRefsView, false),
 ];
 
 pub static STASH: &[Binding] = &[
@@ -361,6 +419,26 @@ pub static REFLOG: &[Binding] = &[b(&["enter", "l"], Action::Enter, true), b(&["
 
 pub static HOME: &[Binding] = &[];
 
+pub static TAGS: &[Binding] = &[
+    b(&["space", "enter"], Action::CheckoutTag, true),
+    b(&["n"], Action::NewTag, true),
+    b(&["d"], Action::DeleteTag, true),
+    b(&["P"], Action::PushTag, true),
+    b(&["]"], Action::NextRefsView, true),
+    b(&["["], Action::PrevRefsView, false),
+    b(&["/"], Action::Search, false),
+];
+
+pub static REMOTES: &[Binding] = &[
+    b(&["f"], Action::FetchRemote, true),
+    b(&["n"], Action::AddRemote, true),
+    b(&["d"], Action::RemoveRemote, true),
+    b(&["e"], Action::EditRemoteUrl, true),
+    b(&["R"], Action::RenameRemote, false),
+    b(&["]"], Action::NextRefsView, true),
+    b(&["["], Action::PrevRefsView, false),
+];
+
 pub fn defaults(ctx: Ctx) -> &'static [Binding] {
     match ctx {
         Ctx::Global => GLOBAL,
@@ -372,6 +450,8 @@ pub fn defaults(ctx: Ctx) -> &'static [Binding] {
         Ctx::Screen(Screen::Stash) => STASH,
         Ctx::Screen(Screen::Workspace) => WORKSPACE,
         Ctx::Screen(Screen::Reflog) => REFLOG,
+        Ctx::Tags => TAGS,
+        Ctx::Remotes => REMOTES,
     }
 }
 
@@ -405,7 +485,7 @@ pub fn key_name(ev: &KeyEvent) -> String {
     }
 }
 
-pub const ALL_CTX: [Ctx; 9] = [
+pub const ALL_CTX: [Ctx; 11] = [
     Ctx::Global,
     Ctx::Diff,
     Ctx::Screen(Screen::Home),
@@ -415,6 +495,8 @@ pub const ALL_CTX: [Ctx; 9] = [
     Ctx::Screen(Screen::Stash),
     Ctx::Screen(Screen::Workspace),
     Ctx::Screen(Screen::Reflog),
+    Ctx::Tags,
+    Ctx::Remotes,
 ];
 
 impl Action {
@@ -604,16 +686,7 @@ mod tests {
 
     #[test]
     fn no_duplicate_keys_within_a_context() {
-        for ctx in [
-            Ctx::Global,
-            Ctx::Diff,
-            Ctx::Screen(Screen::Status),
-            Ctx::Screen(Screen::Log),
-            Ctx::Screen(Screen::Branches),
-            Ctx::Screen(Screen::Stash),
-            Ctx::Screen(Screen::Workspace),
-            Ctx::Screen(Screen::Reflog),
-        ] {
+        for ctx in ALL_CTX {
             let mut seen = std::collections::HashSet::new();
             for b in defaults(ctx) {
                 for k in b.keys {

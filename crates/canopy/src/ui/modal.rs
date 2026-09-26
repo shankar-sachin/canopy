@@ -309,7 +309,12 @@ fn help(f: &mut Frame, area: Rect, app: &App, scroll: u16) {
         lines.push(Line::default());
     };
     let screen_name = app.screen.title();
-    section(&mut lines, &format!("{screen_name} (this screen)"), Ctx::Screen(app.screen));
+    let screen_name = match crate::input::screen_ctx(app) {
+        Ctx::Tags => "Tags",
+        Ctx::Remotes => "Remotes",
+        _ => screen_name,
+    };
+    section(&mut lines, &format!("{screen_name} (this screen)"), crate::input::screen_ctx(app));
     if matches!(app.screen, Screen::Status | Screen::Log | Screen::Branches | Screen::Stash | Screen::Reflog) {
         section(&mut lines, "Diff panel (after ⏎)", Ctx::Diff);
     }

@@ -7,7 +7,7 @@ use ratatui::Frame;
 
 use crate::app::{App, Section};
 use crate::input::state_word;
-use crate::keymap::{Focus, Screen};
+use crate::keymap::{Focus, RefsView, Screen};
 use crate::theme::Theme;
 use crate::ui::util::{ago, now, panel, trunc};
 use crate::ui::{diff, graph};
@@ -534,7 +534,111 @@ fn log(f: &mut Frame, area: Rect, app: &mut App) {
 
 // -------------------------------------------------------------- branches
 
+/// Panel title with a Branches · Tags · Remotes switcher and a summary.
+fn refs_title<'a>(app: &App, theme: &Theme, summary: String) -> Line<'a> {
+    let mut spans = vec![Span::raw(" ")];
+    for (i, v) in RefsView::ALL.iter().enumerate() {
+        if i > 0 {
+            spans.push(Span::styled(" · ", theme.muted()));
+        }
+        let style = if *v == app.refs_view { theme.accent().add_modifier(Modifier::UNDERLINED) } else { theme.muted() };
+        spans.push(Span::styled(v.title(), style));
+    }
+    spans.push(Span::styled(format!("  {summary} "), theme.muted()));
+    Line::from(spans)
+}
+
 fn branches(f: &mut Frame, area: Rect, app: &mut App) {
+    match app.refs_view {
+        RefsView::Branches => branch_list(f, area, app),
+        RefsView::Tags => tags(f, area, app),
+        RefsView::Remotes => remotes(f, area, app),
+    }
+}
+
+fn tags(f: &mut Frame, area: Rect, app: &mut App) {
+    let theme = app.theme.clone();
+    let vis = app.visible_tags();
+    let (la, da) = split(area, 50);
+    let focused = app.focus == Focus::List;
+    let title = refs_title(app, &theme, format!("{} tags", app.data.tags.len()));
+    if vis.is_empty() {
+        let msg = if app.data.tags.is_empty() {
+            "No tags yet. Tags mark releases: press n to tag HEAD."
+        } else {
+            "No matching tags (esc clears the filter)."
+        };
+        f.render_widget(Paragraph::new(Line::styled(msg, theme.muted())).block(panel(&theme, title, focused)), la);
+        diff::draw(f, da, app);
+        return;
+    }
+    let rows: Vec<Row> = vis
+        .iter()
+        .map(|&i| {
+            let t = &app.data.tags[i];
+            Row::new(vec![
+                Cell::from(Span::styled(t.name.clone(), theme.fg(theme.tag).add_modifier(Modifier::BOLD))),
+                Cell::from(Span::styled(t.oid[..7.min(t.oid.len())].to_string(), theme.fg(theme.hash))),
+                Cell::from(Span::styled(t.subject.clone(), theme.muted())),
+                Cell::from(Span::styled(ago(t.time), theme.muted())),
+            ])
+        })
+        .collect();
+    let table = Table::new(
+        rows,
+        [Constraint::Percentage(30), Constraint::Length(8), Constraint::Fill(1), Constraint::Length(4)],
+    )
+    .column_spacing(1)
+    .block(panel(&theme, title, focused))
+    .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
+    let sel = app.selected(Screen::Branches);
+    let mut st = TableState::default().with_offset(app.list(Screen::Branches).offset()).with_selected(Some(sel));
+    f.render_stateful_widget(table, la, &mut st);
+    *app.list(Screen::Branches).offset_mut() = st.offset();
+    diff::draw(f, da, app);
+}
+
+fn remotes(f: &mut Frame, area: Rect, app: &mut App) {
+    let theme = app.theme.clone();
+    let (la, da) = split(area, 50);
+    let focused = app.focus == Focus::List;
+    let title = refs_title(app, &theme, format!("{} remotes", app.data.remotes.len()));
+    if app.data.remotes.is_empty() {
+        let lines = vec![
+            Line::styled("No remotes yet.", theme.muted()),
+            Line::styled("A remote is a copy of this repo somewhere else, like GitHub.", theme.muted()),
+            Line::styled("Press n and enter e.g.  origin git@github.com:you/repo.git", theme.muted()),
+        ];
+        f.render_widget(Paragraph::new(lines).block(panel(&theme, title, focused)), la);
+        diff::draw(f, da, app);
+        return;
+    }
+    let rows: Vec<Row> = app
+        .data
+        .remotes
+        .iter()
+        .map(|r| {
+            let n =
+                app.data.branches.iter().filter(|b| b.is_remote && b.name.starts_with(&format!("{}/", r.name))).count();
+            Row::new(vec![
+                Cell::from(Span::styled(r.name.clone(), theme.fg(theme.remote).add_modifier(Modifier::BOLD))),
+                Cell::from(Span::styled(r.fetch_url.clone(), theme.fg(theme.fg))),
+                Cell::from(Span::styled(format!("{n} branches"), theme.muted())),
+            ])
+        })
+        .collect();
+    let table = Table::new(rows, [Constraint::Length(12), Constraint::Fill(1), Constraint::Length(12)])
+        .column_spacing(1)
+        .block(panel(&theme, title, focused))
+        .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
+    let sel = app.selected(Screen::Branches);
+    let mut st = TableState::default().with_offset(app.list(Screen::Branches).offset()).with_selected(Some(sel));
+    f.render_stateful_widget(table, la, &mut st);
+    *app.list(Screen::Branches).offset_mut() = st.offset();
+    diff::draw(f, da, app);
+}
+
+fn branch_list(f: &mut Frame, area: Rect, app: &mut App) {
     let theme = app.theme.clone();
     let vis = app.visible_branches();
     if vis.is_empty() {
@@ -600,7 +704,11 @@ fn branches(f: &mut Frame, area: Rect, app: &mut App) {
         ],
     )
     .column_spacing(1)
-    .block(panel(&theme, format!(" Branches · {nl} local · {} remote ", app.data.branches.len() - nl), focused))
+    .block(panel(
+        &theme,
+        refs_title(app, &theme, format!("{nl} local · {} remote", app.data.branches.len() - nl)),
+        focused,
+    ))
     .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
     let mut st = TableState::default().with_offset(app.list(Screen::Branches).offset()).with_selected(Some(vis_sel));
     f.render_stateful_widget(table, la, &mut st);

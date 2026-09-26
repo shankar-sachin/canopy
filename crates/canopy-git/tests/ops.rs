@@ -225,3 +225,36 @@ async fn fetch_push_with_progress() {
     git.fetch(None, tx).await.unwrap();
     assert!(git.branches().await.unwrap().iter().any(|b| b.is_remote));
 }
+
+#[tokio::test]
+async fn tags_and_remotes() {
+    let remote = TempDir::new().unwrap();
+    sh(remote.path(), &["init", "-q", "--bare", "-b", "main"]);
+    let dir = repo();
+    let git = Git::open(dir.path()).await.unwrap();
+    write(&dir, "f.txt", "x\n");
+    commit_all(&git, "x").await;
+
+    git.create_tag("v1.0.0", "HEAD", None).await.unwrap();
+    git.create_tag("v1.1.0", "HEAD", Some("release notes")).await.unwrap();
+    let tags = git.tags().await.unwrap();
+    assert_eq!(tags.len(), 2);
+    assert!(tags.iter().any(|t| t.name == "v1.1.0" && t.subject == "release notes"));
+
+    git.add_remote("upstream", remote.path().to_str().unwrap()).await.unwrap();
+    git.rename_remote("upstream", "origin").await.unwrap();
+    git.set_remote_url("origin", remote.path().to_str().unwrap()).await.unwrap();
+    let remotes = git.remotes().await.unwrap();
+    assert_eq!(remotes.len(), 1);
+    assert_eq!(remotes[0].name, "origin");
+
+    git.push_tag("origin", "v1.0.0").await.unwrap();
+    assert!(sh(remote.path(), &["tag"]).contains("v1.0.0"));
+    git.delete_remote_tag("origin", "v1.0.0").await.unwrap();
+    assert!(!sh(remote.path(), &["tag"]).contains("v1.0.0"));
+    git.delete_tag("v1.0.0").await.unwrap();
+    assert_eq!(git.tags().await.unwrap().len(), 1);
+
+    git.remove_remote("origin").await.unwrap();
+    assert!(git.remotes().await.unwrap().is_empty());
+}
