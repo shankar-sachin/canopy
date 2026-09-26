@@ -464,7 +464,7 @@ html[data-theme="light"] .dl.add .code, html[data-theme="light"] .dl.add .sign {
 .setup { max-width: 520px; padding: 24px; }
 .setup h3 { margin: 0 0 8px; font-size: 18px; }
 .setup p { color: var(--muted); }
-.code { margin: 10px 0; padding: 12px 14px; border-radius: 9px; background: var(--bg); border: 1px solid var(--border); font: 13px/1.6 var(--mono); }
+.codeblock { margin: 10px 0; padding: 12px 14px; border-radius: 9px; background: var(--bg); border: 1px solid var(--border); font: 13px/1.6 var(--mono); }
 .setup-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .gh-home-row { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-radius: 8px; cursor: pointer; }
 .gh-home-row:hover { background: var(--hover); }

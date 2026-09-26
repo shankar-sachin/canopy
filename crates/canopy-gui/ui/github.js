@@ -31,9 +31,9 @@ function setupCard() {
   const mac = navigator.platform.includes("Mac");
   const body = {
     not_installed: `<h3>Connect GitHub</h3><p>Canopy uses the GitHub CLI (<code>gh</code>) with your own login. Install it, then log in:</p>
-      <pre class="code selectable">${mac ? "brew install gh" : /Win/.test(navigator.platform) ? "winget install --id GitHub.cli -e" : "# see https://cli.github.com for your distribution"}
+      <pre class="codeblock selectable">${mac ? "brew install gh" : /Win/.test(navigator.platform) ? "winget install --id GitHub.cli -e" : "# see https://cli.github.com for your distribution"}
 gh auth login</pre>`,
-    not_logged_in: `<h3>Log in to GitHub</h3><p>The GitHub CLI is installed but not logged in. In a terminal, run:</p><pre class="code selectable">gh auth login</pre>`,
+    not_logged_in: `<h3>Log in to GitHub</h3><p>The GitHub CLI is installed but not logged in. In a terminal, run:</p><pre class="codeblock selectable">gh auth login</pre>`,
     not_github: `<h3>Not a GitHub repository</h3><p>This repository has no GitHub remote, so there are no pull requests, issues or runs to show.
       Everything on the git pages still works.</p>`,
   }[s];
