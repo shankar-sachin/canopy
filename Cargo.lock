@@ -165,7 +165,7 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 
 [[package]]
 name = "canopy-gh"
-version = "0.4.0"
+version = "1.0.0"
 dependencies = [
  "canopy-git",
  "serde",
@@ -177,7 +177,7 @@ dependencies = [
 
 [[package]]
 name = "canopy-git"
-version = "0.4.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "tempfile",
@@ -187,7 +187,7 @@ dependencies = [
 
 [[package]]
 name = "canopy-git-tui"
-version = "0.4.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "canopy-gh",

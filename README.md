@@ -135,7 +135,8 @@ crates/canopy       the TUI (Ratatui): app loop, screens, keymap, themes
 - [x] GitHub pull requests and issues via `gh`
 - [x] GitHub Actions runs
 - [x] The Canopy wiki, the logo, a startup animation, and a roomier layout (v0.4)
-- [ ] More GitHub: notifications, releases, inline review comments (v0.5)
+- [x] More GitHub: notifications, releases, inline review comments, a CI log viewer, and Windows builds (v1.0)
+- [ ] A desktop GUI
 - [ ] Syntax-highlighted diffs
 - [x] Conflict editor with per-conflict ours/theirs
 - [x] File history and blame
