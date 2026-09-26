@@ -173,7 +173,16 @@
     font: 14px/1.8 var(--mono); overflow-x: auto; white-space: pre; position: relative;
   }
   .code .p { color: var(--green); user-select: none; } .code .m { color: var(--faint); }
-  .code .copy { position: absolute; top: 10px; right: 10px; }
+  /* The copy button lives on the frame (.codebox), outside the scrolling text. */
+  .codebox { position: relative; margin: 14px 0; }
+  .codebox > pre.code { margin: 0; padding-right: 58px; }
+  .codebox > .copy { position: absolute; top: 10px; right: 10px; z-index: 2; }
+  /* A panel on the right edge: text scrolling under the button fades out. */
+  .codebox::after {
+    content: ""; position: absolute; top: 1px; right: 1px; bottom: 1px; width: 58px; z-index: 1;
+    border-radius: 0 11px 11px 0; pointer-events: none;
+    background: linear-gradient(90deg, transparent, var(--term-bg) 16px);
+  }
 
   .roadmap { display: grid; gap: 0; grid-template-columns: repeat(6, 1fr); position: relative; }
   @media (max-width: 820px) { .roadmap { grid-template-columns: 1fr; gap: 12px; } }
@@ -386,3 +395,18 @@
   .search-foot kbd { margin-right: 4px; }
 
   .alt-install { margin: 14px 0 0; font-size: 14px; color: var(--muted); }
+
+  /* Phones: wide reference tables scroll in their own box, never the page. */
+  /* Phones: reference tables stack, one row per block (name and value on the
+     first line, the description below), so nothing is squeezed or cut off. */
+  @media (max-width: 640px) {
+    table.ref, table.ref tbody, table.ref tr { display: block; width: 100%; }
+    table.ref thead { display: none; }
+    table.ref tr { padding: 10px 0; border-bottom: 1px solid var(--border); }
+    table.ref td { display: inline-block; border: 0; padding: 2px 8px 2px 0; width: auto; vertical-align: baseline; }
+    table.ref td:first-child { width: auto; }
+    table.ref td:last-child { display: block; padding-top: 4px; }
+    table.ref tr:hover td { background: none; }
+  }
+  /* Long inline code (paths, commands) wraps instead of pushing past the edge. */
+  .prose :not(pre) > code, .wprose :not(pre) > code { overflow-wrap: anywhere; }

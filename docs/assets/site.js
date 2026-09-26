@@ -60,11 +60,50 @@ function legacyCopy(text) {
   ta.remove();
   return ok;
 }
+// Every code block gets a copy button. The block is wrapped so the button
+// sits on the frame, not in the scrolling text, and stays put when a long
+// command scrolls sideways.
+const COPY_ICONS = '<svg class="i-copy" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 5.5V3.6A1.1 1.1 0 0 0 9.4 2.5H3.6a1.1 1.1 0 0 0-1.1 1.1v5.8a1.1 1.1 0 0 0 1.1 1.1h1.9"/></svg><svg class="i-done" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 8.5 3 3 6-7"/></svg>';
+
+/// The commands in a block: no prompts ($, PS>), no comment lines.
+function blockText(pre) {
+  const clone = pre.cloneNode(true);
+  clone.querySelectorAll(".copy, .p").forEach((el) => el.remove());
+  clone.querySelectorAll(".m").forEach((el) => {
+    // A comment on its own line goes; a trailing comment is cut off.
+    el.remove();
+  });
+  return clone.textContent
+    .split("\n")
+    .map((l) => l.replace(/\s+$/, ""))
+    .filter((l) => l.trim())
+    .join("\n");
+}
+
+document.querySelectorAll("pre.code").forEach((pre) => {
+  if (pre.parentElement.classList.contains("codebox")) return;
+  const box = document.createElement("div");
+  box.className = "codebox";
+  pre.replaceWith(box);
+  box.append(pre);
+  let btn = pre.querySelector(".copy");
+  if (!btn) {
+    btn = document.createElement("button");
+    btn.className = "copy";
+    btn.type = "button";
+    btn.innerHTML = COPY_ICONS;
+  }
+  btn.setAttribute("aria-label", "Copy");
+  btn.title = "Copy";
+  if (!btn.dataset.copyText && !btn.dataset.copy) btn._pre = pre;
+  box.append(btn);
+});
+
 document.addEventListener("click", async (e) => {
   const btn = e.target.closest(".copy");
   if (!btn) return;
   e.preventDefault();
-  const text = (btn.dataset.copyText || document.getElementById(btn.dataset.copy)?.textContent || "").trim();
+  const text = (btn.dataset.copyText || (btn._pre && blockText(btn._pre)) || document.getElementById(btn.dataset.copy)?.textContent || "").trim();
   if (!text) return;
   const ok = await copyText(text);
   btn.classList.toggle("done", ok);
