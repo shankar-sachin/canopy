@@ -122,6 +122,7 @@ pub fn draw(f: &mut Frame, app: &App) {
             f.render_widget(Paragraph::new(text).scroll((*scroll, 0)).block(block), r);
         }
         Modal::Blame(v) => blame(f, area, t, v),
+        Modal::Compose(c) => compose(f, area, t, c),
         Modal::Rebase { items, sel, .. } => {
             let r = centered(area, 90, items.len() as u16 + 9);
             f.render_widget(Clear, r);
@@ -328,6 +329,47 @@ fn blame(f: &mut Frame, area: Rect, t: &Theme, v: &crate::modal::BlameView) {
         };
         f.render_widget(Paragraph::new(text), footer);
     }
+}
+
+fn compose(f: &mut Frame, area: Rect, t: &Theme, c: &crate::modal::Compose) {
+    let r = centered(area, 84, 20);
+    f.render_widget(Clear, r);
+    let block = modal_block(t, format!(" {} ", c.heading), false);
+    let inner = block.inner(r);
+    f.render_widget(block, r);
+    let title_h = if c.title.is_some() { 3 } else { 0 };
+    let [title_area, b_label, b_area, hints] = Layout::vertical([
+        Constraint::Length(title_h),
+        Constraint::Length(1),
+        Constraint::Fill(1),
+        Constraint::Length(1),
+    ])
+    .areas(inner);
+    if let Some(title) = &c.title {
+        let [label, line, _] =
+            Layout::vertical([Constraint::Length(1), Constraint::Length(1), Constraint::Length(1)]).areas(title_area);
+        f.render_widget(Paragraph::new(Line::styled("Title", if c.on_body { t.muted() } else { t.accent() })), label);
+        draw_text(f, line, title, t, !c.on_body, "› ");
+    }
+    let label = if c.title.is_some() { "Description (Markdown, optional)" } else { "Message (Markdown)" };
+    f.render_widget(Paragraph::new(Line::styled(label, if c.on_body { t.accent() } else { t.muted() })), b_label);
+    let lines: Vec<Line> = c.body.lines().iter().map(|l| Line::raw(l.clone())).collect();
+    let (row, col) = c.body.cursor();
+    let scroll = (row as u16).saturating_sub(b_area.height.saturating_sub(1));
+    f.render_widget(Paragraph::new(lines).scroll((scroll, 0)).style(Style::default().bg(t.selection_bg)), b_area);
+    if c.on_body {
+        f.set_cursor_position(Position::new(b_area.x + col as u16, b_area.y + row as u16 - scroll));
+    }
+    let mut h = Vec::new();
+    let keys: &[(&str, &str)] = if c.title.is_some() {
+        &[("⏎", "send (from title)"), ("tab", "switch field"), ("^s", "send"), ("esc", "cancel")]
+    } else {
+        &[("^s", "send"), ("⏎", "new line"), ("esc", "cancel")]
+    };
+    for (k, l) in keys {
+        h.extend(key_hint(t, k, l));
+    }
+    f.render_widget(Paragraph::new(Line::from(h)), hints);
 }
 
 fn welcome(f: &mut Frame, area: Rect, t: &Theme) {

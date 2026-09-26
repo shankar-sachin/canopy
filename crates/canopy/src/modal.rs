@@ -58,6 +58,13 @@ pub enum Pending {
     BisectFinish {
         oid: String,
     },
+    PrMerge {
+        number: u64,
+        method: canopy_gh::MergeMethod,
+    },
+    PrClose(u64),
+    /// Open the compose dialog for a review of this kind.
+    PrReview(u64, canopy_gh::ReviewKind),
 }
 
 #[derive(Debug, Clone)]
@@ -161,6 +168,39 @@ pub enum Modal {
     },
     Welcome,
     Blame(BlameView),
+    /// Write a title and/or body for something on GitHub.
+    Compose(Compose),
+}
+
+#[derive(Debug, Clone)]
+pub enum ComposeFor {
+    NewPullRequest {
+        base: String,
+    },
+    /// Comment on this PR number.
+    Comment(u64),
+    Review(u64, canopy_gh::ReviewKind),
+}
+
+pub struct Compose {
+    pub heading: String,
+    /// `None` for body-only messages (comments, reviews).
+    pub title: Option<TextArea>,
+    pub body: TextArea,
+    pub on_body: bool,
+    pub purpose: ComposeFor,
+}
+
+impl Compose {
+    pub fn new(heading: impl Into<String>, with_title: bool, purpose: ComposeFor) -> Self {
+        Compose {
+            heading: heading.into(),
+            title: with_title.then(|| TextArea::single("")),
+            body: TextArea::multi(""),
+            on_body: !with_title,
+            purpose,
+        }
+    }
 }
 
 pub struct BlameView {

@@ -21,6 +21,8 @@ pub struct Config {
     pub workspace_depth: usize,
     /// User-defined commands bound to keys.
     pub custom_commands: Vec<CustomCommand>,
+    /// Path to the GitHub CLI, if not `gh` on PATH.
+    pub gh_program: Option<String>,
     /// Key remaps: action name -> key or list of keys.
     pub keys: BTreeMap<String, KeySpec>,
     /// Number of commits loaded per log page.
@@ -58,6 +60,7 @@ impl Default for Config {
             workspace_depth: 3,
             custom_commands: Vec::new(),
             keys: BTreeMap::new(),
+            gh_program: None,
             log_page_size: 300,
         }
     }

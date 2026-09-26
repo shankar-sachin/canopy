@@ -115,6 +115,7 @@ fn goto(app: &mut App, s: Screen) {
         app.set_selected(s, 0);
     }
     diff::load_for_selection(app);
+    crate::github::on_enter(app, s);
 }
 
 fn needs_repo(app: &mut App) -> bool {
@@ -148,6 +149,9 @@ pub fn do_action(app: &mut App, action: Action) {
         }
         Refresh => {
             app.refresh();
+            if app.screen == Screen::Pulls {
+                crate::github::load_prs(app);
+            }
             if app.screen == Screen::Workspace {
                 app.scan_workspace();
             }
@@ -232,7 +236,7 @@ pub fn do_action(app: &mut App, action: Action) {
                         failed += 1;
                     }
                 }
-                Ok(Output {
+                Ok::<_, canopy_git::GitError>(Output {
                     cmd: "git fetch --all --prune  # in every repo".into(),
                     stdout: if failed > 0 { format!("{failed} failed") } else { String::new() },
                     stderr: String::new(),
@@ -664,6 +668,9 @@ fn repo_action(app: &mut App, action: Action) {
             app.run_op(format!("Fetch {}", r.name), Then::Refresh, async move { git.fetch(Some(&r.name), p).await });
         }
         Bisect => bisect(app),
+        PrCheckout | PrCreate | PrReview | PrComment | PrMerge | PrClose | OpenInBrowser | CycleFilter | ToggleDiff => {
+            github_action(app, action)
+        }
         FileHistory => {
             let Some((path, _)) = target_file(app) else { return };
             app.set_log_path(Some(path));
@@ -926,6 +933,160 @@ fn push(app: &mut App) {
             };
         }
     }
+}
+
+fn github_action(app: &mut App, action: Action) {
+    use crate::modal::{Compose, ComposeFor};
+    use canopy_gh::{MergeMethod, ReviewKind};
+    if !app.github.ready() {
+        app.toast(Level::Info, "GitHub isn't set up for this repo yet (see the Pull requests tab)");
+        return;
+    }
+    let Some(gh) = app.github.gh.clone() else { return };
+    let pr = crate::github::selected_pr(app).cloned();
+    match action {
+        Action::CycleFilter => {
+            app.github.pr_filter = app.github.pr_filter.next();
+            app.set_selected(Screen::Pulls, 0);
+            *app.list(Screen::Pulls).offset_mut() = 0;
+            app.toast(Level::Info, format!("Showing {} pull requests", app.github.pr_filter.label()));
+            crate::github::load_prs(app);
+        }
+        Action::ToggleDiff => {
+            app.github.show_pr_diff = !app.github.show_pr_diff;
+            diff::load_for_selection(app);
+        }
+        Action::OpenInBrowser => {
+            let url = match (&pr, app.github.status.as_ref()) {
+                (Some(p), _) => p.url.clone(),
+                (None, Some(canopy_gh::GhStatus::Ready(info))) => format!("{}/pulls", info.url),
+                _ => return,
+            };
+            if crate::terminal::open_url(&url) {
+                app.toast(Level::Info, format!("Opened {url}"));
+            }
+        }
+        Action::PrCreate => {
+            let Some(branch) = app.current_branch().map(String::from) else {
+                app.toast(Level::Warn, "Check out a branch first");
+                return;
+            };
+            let base = match app.github.status.as_ref() {
+                Some(canopy_gh::GhStatus::Ready(info)) => {
+                    info.default_branch_ref.as_ref().map(|b| b.name.clone()).unwrap_or_else(|| "main".into())
+                }
+                _ => "main".into(),
+            };
+            if branch == base {
+                app.toast(Level::Warn, format!("You're on {base}; create a branch for your change first"));
+                return;
+            }
+            if app.data.status.branch.upstream.is_none() {
+                app.toast(Level::Warn, "Push this branch first (P), then open the pull request");
+                return;
+            }
+            let heading = format!("New pull request: {branch} → {base}");
+            app.modal = Modal::Compose(Compose::new(heading, true, ComposeFor::NewPullRequest { base }));
+        }
+        _ => {
+            let Some(pr) = pr else { return };
+            let n = pr.number;
+            match action {
+                Action::PrCheckout => {
+                    app.run_op(format!("Check out #{n}"), Then::Refresh, async move { gh.pr_checkout(n).await });
+                }
+                Action::PrComment => {
+                    app.modal = Modal::Compose(Compose::new(format!("Comment on #{n}"), false, ComposeFor::Comment(n)));
+                }
+                Action::PrReview => {
+                    let item = |key, label: &str, detail: &str, kind| MenuItem {
+                        key,
+                        label: label.into(),
+                        detail: detail.into(),
+                        pending: Pending::PrReview(n, kind),
+                        danger: false,
+                    };
+                    app.modal = Modal::Menu {
+                        title: format!("Review #{n} {}", pr.title),
+                        items: vec![
+                            item('a', "Approve", "looks good to merge", ReviewKind::Approve),
+                            item('c', "Comment", "feedback without a verdict", ReviewKind::Comment),
+                            item('x', "Request changes", "must be fixed before merging", ReviewKind::RequestChanges),
+                        ],
+                        sel: 0,
+                    };
+                }
+                Action::PrMerge => {
+                    if pr.state != "OPEN" {
+                        app.toast(Level::Info, format!("#{n} is {}", pr.state.to_lowercase()));
+                        return;
+                    }
+                    let item = |key, label: &str, detail: &str, method| MenuItem {
+                        key,
+                        label: label.into(),
+                        detail: detail.into(),
+                        pending: Pending::PrMerge { number: n, method },
+                        danger: false,
+                    };
+                    let mut title = format!("Merge #{n} into {}", pr.base_ref_name);
+                    if pr.checks().failed > 0 {
+                        title.push_str(" · ⚠ checks are failing");
+                    }
+                    app.modal = Modal::Menu {
+                        title,
+                        items: vec![
+                            item('m', "Merge commit", "keep every commit, add a merge commit", MergeMethod::Merge),
+                            item('s', "Squash", "combine into one commit", MergeMethod::Squash),
+                            item('r', "Rebase", "replay commits on top, no merge commit", MergeMethod::Rebase),
+                        ],
+                        sel: 0,
+                    };
+                }
+                Action::PrClose => {
+                    confirm(
+                        app,
+                        &format!("Close #{n}?"),
+                        vec![pr.title.clone(), "It can be reopened on GitHub later.".into()],
+                        Pending::PrClose(n),
+                        true,
+                    );
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
+/// Validate and send a compose dialog. `Err` keeps the dialog open.
+fn submit_compose(app: &mut App, c: &crate::modal::Compose) -> Result<(), String> {
+    use crate::modal::ComposeFor;
+    use canopy_gh::ReviewKind;
+    let Some(gh) = app.github.gh.clone() else { return Err("GitHub isn't ready".into()) };
+    let title = c.title.as_ref().map(|t| t.text().trim().to_string()).unwrap_or_default();
+    let body = c.body.text().trim().to_string();
+    match c.purpose.clone() {
+        ComposeFor::NewPullRequest { base } => {
+            if title.is_empty() {
+                return Err("Give the pull request a title".into());
+            }
+            app.run_op("Create pull request", Then::GitHub, async move {
+                gh.pr_create(&title, &body, Some(&base), false).await
+            });
+        }
+        ComposeFor::Comment(n) => {
+            if body.is_empty() {
+                return Err("Write a comment first".into());
+            }
+            app.run_op(format!("Comment on #{n}"), Then::GitHub, async move { gh.pr_comment(n, &body).await });
+        }
+        ComposeFor::Review(n, kind) => {
+            if body.is_empty() && kind != ReviewKind::Approve {
+                return Err("Say what needs to change (a review needs a message)".into());
+            }
+            app.run_op(format!("Review #{n}"), Then::GitHub, async move { gh.pr_review(n, kind, &body).await });
+        }
+    }
+    Ok(())
 }
 
 /// The file `L`/`B` act on, and the revision to look at (`None` = working tree).
@@ -1274,6 +1435,26 @@ fn modal_key(app: &mut App, key: KeyEvent) {
                 }
             }
         }
+        Modal::Compose(mut c) => {
+            let submit = (key.code == KeyCode::Char('s') && ctrl) || (key.code == KeyCode::Enter && !c.on_body);
+            match key.code {
+                KeyCode::Esc => return,
+                _ if submit => match submit_compose(app, &c) {
+                    Ok(()) => return,
+                    Err(msg) => app.toast(Level::Warn, msg),
+                },
+                KeyCode::Tab | KeyCode::BackTab if c.title.is_some() => c.on_body = !c.on_body,
+                KeyCode::Down if !c.on_body => c.on_body = true,
+                KeyCode::Up if c.on_body && c.title.is_some() && c.body.cursor().0 == 0 => c.on_body = false,
+                _ => {
+                    let target = if c.on_body { Some(&mut c.body) } else { c.title.as_mut() };
+                    if let Some(t) = target {
+                        t.handle_key(key);
+                    }
+                }
+            }
+            Modal::Compose(c)
+        }
         Modal::Blame(mut v) => {
             let n = v.blame.lines.len();
             let mv = |v: &mut crate::modal::BlameView, d: isize| {
@@ -1548,7 +1729,7 @@ pub fn execute(app: &mut App, pending: Pending) {
                 if !untracked.is_empty() {
                     last = Some(git.clean(&untracked).await?);
                 }
-                Ok(last.expect("at least one file"))
+                Ok::<_, canopy_git::GitError>(last.expect("at least one file"))
             });
         }
         Pending::DeleteBranch { name, remote, force } => {
@@ -1579,6 +1760,32 @@ pub fn execute(app: &mut App, pending: Pending) {
                 }
                 git.delete_tag(&name).await
             });
+        }
+        Pending::PrMerge { number, method } => {
+            let Some(gh) = app.github.gh.clone() else { return };
+            app.run_op(
+                format!("Merge #{number}"),
+                Then::GitHub,
+                async move { gh.pr_merge(number, method, true).await },
+            );
+        }
+        Pending::PrClose(number) => {
+            let Some(gh) = app.github.gh.clone() else { return };
+            app.run_op(format!("Close #{number}"), Then::GitHub, async move { gh.pr_close(number).await });
+        }
+        Pending::PrReview(number, kind) => {
+            use canopy_gh::ReviewKind;
+            let what = match kind {
+                ReviewKind::Approve => "Approve",
+                ReviewKind::Comment => "Review",
+                ReviewKind::RequestChanges => "Request changes on",
+            };
+            let compose = crate::modal::Compose::new(
+                format!("{what} #{number}"),
+                false,
+                crate::modal::ComposeFor::Review(number, kind),
+            );
+            app.modal = Modal::Compose(compose);
         }
         Pending::BisectStart { good } => {
             app.run_op("Start bisect", Then::Bisect, async move { git.bisect_start("HEAD", &good).await });

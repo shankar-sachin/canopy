@@ -616,3 +616,153 @@ async fn submodules_view() {
     press(&mut app, KeyCode::Enter).await;
     assert!(app.git.as_ref().unwrap().repo.root.ends_with("vendor/lib"));
 }
+
+// ------------------------------------------------------------------ GitHub
+
+/// A fake `gh` that serves the canopy-gh fixtures and logs its arguments.
+fn fake_gh(dir: &Path, logged_in: bool) -> std::path::PathBuf {
+    use std::os::unix::fs::PermissionsExt;
+    let fixtures = concat!(env!("CARGO_MANIFEST_DIR"), "/../canopy-gh/tests/fixtures");
+    let script = format!(
+        r#"#!/bin/sh
+echo "$@" >> "{log}"
+case "$1 $2" in
+  "auth status") {auth} ;;
+  "repo view") echo '{{"nameWithOwner":"o/r","url":"https://github.com/o/r","defaultBranchRef":{{"name":"main"}}}}' ;;
+  "api user") echo ada ;;
+  "pr list") cat "{f}/pr_list.json" ;;
+  "pr view") cat "{f}/pr_view.json" ;;
+  "pr diff") printf 'diff --git a/csv.rs b/csv.rs\n--- a/csv.rs\n+++ b/csv.rs\n@@ -0,0 +1 @@\n+fn parse() {{}}\n' ;;
+  *) : ;;
+esac
+"#,
+        log = dir.join("gh-calls.log").display(),
+        f = fixtures,
+        auth = if logged_in { "exit 0" } else { "exit 1" },
+    );
+    let path = dir.join("fake-gh");
+    std::fs::write(&path, script).unwrap();
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+    path
+}
+
+async fn github_app(dir: &Path, gh: &Path) -> App {
+    let git = canopy_git::Git::open(dir).await.unwrap();
+    let config = Config { gh_program: Some(gh.display().to_string()), ..Config::default() };
+    let mut app = App::new(Some(git), config, dir.to_path_buf());
+    app.refresh();
+    crate::github::detect(&mut app);
+    app.settle().await;
+    app
+}
+
+fn gh_calls(dir: &Path) -> Vec<String> {
+    std::fs::read_to_string(dir.join("gh-calls.log")).unwrap_or_default().lines().map(String::from).collect()
+}
+
+#[tokio::test]
+async fn pull_requests_tab() {
+    let dir = demo_repo();
+    let bin = TempDir::new().unwrap();
+    let gh = fake_gh(bin.path(), true);
+    let mut app = github_app(dir.path(), &gh).await;
+    press(&mut app, KeyCode::Char('8')).await;
+    let s = render(&mut app, 140, 34);
+    assert!(s.contains("Pull requests · o/r · open · 2"), "{s}");
+    assert!(
+        s.contains("#12") && s.contains("Add CSV parser") && s.contains("✗ 1 failed") && s.contains("approved"),
+        "{s}"
+    );
+    // Details panel: description, checks, review, comment.
+    assert!(s.contains("ada wants to merge feature/parser into main"), "{s}");
+    assert!(s.contains("Parses CSV") && s.contains("bob approved") && s.contains("Nice!"), "{s}");
+
+    // D shows the diff under the details.
+    press(&mut app, KeyCode::Char('D')).await;
+    let s = render(&mut app, 140, 34);
+    assert!(s.contains("csv.rs"), "{s}");
+
+    // Filter cycles to "mine" and asks gh for --author @me.
+    press(&mut app, KeyCode::Char('f')).await;
+    assert!(gh_calls(bin.path()).iter().any(|l| l.starts_with("pr list") && l.contains("--author @me")));
+
+    // Review → approve (message optional) → sends `gh pr review 12 --approve`.
+    press(&mut app, KeyCode::Char('r')).await;
+    press(&mut app, KeyCode::Char('a')).await;
+    assert!(matches!(app.modal, Modal::Compose(_)));
+    crate::input::handle_key(&mut app, KeyEvent::new(KeyCode::Char('s'), KeyModifiers::CONTROL));
+    app.settle().await;
+    assert!(gh_calls(bin.path()).contains(&"pr review 12 --approve".to_string()), "{:?}", gh_calls(bin.path()));
+
+    // Request changes needs a message.
+    press(&mut app, KeyCode::Char('r')).await;
+    press(&mut app, KeyCode::Char('x')).await;
+    crate::input::handle_key(&mut app, KeyEvent::new(KeyCode::Char('s'), KeyModifiers::CONTROL));
+    assert!(matches!(app.modal, Modal::Compose(_)), "empty request-changes must not send");
+    chars(&mut app, "Please add tests").await;
+    crate::input::handle_key(&mut app, KeyEvent::new(KeyCode::Char('s'), KeyModifiers::CONTROL));
+    app.settle().await;
+    assert!(gh_calls(bin.path()).contains(&"pr review 12 --request-changes --body Please add tests".to_string()));
+
+    // Merge → squash.
+    press(&mut app, KeyCode::Char('M')).await;
+    let s = render(&mut app, 140, 34);
+    assert!(s.contains("checks are failing"), "{s}");
+    press(&mut app, KeyCode::Char('s')).await;
+    assert!(gh_calls(bin.path()).contains(&"pr merge 12 --squash --delete-branch".to_string()));
+    assert!(app.history.iter().any(|c| c == "gh pr merge 12 --squash --delete-branch"), "teach mode");
+
+    // Checkout.
+    press(&mut app, KeyCode::Char(' ')).await;
+    assert!(gh_calls(bin.path()).contains(&"pr checkout 12".to_string()));
+}
+
+#[tokio::test]
+async fn create_pr_needs_a_pushed_branch() {
+    let dir = demo_repo();
+    let bare = TempDir::new().unwrap();
+    sh(bare.path(), "git init -q --bare -b main");
+    let bin = TempDir::new().unwrap();
+    let gh = fake_gh(bin.path(), true);
+    sh(
+        dir.path(),
+        &format!(
+            "git stash -q -u && git remote add origin {} && git push -q -u origin main && git switch -qc feat",
+            bare.path().display()
+        ),
+    );
+    let mut app = github_app(dir.path(), &gh).await;
+    press(&mut app, KeyCode::Char('8')).await;
+    press(&mut app, KeyCode::Char('n')).await;
+    assert!(app.toast.as_ref().unwrap().text.contains("Push this branch first"));
+    sh(dir.path(), "git push -q -u origin feat");
+    app.refresh();
+    app.settle().await;
+    press(&mut app, KeyCode::Char('n')).await;
+    let s = render(&mut app, 140, 34);
+    assert!(s.contains("New pull request: feat → main"), "{s}");
+    chars(&mut app, "Add feature").await;
+    press(&mut app, KeyCode::Tab).await;
+    chars(&mut app, "Why it matters").await;
+    crate::input::handle_key(&mut app, KeyEvent::new(KeyCode::Char('s'), KeyModifiers::CONTROL));
+    app.settle().await;
+    assert!(
+        gh_calls(bin.path()).contains(&"pr create --title Add feature --body Why it matters --base main".to_string())
+    );
+}
+
+#[tokio::test]
+async fn github_setup_card_when_logged_out() {
+    let dir = demo_repo();
+    let bin = TempDir::new().unwrap();
+    let gh = fake_gh(bin.path(), false);
+    let mut app = github_app(dir.path(), &gh).await;
+    press(&mut app, KeyCode::Char('8')).await;
+    let s = render(&mut app, 120, 24);
+    assert!(s.contains("not logged in to GitHub") && s.contains("gh auth login"), "{s}");
+    // Actions explain instead of failing.
+    press(&mut app, KeyCode::Char('n')).await;
+    assert!(app.toast.as_ref().unwrap().text.contains("isn't set up"));
+    // Nothing but detection was run.
+    assert_eq!(gh_calls(bin.path()), vec!["auth status"]);
+}

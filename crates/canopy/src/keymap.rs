@@ -14,11 +14,20 @@ pub enum Screen {
     Stash,
     Workspace,
     Reflog,
+    Pulls,
 }
 
 impl Screen {
-    pub const ALL: [Screen; 7] =
-        [Screen::Home, Screen::Status, Screen::Log, Screen::Branches, Screen::Stash, Screen::Workspace, Screen::Reflog];
+    pub const ALL: [Screen; 8] = [
+        Screen::Home,
+        Screen::Status,
+        Screen::Log,
+        Screen::Branches,
+        Screen::Stash,
+        Screen::Workspace,
+        Screen::Reflog,
+        Screen::Pulls,
+    ];
 
     pub fn title(self) -> &'static str {
         match self {
@@ -29,6 +38,7 @@ impl Screen {
             Screen::Stash => "Stash",
             Screen::Workspace => "Workspace",
             Screen::Reflog => "Reflog",
+            Screen::Pulls => "Pull requests",
         }
     }
 
@@ -158,6 +168,16 @@ pub enum Action {
     ResetToEntry,
     FileHistory,
     Blame,
+    // GitHub
+    PrCheckout,
+    PrCreate,
+    PrReview,
+    PrComment,
+    PrMerge,
+    PrClose,
+    OpenInBrowser,
+    CycleFilter,
+    ToggleDiff,
     Bisect,
     // Conflict panel
     NextConflict,
@@ -207,6 +227,7 @@ impl Action {
             Goto(Screen::Stash) => "go to stash",
             Goto(Screen::Workspace) => "go to workspace",
             Goto(Screen::Reflog) => "go to reflog",
+            Goto(Screen::Pulls) => "go to pull requests",
             NextScreen => "next tab",
             PrevScreen => "previous tab",
             Refresh => "refresh",
@@ -268,6 +289,15 @@ impl Action {
             AbortOp => "abort merge/rebase",
             Bisect => "bisect: find the commit that broke something",
             FileHistory => "history of this file",
+            PrCheckout => "check out this pull request",
+            PrCreate => "create a pull request for this branch",
+            PrReview => "review: approve / comment / request changes",
+            PrComment => "comment",
+            PrMerge => "merge pull request",
+            PrClose => "close",
+            OpenInBrowser => "open in browser",
+            CycleFilter => "cycle filter",
+            ToggleDiff => "show diff / details",
             Blame => "blame: who changed each line",
             NextConflict => "next conflict",
             PrevConflict => "previous conflict",
@@ -337,6 +367,13 @@ impl Action {
             Quit => "quit",
             RebaseInteractive => "rebase -i",
             NextRefsView => "switch view",
+            PrCheckout => "checkout",
+            PrCreate => "new",
+            PrReview => "review",
+            PrMerge => "merge",
+            OpenInBrowser => "browser",
+            CycleFilter => "filter",
+            ToggleDiff => "diff",
             NextConflict => "next",
             KeepOurs => "ours",
             KeepTheirs => "theirs",
@@ -385,6 +422,7 @@ pub static GLOBAL: &[Binding] = &[
     b(&["5"], Action::Goto(Screen::Stash), false),
     b(&["6"], Action::Goto(Screen::Workspace), false),
     b(&["7"], Action::Goto(Screen::Reflog), false),
+    b(&["8"], Action::Goto(Screen::Pulls), false),
     b(&["tab"], Action::NextScreen, false),
     b(&["backtab"], Action::PrevScreen, false),
     b(&["ctrl-r"], Action::Refresh, false),
@@ -479,6 +517,19 @@ pub static REFLOG: &[Binding] = &[b(&["enter", "l"], Action::Enter, true), b(&["
 
 pub static HOME: &[Binding] = &[];
 
+pub static PULLS: &[Binding] = &[
+    b(&["enter", "l"], Action::Enter, false),
+    b(&["space"], Action::PrCheckout, true),
+    b(&["n"], Action::PrCreate, true),
+    b(&["r"], Action::PrReview, true),
+    b(&["M"], Action::PrMerge, true),
+    b(&["C"], Action::PrComment, false),
+    b(&["X"], Action::PrClose, false),
+    b(&["D"], Action::ToggleDiff, true),
+    b(&["o"], Action::OpenInBrowser, true),
+    b(&["f"], Action::CycleFilter, true),
+];
+
 pub static CONFLICT: &[Binding] = &[
     b(&["o"], Action::KeepOurs, true),
     b(&["t"], Action::KeepTheirs, true),
@@ -538,6 +589,7 @@ pub fn defaults(ctx: Ctx) -> &'static [Binding] {
         Ctx::Screen(Screen::Stash) => STASH,
         Ctx::Screen(Screen::Workspace) => WORKSPACE,
         Ctx::Screen(Screen::Reflog) => REFLOG,
+        Ctx::Screen(Screen::Pulls) => PULLS,
         Ctx::Tags => TAGS,
         Ctx::Conflict => CONFLICT,
         Ctx::Remotes => REMOTES,
@@ -576,7 +628,7 @@ pub fn key_name(ev: &KeyEvent) -> String {
     }
 }
 
-pub const ALL_CTX: [Ctx; 14] = [
+pub const ALL_CTX: [Ctx; 15] = [
     Ctx::Global,
     Ctx::Diff,
     Ctx::Screen(Screen::Home),
@@ -586,6 +638,7 @@ pub const ALL_CTX: [Ctx; 14] = [
     Ctx::Screen(Screen::Stash),
     Ctx::Screen(Screen::Workspace),
     Ctx::Screen(Screen::Reflog),
+    Ctx::Screen(Screen::Pulls),
     Ctx::Tags,
     Ctx::Remotes,
     Ctx::Worktrees,

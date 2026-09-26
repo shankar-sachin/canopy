@@ -23,20 +23,21 @@ pub fn draw(f: &mut Frame, area: Rect, app: &mut App) {
     };
 
     let (added, removed) = view.added_removed();
-    let mut title = vec![
-        Span::raw(" "),
-        Span::raw(trunc(&view.title, area.width.saturating_sub(24) as usize)),
-        Span::raw(" "),
-        Span::styled(format!("+{added}"), theme.fg(theme.added)),
-        Span::raw(" "),
-        Span::styled(format!("-{removed} "), theme.fg(theme.removed)),
-    ];
+    let mut title =
+        vec![Span::raw(" "), Span::raw(trunc(&view.title, area.width.saturating_sub(24) as usize)), Span::raw(" ")];
+    // Info-only panels (PR details, remotes, worktrees) have no counts to show.
+    if !view.files.is_empty() {
+        title.push(Span::styled(format!("+{added}"), theme.fg(theme.added)));
+        title.push(Span::raw(" "));
+        title.push(Span::styled(format!("-{removed} "), theme.fg(theme.removed)));
+    }
     if view.anchor.is_some() {
         title.push(Span::styled("[range] ", theme.fg(theme.accent_alt)));
     }
     let block = panel(&theme, Line::from(title), focused);
     let inner = block.inner(area);
     f.render_widget(block, area);
+    app.last_diff_width = inner.width as usize;
 
     if view.rows.is_empty() {
         let text = if view.files.iter().any(|f| f.binary) { "Binary file" } else { "No changes" };

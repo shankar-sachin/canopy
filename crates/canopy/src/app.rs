@@ -70,6 +70,16 @@ pub enum Msg {
     /// Full message of HEAD, fetched to prefill the amend dialog.
     OpenAmend(String),
     ShowOutput(String, String),
+    GhDetected {
+        status: canopy_gh::GhStatus,
+        viewer: Option<String>,
+    },
+    Prs(Result<Vec<canopy_gh::PullRequest>, String>),
+    PrDetail {
+        gen: u64,
+        detail: Result<Box<canopy_gh::PullRequest>, String>,
+        diff: Option<String>,
+    },
     Blame(Result<crate::modal::BlameView, String>),
 }
 
@@ -80,6 +90,8 @@ pub enum Then {
     RefreshWorkspace,
     /// A bisect step: record git's answer, then refresh.
     Bisect,
+    /// Something changed on GitHub: reload the repo and the PR list.
+    GitHub,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -146,6 +158,9 @@ pub struct App {
     pub log_loading: bool,
     /// When set, History shows only commits touching this path (following renames).
     pub log_path: Option<String>,
+    pub github: crate::github::GithubState,
+    /// Inner width of the diff panel at the last draw (for wrapping text).
+    pub last_diff_width: usize,
     /// Git's answer to the last bisect step, while bisecting.
     pub bisect: Option<BisectStep>,
     /// Select this commit in History once the next refresh lands.
@@ -202,6 +217,8 @@ impl App {
             last_status_poll: Instant::now(),
             log_loading: false,
             log_path: None,
+            github: Default::default(),
+            last_diff_width: 72,
             bisect: None,
             jump_after_load: None,
             refs_view: RefsView::Branches,
@@ -316,6 +333,7 @@ impl App {
             Screen::Stash => self.data.stashes.len(),
             Screen::Workspace => self.visible_workspace().len(),
             Screen::Reflog => self.data.reflog.len(),
+            Screen::Pulls => self.github.prs.len(),
         }
     }
 
@@ -393,9 +411,10 @@ impl App {
     }
 
     /// Run a git operation in the background and report the result.
-    pub fn run_op<F>(&mut self, label: impl Into<String>, then: Then, fut: F)
+    pub fn run_op<F, E>(&mut self, label: impl Into<String>, then: Then, fut: F)
     where
-        F: Future<Output = Result<Output, GitError>> + Send + 'static,
+        F: Future<Output = Result<Output, E>> + Send + 'static,
+        E: std::fmt::Display,
     {
         let label = label.into();
         self.busy = Some(label.clone());
@@ -617,6 +636,10 @@ impl App {
                 match then {
                     Then::Refresh => self.refresh(),
                     Then::RefreshWorkspace => self.scan_workspace(),
+                    Then::GitHub => {
+                        self.refresh();
+                        crate::github::load_prs(self);
+                    }
                     Then::Bisect => {
                         self.refresh();
                         if let Some(BisectStep::Found { oid, subject }) = self.bisect.clone() {
@@ -632,6 +655,7 @@ impl App {
                 self.clamp_selections();
             }
             Msg::RepoOpened(Ok(git)) => {
+                self.github = Default::default();
                 self.toast(Level::Info, format!("Opened {}", git.repo.root.display()));
                 self.git = Some(git);
                 self.data = Snapshot::default();
@@ -643,6 +667,7 @@ impl App {
                 self.screen = Screen::Home;
                 self.focus = Focus::List;
                 self.refresh();
+                crate::github::detect(self);
             }
             Msg::RepoOpened(Err(e)) => self.toast(Level::Error, e),
             Msg::Blame(Ok(view)) => {
@@ -656,6 +681,42 @@ impl App {
             Msg::Blame(Err(e)) => {
                 self.busy = None;
                 self.toast(Level::Error, e);
+            }
+            Msg::GhDetected { status, viewer } => {
+                self.github.status = Some(status);
+                self.github.viewer = viewer;
+                crate::github::on_enter(self, self.screen);
+            }
+            Msg::Prs(result) => {
+                self.github.prs_loading = false;
+                match result {
+                    Ok(prs) => {
+                        self.github.prs = prs;
+                        self.github.prs_loaded = true;
+                        self.clamp_selections();
+                        if self.screen == Screen::Pulls {
+                            crate::views::diff::load_for_selection(self);
+                        }
+                    }
+                    Err(e) => self.toast(Level::Error, e),
+                }
+            }
+            Msg::PrDetail { gen, detail, diff } => {
+                if gen != self.diff_gen || self.screen != Screen::Pulls {
+                    return;
+                }
+                match detail {
+                    Ok(pr) => {
+                        let mut v = crate::github::pr_view(&pr, diff.as_deref(), self.last_diff_width);
+                        if let Some(old) = self.diff.as_ref().filter(|o| o.key == v.key) {
+                            v.cursor = old.cursor.min(v.rows.len().saturating_sub(1));
+                        }
+                        self.github.pr_diff = diff.map(|d| (pr.number, d));
+                        self.github.pr_detail = Some(*pr);
+                        self.diff = Some(v);
+                    }
+                    Err(e) => self.toast(Level::Error, e),
+                }
             }
             Msg::ShowOutput(title, text) => {
                 self.progress = None;
@@ -698,6 +759,7 @@ impl App {
         spawn_input_thread(self.tx.clone(), self.paused.clone());
         if self.git.is_some() {
             self.refresh();
+            crate::github::detect(&mut self);
         }
         self.scan_workspace();
 

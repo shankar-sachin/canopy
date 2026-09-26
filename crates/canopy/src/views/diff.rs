@@ -283,6 +283,10 @@ pub fn load_for_selection(app: &mut App) {
             .reflog
             .get(app.selected(Screen::Reflog))
             .map(|r| Req::Show { rev: r.oid.clone(), title: format!("{} {}", r.selector, r.subject) }),
+        Screen::Pulls => {
+            crate::github::load_pr_detail(app, gen);
+            return;
+        }
         Screen::Home | Screen::Workspace => None,
     };
 
@@ -382,7 +386,7 @@ pub fn apply_selection(app: &mut App, whole_hunk: bool) {
                 last = Some(out);
             }
         }
-        Ok(last.unwrap_or_else(|| canopy_git::Output {
+        Ok::<_, canopy_git::GitError>(last.unwrap_or_else(|| canopy_git::Output {
             cmd: "git apply --cached".into(),
             stdout: String::new(),
             stderr: String::new(),
