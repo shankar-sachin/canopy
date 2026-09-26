@@ -30,6 +30,8 @@ pub struct DiffView {
     pub anchor: Option<usize>,
     pub scroll: usize,
     pub side_by_side: bool,
+    /// The commit this diff shows, when it's a commit (for blame).
+    pub rev: Option<String>,
 }
 
 impl DiffView {
@@ -44,8 +46,19 @@ impl DiffView {
                 }
             }
         }
-        let mut v =
-            DiffView { key, title, meta, files, mode, rows, cursor: 0, anchor: None, scroll: 0, side_by_side: false };
+        let mut v = DiffView {
+            key,
+            title,
+            meta,
+            files,
+            mode,
+            rows,
+            cursor: 0,
+            anchor: None,
+            scroll: 0,
+            side_by_side: false,
+            rev: None,
+        };
         if v.mode.is_some() {
             // Start on the first change so `space` does something useful.
             v.cursor = v.rows.iter().position(|r| v.is_change(*r)).unwrap_or(0);
@@ -115,6 +128,16 @@ impl DiffView {
         }
         groups.reverse();
         groups
+    }
+
+    /// Path of the file under the cursor (the new path, or old if deleted).
+    pub fn current_file(&self) -> Option<&str> {
+        let fi = match self.rows.get(self.cursor)? {
+            Row::File(fi) | Row::Hunk(fi, _) | Row::Line(fi, _, _) => *fi,
+            Row::Meta(_) => return self.files.first().map(|f| f.new_path.as_str()),
+        };
+        let f = &self.files[fi];
+        Some(if f.new_path.is_empty() { &f.old_path } else { &f.new_path })
     }
 
     pub fn current_hunk(&self) -> Option<(usize, usize)> {
@@ -250,7 +273,9 @@ pub fn load_for_selection(app: &mut App) {
             }
             Req::Show { rev, title } => git.show(&rev).await.map(|(header, files)| {
                 let meta = header.lines().map(String::from).collect();
-                DiffView::new(format!("show:{rev}"), title, meta, files, None)
+                let mut v = DiffView::new(format!("show:{rev}"), title, meta, files, None);
+                v.rev = Some(rev);
+                v
             }),
             Req::Stash { name } => git.run(&["stash", "show", "-p", "--no-ext-diff", &name]).await.map(|o| {
                 let files = canopy_git::parse::diff::parse(&o.stdout);

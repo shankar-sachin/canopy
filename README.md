@@ -55,6 +55,7 @@ Press `?` on any screen for its keys, or `:` to search every action by name.
 | `a` | stage / unstage all | | `z` | **undo** last commit, reset, or checkout |
 | `d` | discard (asks first) | | `!` | run any git command |
 | `/` | filter the list | | `T` | toggle teach mode |
+| `L` | history of a file (follows renames) | | `B` | blame: who changed each line |
 | `:` or `ctrl-p` | command palette | | `ctrl-t` | cycle theme |
 
 ### Made for learning git
@@ -112,8 +113,9 @@ crates/canopy       the TUI (Ratatui): app loop, screens, keymap, themes
 - [x] Full git dashboard (v1)
 - [ ] GitHub via `gh`: pull requests, issues, Actions runs, reviews
 - [ ] Syntax-highlighted diffs
-- [ ] Conflict editor with per-hunk ours/theirs
-- [ ] Worktrees, submodules, blame, bisect screens
+- [x] Conflict editor with per-conflict ours/theirs
+- [x] File history and blame
+- [ ] Worktrees, submodules, bisect
 
 ## Develop
 
