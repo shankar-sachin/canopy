@@ -8,6 +8,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod actions;
+mod graph;
+mod history;
 mod overview;
 mod recent;
 
@@ -143,6 +145,13 @@ fn main() {
             actions::op_continue,
             actions::op_abort,
             actions::sync,
+            history::history,
+            history::commit_details,
+            history::refs,
+            history::stash_diff,
+            history::git_op,
+            history::undo_info,
+            history::undo,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Canopy");

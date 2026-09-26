@@ -226,7 +226,7 @@ button { font: inherit; color: inherit; }
 .ref { display: inline-block; font: 600 11px var(--mono); padding: 0 6px; border-radius: 5px; margin-right: 6px; vertical-align: 1px; }
 .ref.head { background: color-mix(in srgb, var(--green) 18%, transparent); color: var(--green); }
 .ref.remote { background: color-mix(in srgb, var(--teal) 16%, transparent); color: var(--teal); }
-.ref.more { background: var(--surface-2); color: var(--muted); }
+.ref.extra { background: var(--surface-2); color: var(--muted); }
 .ref.tag { background: color-mix(in srgb, var(--amber) 18%, transparent); color: var(--amber); }
 
 .branches { list-style: none; margin: 0; padding: 0 0 6px; }
@@ -349,3 +349,81 @@ html[data-theme="light"] .dl.add .code, html[data-theme="light"] .dl.add .sign {
 .conflict-help { padding: 20px; max-width: 640px; color: var(--muted); }
 .conflict-help code { color: var(--amber); }
 .conflict-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+
+/* ---------- dialogs with fields ---------- */
+.field { display: flex; flex-direction: column; gap: 5px; margin-top: 12px; font-size: 13px; color: var(--muted); }
+.check.field { flex-direction: row; }
+.modal-list { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
+.modal-list li { margin: 3px 0; }
+.small { font-size: 12px; }
+.link { border: 0; background: none; padding: 0; color: var(--green); cursor: pointer; font-size: 12px; }
+.link:hover { text-decoration: underline; }
+
+/* ---------- history ---------- */
+.history { display: grid; grid-template-columns: minmax(440px, 1.15fr) minmax(360px, 1fr); height: 100%; }
+.hleft { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border); }
+.htools { flex: none; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.htools .input { flex: 1; }
+.hscroll { flex: 1; overflow: auto; }
+.hlist { list-style: none; margin: 0; padding: 0 0 12px; }
+.hrow { display: flex; align-items: center; gap: 8px; height: 34px; padding-right: 12px; cursor: pointer; }
+.hrow:hover { background: var(--hover); }
+.hrow.on { background: color-mix(in srgb, var(--green) 14%, transparent); }
+.graph { flex: none; overflow: visible; }
+.graph .lane { fill: none; stroke-width: 2; }
+.graph .dot { stroke-width: 2; }
+.graph .dot.hollow { fill: var(--bg); }
+.l0 { stroke: var(--green); fill: var(--green); } .graph .lane.l0 { fill: none; }
+.l1 { stroke: var(--teal); fill: var(--teal); } .graph .lane.l1 { fill: none; }
+.l2 { stroke: var(--violet); fill: var(--violet); } .graph .lane.l2 { fill: none; }
+.l3 { stroke: var(--amber); fill: var(--amber); } .graph .lane.l3 { fill: none; }
+.l4 { stroke: var(--red); fill: var(--red); } .graph .lane.l4 { fill: none; }
+.l5 { stroke: var(--green-2); fill: var(--green-2); } .graph .lane.l5 { fill: none; }
+.graph .dot.hollow { fill: var(--bg); }
+.hrow .hsubj { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hrow:not(:has(.graph)) .hsubj { padding-left: 14px; }
+.hauthor { color: var(--muted); font-size: 12px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.htime { color: var(--faint); font-size: 12px; white-space: nowrap; }
+.hrow .oid { font: 12px var(--mono); color: var(--amber); }
+.hlist .more { text-align: center; padding: 12px; }
+.hdetails { min-width: 0; min-height: 0; overflow: auto; }
+.cdetails { padding: 18px 18px 30px; }
+.chead h3 { margin: 0 0 8px; font-size: 17px; letter-spacing: -.01em; }
+.cbody { margin: 0 0 10px; white-space: pre-wrap; font: 13px/1.5 var(--sans); color: var(--muted); }
+.cmeta { display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+.cmeta .mono { font-size: 12px; color: var(--muted); }
+.cactions { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 18px; }
+.dfile { margin-bottom: 12px; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
+.dfile summary { display: flex; align-items: center; gap: 10px; padding: 7px 12px; background: var(--surface-2); cursor: pointer; font-size: 13px; }
+.dfile summary .mono { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adds { color: var(--green); font: 12px var(--mono); }
+.dels { color: var(--red); font: 12px var(--mono); }
+.hunk.ro { margin: 0; border: 0; border-radius: 0; width: auto; min-width: 0; font: 12.5px/1.55 var(--mono); overflow-x: auto; }
+.hunk.ro .hunk-h { padding: 3px 12px; }
+
+/* ---------- branches ---------- */
+.branches-card { max-width: 1280px; margin: 0 auto; }
+.tabs { display: flex; align-items: center; gap: 4px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.tab { border: 0; background: transparent; color: var(--muted); height: 30px; padding: 0 12px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.tab:hover { background: var(--hover); color: var(--text); }
+.tab.on { background: var(--surface-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--border-2); }
+.blist { list-style: none; margin: 0; padding: 6px 0; }
+.brow { position: relative; display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 4px 16px; }
+.brow:hover { background: var(--hover); }
+.bname { font: 600 13px var(--mono); white-space: nowrap; }
+.brow.head .bname { color: var(--green); }
+.bname.remote { color: var(--teal); }
+.bname.tag { color: var(--amber); }
+.cur { margin-right: 6px; }
+.bsubj { flex: 1; min-width: 0; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.bacts { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: none; gap: 4px; padding-left: 24px;
+  background: linear-gradient(90deg, transparent, var(--hover) 24px); }
+.brow:hover .bacts { display: flex; }
+
+/* ---------- stash ---------- */
+.srow { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; padding: 7px 10px; border-radius: 8px; cursor: pointer; }
+.srow:hover { background: var(--hover); }
+.srow.on { background: color-mix(in srgb, var(--green) 14%, transparent); }
+.sname { font-size: 12px; color: var(--amber); }
+.smsg { grid-column: 1 / -1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.srow .htime { grid-row: 1; grid-column: 2; text-align: right; }

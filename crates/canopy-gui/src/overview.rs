@@ -305,7 +305,21 @@ mod tests {
                 diffs.insert(format!("{}|{staged}|{untracked}", f.path), serde_json::to_value(d.unwrap()).unwrap());
             }
         }
-        let all = serde_json::json!({ "overview": o, "diffs": diffs });
+        // History of every branch, the newest commit's details, tags and stashes.
+        let hq = canopy_git::ops::LogQuery { limit: 80, all: true, ..Default::default() };
+        let commits = git.log(&hq).await.unwrap_or_default();
+        let graph = crate::graph::build(&commits);
+        let details = match commits.first() {
+            Some(c) => {
+                let (header, files) = git.show(&c.oid).await.unwrap();
+                serde_json::json!({ "header": header, "files": files })
+            }
+            None => serde_json::Value::Null,
+        };
+        let history = serde_json::json!({ "commits": commits, "graph": graph, "more": true });
+        let refs = serde_json::json!({ "tags": git.tags().await.unwrap_or_default(), "stashes": git.stashes().await.unwrap_or_default() });
+        let all =
+            serde_json::json!({ "overview": o, "diffs": diffs, "history": history, "details": details, "refs": refs });
         std::fs::write(out, serde_json::to_string_pretty(&all).unwrap()).unwrap();
     }
 }

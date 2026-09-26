@@ -42,6 +42,9 @@ const ICONS = {
   folder: '<path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.8l1.4 1.5h4.8A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"/>',
   x: '<path d="M4 4l8 8M12 4l-8 8"/>',
   changes: '<path d="M4 2.5h5.5L12 5v8.5H4z"/><path d="M8 6.5v4M6 8.5h4"/>',
+  history: '<circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/>',
+  branches: '<circle cx="5" cy="3.5" r="1.5"/><circle cx="5" cy="12.5" r="1.5"/><circle cx="11" cy="5.5" r="1.5"/><path d="M5 5v6M11 7c0 2.5-6 1.5-6 4"/>',
+  stash: '<path d="M2.5 9.5 4 4h8l1.5 5.5v3a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z"/><path d="M2.5 9.5h3.5l.5 1.5h3l.5-1.5h3.5"/>',
 };
 
 function icon(name, size = 16) {
@@ -167,7 +170,7 @@ function refChip(r) {
 // At most two labels, so the commit message stays readable.
 function refChips(refs) {
   const shown = refs.filter((r) => r !== "HEAD");
-  const more = shown.length > 2 ? `<span class="ref more" title="${esc(shown.slice(2).join(", "))}">+${shown.length - 2}</span>` : "";
+  const more = shown.length > 2 ? `<span class="ref extra" title="${esc(shown.slice(2).join(", "))}">+${shown.length - 2}</span>` : "";
   return shown.slice(0, 2).map(refChip).join("") + more;
 }
 
@@ -287,6 +290,92 @@ function ask({ title, text = "", html = "", buttons }) {
   });
 }
 
+/// A dialog with fields. fields: [{id, label, value, placeholder, type:
+/// "text" | "checkbox" | "select", options: [[value, label]]}].
+/// Resolves to {id: value} or null when cancelled.
+function prompt({ title, text = "", fields, ok = "OK", kind = "primary" }) {
+  return new Promise((resolve) => {
+    const wrap = document.createElement("div");
+    wrap.className = "modal-wrap";
+    const field = (f) => {
+      if (f.type === "checkbox") return `<label class="check field"><input type="checkbox" name="${f.id}"${f.value ? " checked" : ""}> ${esc(f.label)}</label>`;
+      if (f.type === "select") return `<label class="field"><span>${esc(f.label)}</span><select class="input" name="${f.id}">${f.options.map(([v, l]) => `<option value="${esc(v)}"${v === f.value ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></label>`;
+      return `<label class="field"><span>${esc(f.label)}</span><input class="input" name="${f.id}" value="${esc(f.value || "")}" placeholder="${esc(f.placeholder || "")}" autocomplete="off" spellcheck="false"></label>`;
+    };
+    wrap.innerHTML = `<form class="modal" role="dialog" aria-modal="true"><h3>${esc(title)}</h3>${text ? `<p>${esc(text)}</p>` : ""}
+      ${fields.map(field).join("")}
+      <div class="modal-actions"><button class="btn ghost" data-cancel type="button">Cancel</button><button class="btn ${kind}" type="submit">${esc(ok)}</button></div></form>`;
+    const form = wrap.querySelector("form");
+    const close = (v) => {
+      wrap.remove();
+      document.removeEventListener("keydown", onKey, true);
+      resolve(v);
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") { e.stopPropagation(); close(null); }
+    };
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const out = {};
+      for (const f of fields) {
+        const el = form.elements[f.id];
+        out[f.id] = f.type === "checkbox" ? el.checked : el.value.trim();
+      }
+      close(out);
+    });
+    wrap.addEventListener("click", (e) => {
+      if (e.target === wrap || e.target.closest("[data-cancel]")) close(null);
+    });
+    document.addEventListener("keydown", onKey, true);
+    document.body.append(wrap);
+    (form.querySelector("input:not([type=checkbox]), select") || form.querySelector("[type=submit]")).focus();
+  });
+}
+
+/// Read-only diffs (commit details, stashes): one block per file.
+function readonlyDiff(files) {
+  if (!files.length) return `<div class="diff-empty">No file changes.</div>`;
+  return files
+    .map((f) => {
+      const path = f.new_path || f.old_path;
+      let adds = 0, dels = 0;
+      for (const h of f.hunks) for (const l of h.lines) l.kind === "Added" ? adds++ : l.kind === "Removed" && dels++;
+      const body = f.binary
+        ? `<div class="diff-empty">Binary file</div>`
+        : f.hunks
+            .map((h) => `<div class="hunk-h"><span class="mono">${esc(h.header)}</span></div>` + h.lines
+              .map((l) => {
+                const cls = { Added: "add", Removed: "del", Context: "ctx", NoNewline: "nonl" }[l.kind];
+                const sign = { Added: "+", Removed: "−", Context: " ", NoNewline: "" }[l.kind];
+                return `<div class="dl ${cls}"><span class="no">${l.old_no ?? ""}</span><span class="no">${l.new_no ?? ""}</span><span class="sign">${sign}</span><span class="code">${esc(l.content) || " "}</span></div>`;
+              })
+              .join(""))
+            .join("");
+      const moved = f.old_path && f.new_path && f.old_path !== f.new_path ? `<span class="faint">← ${esc(f.old_path)}</span>` : "";
+      return `<details class="dfile" open><summary><span class="mono">${esc(path)}</span>${moved}<span class="grow"></span>
+        <span class="adds">+${adds}</span><span class="dels">−${dels}</span></summary><div class="hunk ro">${body}</div></details>`;
+    })
+    .join("");
+}
+
+// ---------------------------------------------------------------- undo
+
+async function undo() {
+  if (!state.overview || state.busy) return;
+  const plan = await invoke("undo_info").catch(() => ({ kind: "none" }));
+  if (plan.kind === "none") return toast("Nothing to undo yet.");
+  const text = plan.kind === "checkout"
+    ? `Switch back to ${plan.to}.`
+    : `Move this branch back to ${plan.oid.slice(0, 7)} (${plan.subject}). ` +
+      (plan.soft ? "The undone commit's changes come back as staged changes." : "Your uncommitted changes are kept.");
+  const ok = await ask({
+    title: "Undo the last action?",
+    html: `<p class="mono small">Last: ${esc(plan.last)}</p><p>${esc(text)}</p>`,
+    buttons: [{ label: "Undo", value: true, kind: "primary" }],
+  });
+  if (ok) run("Undone", "undo");
+}
+
 // ---------------------------------------------------------------- fetch / pull / push
 
 const SYNC_LABELS = {
@@ -403,6 +492,7 @@ $("#repo-switch").addEventListener("click", async () => {
   showWelcome();
 });
 $("#refresh").addEventListener("click", () => refresh());
+$("#undo").addEventListener("click", undo);
 for (const b of document.querySelectorAll("[data-sync]")) b.addEventListener("click", () => sync(b.dataset.sync));
 window.__TAURI__.event?.listen("progress", (e) => onProgress(e.payload));
 
@@ -416,6 +506,7 @@ document.addEventListener("keydown", (e) => {
   }
   if (mod && e.key === "o") { e.preventDefault(); chooseRepo(); }
   else if (mod && e.key === "r") { e.preventDefault(); refresh(); }
+  else if (mod && e.key === "z" && !typing && state.overview) { e.preventDefault(); undo(); }
   else if (mod && /^[1-9]$/.test(e.key)) {
     const ids = NAV.flatMap((g) => g.items);
     const id = ids[Number(e.key) - 1];
@@ -460,8 +551,23 @@ async function smoke(path) {
     for (let i = 0; i < 50 && !document.querySelector(".dl, .diff-body .diff-empty, .clean"); i++) await new Promise((r) => setTimeout(r, 100));
     const files = grab(".frow .fname");
     const lines = document.querySelectorAll(".dl").length;
-    const text = [...home, `changes: ${files.join(", ") || "(clean)"}`, `diff lines: ${lines}`].join("\n");
-    const ok = !!home.length && (files.length ? lines > 0 : !!document.querySelector(".clean"));
+    const wait = async (sel) => {
+      for (let i = 0; i < 50 && !document.querySelector(sel); i++) await new Promise((r) => setTimeout(r, 100));
+      return document.querySelectorAll(sel).length;
+    };
+    go("history");
+    const commits = await wait(".hrow");
+    const graphs = document.querySelectorAll(".hrow .graph").length;
+    const detail = await wait(".cdetails .dfile, .cdetails .diff-empty");
+    go("branches");
+    const branches = await wait(".brow");
+    go("stash");
+    const stash = await wait(".srow, .clean");
+    const text = [...home, `changes: ${files.join(", ") || "(clean)"}`, `diff lines: ${lines}`,
+      `history: ${commits} commits, ${graphs} graph rows, details ${detail ? "loaded" : "missing"}`,
+      `branches: ${branches} rows`, `stash: ${document.querySelectorAll(".srow").length} stashes`].join("\n");
+    const ok = !!home.length && (files.length ? lines > 0 : !!document.querySelector(".clean"))
+      && commits > 0 && graphs === commits && detail > 0 && branches > 0 && stash > 0;
     await invoke("smoke_report", { ok, text });
   } catch (e) {
     await invoke("smoke_report", { ok: false, text: String(e) });

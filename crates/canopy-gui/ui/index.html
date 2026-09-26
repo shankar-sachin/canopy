@@ -49,6 +49,9 @@
           <button class="btn" data-sync="pull" type="button" title="Pull this branch">Pull</button>
           <button class="btn" data-sync="push" type="button" title="Push this branch">Push</button>
         </div>
+        <button class="btn icon" id="undo" type="button" title="Undo the last commit, reset or checkout (⌘Z)">
+          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M5.5 3.5 2.5 6.5l3 3M2.5 6.5h7a4 4 0 0 1 0 8h-2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
         <button class="btn icon" id="refresh" type="button" title="Refresh (⌘R)">
           <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
@@ -63,5 +66,8 @@
 
 <script src="app.js"></script>
 <script src="changes.js"></script>
+<script src="history.js"></script>
+<script src="branches.js"></script>
+<script src="stash.js"></script>
 </body>
 </html>
