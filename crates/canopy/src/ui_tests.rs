@@ -634,6 +634,8 @@ case "$1 $2" in
   "pr view") cat "{f}/pr_view.json" ;;
   "issue list") case "$*" in *"--state all"*) sed 's/"OPEN"/"CLOSED"/' "{f}/issue_list.json" ;; *) cat "{f}/issue_list.json" ;; esac ;;
   "issue view") cat "{f}/issue_view.json" ;;
+  "run list") cat "{f}/run_list.json" ;;
+  "run view") case "$*" in *--log-failed*) printf 'check (ubuntu)\tRun cargo test\t2026-09-26T00:32:32.4188517Z thread main panicked at src/lib.rs:10\n' ;; *) cat "{f}/run_jobs.json" ;; esac ;;
   "pr diff") printf 'diff --git a/csv.rs b/csv.rs\n--- a/csv.rs\n+++ b/csv.rs\n@@ -0,0 +1 @@\n+fn parse() {{}}\n' ;;
   *) : ;;
 esac
@@ -812,4 +814,46 @@ async fn issues_tab() {
     assert!(s.contains("Reopen #7?"), "{s}");
     press(&mut app, KeyCode::Char('y')).await;
     assert!(gh_calls(bin.path()).contains(&"issue reopen 7".to_string()));
+}
+
+#[tokio::test]
+async fn actions_tab() {
+    let dir = demo_repo();
+    let bin = TempDir::new().unwrap();
+    let gh = fake_gh(bin.path(), true);
+    let mut app = github_app(dir.path(), &gh).await;
+    press(&mut app, KeyCode::Char('0')).await;
+    let s = render(&mut app, 140, 30);
+    assert!(s.contains("Actions · main · 2 · live"), "{s}");
+    assert!(s.contains("✗") && s.contains("Add CSV parser") && s.contains("pull_request"), "{s}");
+    // Failed run: jobs, failing step, and the cleaned log tail.
+    assert!(s.contains("✗ check (ubuntu-latest)") && s.contains("✗ Run cargo test"), "{s}");
+    assert!(s.contains("thread main panicked at src/lib.rs:10") && !s.contains("2026-09-26T00:32:32"), "{s}");
+    assert!(gh_calls(bin.path()).iter().any(|l| l.starts_with("run list") && l.contains("--branch main")));
+
+    press(&mut app, KeyCode::Char('R')).await;
+    assert!(gh_calls(bin.path()).contains(&"run rerun 1001 --failed".to_string()), "{:?}", gh_calls(bin.path()));
+
+    // The second run is still going: R explains instead of calling gh.
+    press(&mut app, KeyCode::Char('j')).await;
+    press(&mut app, KeyCode::Char('R')).await;
+    assert!(app.toast.as_ref().unwrap().text.contains("Only failed runs"));
+
+    press(&mut app, KeyCode::Char('f')).await;
+    let last = gh_calls(bin.path()).into_iter().rfind(|l| l.starts_with("run list")).unwrap();
+    assert!(!last.contains("--branch"), "{last}");
+}
+
+#[tokio::test]
+async fn tab_bar_fits_any_width() {
+    let dir = demo_repo();
+    let mut app = app_for(dir.path()).await;
+    press(&mut app, KeyCode::Char('0')).await;
+    let wide = render(&mut app, 160, 20);
+    assert!(wide.contains("8 Pull requests") && wide.contains(" 0 Actions "), "{wide}");
+    let mid = render(&mut app, 100, 20);
+    assert!(mid.contains(" 8 PRs ") && mid.contains(" 0 CI "), "{mid}");
+    let narrow = render(&mut app, 60, 20);
+    let tabs = narrow.lines().nth(1).unwrap();
+    assert!(tabs.contains(" 0 CI ") && tabs.contains(" 8 ") && !tabs.contains("PRs"), "{tabs}");
 }

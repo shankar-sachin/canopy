@@ -43,6 +43,7 @@ canopy -w ~/code       # workspace view: every repo under ~/code
 | **7 Reflog** | Everywhere HEAD has been: your safety net for recovering anything |
 | **8 Pull requests** | GitHub PRs (open / mine / review requested / all) with checks and reviews. Check out, create, review, comment, merge, close, open in the browser. Needs the [GitHub CLI](https://cli.github.com) logged in |
 | **9 Issues** | GitHub issues (open / assigned to me / all) with labels and comments. Create, comment, close / reopen, open in the browser |
+| **0 Actions** | GitHub Actions runs for this branch or all branches, updating live while they run. Jobs, failing steps, and the tail of the failed log; re-run failed jobs |
 
 ### Keys
 
@@ -50,7 +51,7 @@ Press `?` on any screen for its keys, or `:` to search every action by name.
 
 | Key | Action | | Key | Action |
 | --- | --- | --- | --- | --- |
-| `1`–`7`, `tab` | switch tabs | | `c` | commit |
+| `1`–`9`, `0`, `tab` | switch tabs | | `c` | commit |
 | `j`/`k`, `↑`/`↓` | move | | `A` | amend last commit |
 | `space` | stage / unstage | | `P` / `p` / `f` | push / pull / fetch |
 | `⏎` | open diff (then `space` = line, `⏎` = hunk, `v` = range) | | `S` | stash changes |
@@ -115,7 +116,7 @@ crates/canopy       the TUI (Ratatui): app loop, screens, keymap, themes
 
 - [x] Full git dashboard (v1)
 - [x] GitHub pull requests and issues via `gh`
-- [ ] GitHub Actions runs
+- [x] GitHub Actions runs
 - [ ] Syntax-highlighted diffs
 - [x] Conflict editor with per-conflict ours/theirs
 - [x] File history and blame

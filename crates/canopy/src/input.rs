@@ -152,6 +152,7 @@ pub fn do_action(app: &mut App, action: Action) {
             match app.screen {
                 Screen::Pulls => crate::github::load_prs(app),
                 Screen::Issues => crate::github::load_issues(app),
+                Screen::Runs => crate::github::load_runs(app),
                 _ => {}
             }
             if app.screen == Screen::Workspace {
@@ -671,7 +672,7 @@ fn repo_action(app: &mut App, action: Action) {
         }
         Bisect => bisect(app),
         PrCheckout | PrCreate | PrReview | Comment | PrMerge | CloseItem | IssueCreate | OpenInBrowser
-        | CycleFilter | ToggleDiff => github_action(app, action),
+        | CycleFilter | ToggleDiff | RerunFailed => github_action(app, action),
         FileHistory => {
             let Some((path, _)) = target_file(app) else { return };
             app.set_log_path(Some(path));
@@ -954,7 +955,27 @@ fn github_action(app: &mut App, action: Action) {
         (_, Some(i)) => Some((Target::Issue(i.number), i.title.clone(), i.url.clone(), i.state.clone())),
         _ => None,
     };
+    let run = crate::github::selected_run(app).cloned().filter(|_| app.screen == Screen::Runs);
     match action {
+        Action::CycleFilter if app.screen == Screen::Runs => {
+            app.github.runs_all = !app.github.runs_all;
+            app.set_selected(Screen::Runs, 0);
+            *app.list(Screen::Runs).offset_mut() = 0;
+            let which = if app.github.runs_all { "all branches" } else { "this branch" };
+            app.toast(Level::Info, format!("Showing runs for {which}"));
+            crate::github::load_runs(app);
+        }
+        Action::RerunFailed => {
+            let Some(run) = run else { return };
+            if run.state() != canopy_gh::CheckState::Failed {
+                app.toast(Level::Info, "Only failed runs can be re-run from here");
+                return;
+            }
+            let id = run.database_id;
+            app.run_op(format!("Re-run {} #{}", run.workflow_name, run.number), Then::GitHub, async move {
+                gh.run_rerun_failed(id).await
+            });
+        }
         Action::CycleFilter if on_issues => {
             app.github.issue_filter = app.github.issue_filter.next();
             app.set_selected(Screen::Issues, 0);
@@ -976,6 +997,10 @@ fn github_action(app: &mut App, action: Action) {
         Action::OpenInBrowser => {
             let url = match (&target, app.github.status.as_ref()) {
                 (Some((_, _, url, _)), _) => url.clone(),
+                (None, _) if run.is_some() => run.as_ref().map(|r| r.url.clone()).unwrap_or_default(),
+                (None, Some(canopy_gh::GhStatus::Ready(info))) if app.screen == Screen::Runs => {
+                    format!("{}/actions", info.url)
+                }
                 (None, Some(canopy_gh::GhStatus::Ready(info))) => {
                     format!("{}/{}", info.url, if on_issues { "issues" } else { "pulls" })
                 }

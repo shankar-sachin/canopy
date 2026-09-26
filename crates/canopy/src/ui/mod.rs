@@ -93,29 +93,51 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
 
 fn draw_tabs(f: &mut Frame, area: Rect, app: &App) {
     let t = &app.theme;
-    let mut spans = vec![Span::raw(" ")];
-    for (i, s) in Screen::ALL.iter().enumerate() {
-        let badge = match s {
-            Screen::Status => {
-                let n = app.data.status.files.iter().filter(|f| f.kind != canopy_git::FileKind::Ignored).count();
-                (n > 0).then(|| n.to_string())
-            }
-            Screen::Stash => (!app.data.stashes.is_empty()).then(|| app.data.stashes.len().to_string()),
-            _ => None,
-        };
-        let active = *s == app.screen;
-        let style = if active {
-            Style::default().fg(t.bg).bg(t.accent).add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(t.muted)
-        };
-        spans.push(Span::styled(format!(" {} {} ", i + 1, s.title()), style));
-        if let Some(b) = badge {
-            spans.push(Span::styled(format!("{b} "), if active { style } else { t.fg(t.accent_alt) }));
+    let badge = |s: &Screen| match s {
+        Screen::Status => {
+            let n = app.data.status.files.iter().filter(|f| f.kind != canopy_git::FileKind::Ignored).count();
+            (n > 0).then(|| n.to_string())
         }
-        spans.push(Span::raw(" "));
-    }
-    f.render_widget(Paragraph::new(Line::from(spans)), area);
+        Screen::Stash => (!app.data.stashes.is_empty()).then(|| app.data.stashes.len().to_string()),
+        Screen::Pulls if app.github.prs_loaded => {
+            (!app.github.prs.is_empty()).then(|| app.github.prs.len().to_string())
+        }
+        _ => None,
+    };
+    // Full names if they fit, then short names, then just the numbers.
+    let build = |names: &dyn Fn(Screen) -> &'static str| {
+        let mut spans = vec![Span::raw(" ")];
+        for (i, s) in Screen::ALL.iter().enumerate() {
+            let active = *s == app.screen;
+            let style = if active {
+                Style::default().fg(t.bg).bg(t.accent).add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(t.muted)
+            };
+            // Keys are 1-9 then 0.
+            let key = (i + 1) % 10;
+            let name = names(*s);
+            let label = if name.is_empty() { format!(" {key} ") } else { format!(" {key} {name} ") };
+            spans.push(Span::styled(label, style));
+            if let Some(b) = badge(s).filter(|_| !name.is_empty()) {
+                spans.push(Span::styled(format!("{b} "), if active { style } else { t.fg(t.accent_alt) }));
+            }
+            spans.push(Span::raw(" "));
+        }
+        Line::from(spans)
+    };
+    let full = build(&Screen::title);
+    let line = if full.width() <= area.width as usize {
+        full
+    } else {
+        let short = build(&Screen::short_title);
+        if short.width() <= area.width as usize {
+            short
+        } else {
+            build(&|s| if s == app.screen { Screen::short_title(s) } else { "" })
+        }
+    };
+    f.render_widget(Paragraph::new(line), area);
 }
 
 fn draw_teach(f: &mut Frame, area: Rect, app: &App) {

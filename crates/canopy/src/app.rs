@@ -76,6 +76,13 @@ pub enum Msg {
     },
     Prs(Result<Vec<canopy_gh::PullRequest>, String>),
     Issues(Result<Vec<canopy_gh::Issue>, String>),
+    Runs(Result<Vec<canopy_gh::Run>, String>),
+    RunDetail {
+        gen: u64,
+        run: Box<canopy_gh::Run>,
+        jobs: Result<Vec<canopy_gh::Job>, String>,
+        log: Option<String>,
+    },
     IssueDetail {
         gen: u64,
         detail: Result<Box<canopy_gh::Issue>, String>,
@@ -182,6 +189,7 @@ pub struct App {
     inflight: Arc<AtomicUsize>,
     pub needs_redraw_full: bool,
     last_status_poll: Instant,
+    last_runs_poll: Instant,
 }
 
 impl App {
@@ -220,6 +228,7 @@ impl App {
             inflight: Arc::new(AtomicUsize::new(0)),
             needs_redraw_full: false,
             last_status_poll: Instant::now(),
+            last_runs_poll: Instant::now(),
             log_loading: false,
             log_path: None,
             github: Default::default(),
@@ -340,6 +349,7 @@ impl App {
             Screen::Reflog => self.data.reflog.len(),
             Screen::Pulls => self.github.prs.len(),
             Screen::Issues => self.github.issues.len(),
+            Screen::Runs => self.github.runs.len(),
         }
     }
 
@@ -721,6 +731,36 @@ impl App {
                     Err(e) => self.toast(Level::Error, e),
                 }
             }
+            Msg::Runs(result) => {
+                self.github.runs_loading = false;
+                self.last_runs_poll = Instant::now();
+                match result {
+                    Ok(runs) => {
+                        self.github.runs = runs;
+                        self.github.runs_loaded = true;
+                        self.clamp_selections();
+                        if self.screen == Screen::Runs {
+                            crate::views::diff::load_for_selection(self);
+                        }
+                    }
+                    Err(e) => self.toast(Level::Error, e),
+                }
+            }
+            Msg::RunDetail { gen, run, jobs, log } => {
+                if gen != self.diff_gen || self.screen != Screen::Runs {
+                    return;
+                }
+                match jobs {
+                    Ok(jobs) => {
+                        let mut v = crate::github::run_view(&run, &jobs, log.as_deref(), self.last_diff_width);
+                        if let Some(old) = self.diff.as_ref().filter(|o| o.key == v.key) {
+                            v.cursor = old.cursor.min(v.rows.len().saturating_sub(1));
+                        }
+                        self.diff = Some(v);
+                    }
+                    Err(e) => self.toast(Level::Error, e),
+                }
+            }
             Msg::IssueDetail { gen, detail } => {
                 if gen != self.diff_gen || self.screen != Screen::Issues {
                     return;
@@ -827,6 +867,15 @@ impl App {
                     {
                         self.last_status_poll = Instant::now();
                         self.poll_status();
+                    }
+                    // Watch in-progress workflow runs while the Actions tab is open.
+                    if self.screen == Screen::Runs
+                        && !self.github.runs_loading
+                        && crate::github::runs_in_progress(&self)
+                        && self.last_runs_poll.elapsed() > Duration::from_secs(10)
+                    {
+                        self.last_runs_poll = Instant::now();
+                        crate::github::load_runs(&mut self);
                     }
                 }
             }
