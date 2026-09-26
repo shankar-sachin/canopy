@@ -27,7 +27,7 @@ command -v gh >/dev/null 2>&1 || die "needs the GitHub CLI (gh), logged in"
 [ -n "$version" ] || version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
 [ -n "$version" ] || die "couldn't read the version from Cargo.toml"
 tag="v$version"
-id=SachinShankar.Canopy
+id=ShankarS.Canopy
 
 sha() {
   gh release download "$tag" --repo shankar-sachin/canopy -p "canopy-$tag-$1.zip.sha256" -O - 2>/dev/null |
@@ -53,9 +53,9 @@ echo "winget: manifests for $tag in $out"
 
 me=$(gh api user -q .login)
 fork="$me/winget-pkgs"
-dir="manifests/s/SachinShankar/Canopy/$version"
+dir="manifests/s/ShankarS/Canopy/$version"
 branch="canopy-$version"
-if gh api "repos/microsoft/winget-pkgs/contents/manifests/s/SachinShankar/Canopy" >/dev/null 2>&1; then
+if gh api "repos/microsoft/winget-pkgs/contents/manifests/s/ShankarS/Canopy" >/dev/null 2>&1; then
   title="New version: $id version $version"
 else
   title="New package: $id version $version"

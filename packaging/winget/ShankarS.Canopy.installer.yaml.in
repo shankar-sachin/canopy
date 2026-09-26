@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.9.0.schema.json
 # Rendered by scripts/winget.sh from packaging/winget/. Edit the template.
-PackageIdentifier: SachinShankar.Canopy
+PackageIdentifier: ShankarS.Canopy
 PackageVersion: @VERSION@
 InstallerType: zip
 NestedInstallerType: portable
