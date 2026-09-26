@@ -365,9 +365,25 @@ fn repo_action(app: &mut App, action: Action) {
             };
             let Some(path) = path else { return };
             let full = git.repo.root.join(path);
-            let editor = std::env::var("VISUAL").or_else(|_| std::env::var("EDITOR")).unwrap_or_else(|_| "vi".into());
+            let fallback = if cfg!(windows) { "notepad" } else { "vi" };
+            let editor =
+                std::env::var("VISUAL").or_else(|_| std::env::var("EDITOR")).unwrap_or_else(|_| fallback.into());
             let status = app.suspend(|| {
-                std::process::Command::new("sh").arg("-c").arg(format!("{editor} \"$1\"")).arg("sh").arg(&full).status()
+                if cfg!(windows) {
+                    // No POSIX shell on Windows: run the editor directly.
+                    // "code --wait" becomes program "code", args ["--wait", file].
+                    let mut parts = split_args(&editor);
+                    let program = if parts.is_empty() { "notepad".to_string() } else { parts.remove(0) };
+                    std::process::Command::new(program).args(parts).arg(&full).status()
+                } else {
+                    // Through sh, so EDITOR can use any shell syntax.
+                    std::process::Command::new("sh")
+                        .arg("-c")
+                        .arg(format!("{editor} \"$1\""))
+                        .arg("sh")
+                        .arg(&full)
+                        .status()
+                }
             });
             if let Err(e) = status {
                 app.toast(Level::Error, format!("Could not run {editor}: {e}"));
@@ -2085,9 +2101,7 @@ pub fn execute(app: &mut App, pending: Pending) {
             let guard = app.in_flight();
             tokio::spawn(async move {
                 let _guard = guard;
-                let res = tokio::process::Command::new("sh")
-                    .arg("-c")
-                    .arg(&c.cmd)
+                let res = crate::terminal::shell_command(&c.cmd)
                     .current_dir(root)
                     .stdin(std::process::Stdio::null())
                     .output()

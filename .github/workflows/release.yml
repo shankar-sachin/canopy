@@ -24,24 +24,42 @@ jobs:
             os: macos-latest
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
     runs-on: ${{ matrix.os }}
+    # Windows is secondary: a failed Windows build must not block the
+    # macOS/Linux release.
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
       - run: cargo build --release --locked --target ${{ matrix.target }} -p canopy-git-tui
-      - name: Package
+      - name: Package (macOS, Linux)
+        if: runner.os != 'Windows'
         run: |
           name=canopy-${{ github.ref_name }}-${{ matrix.target }}
           mkdir "$name"
           cp target/${{ matrix.target }}/release/canopy README.md LICENSE "$name/"
           tar czf "$name.tar.gz" "$name"
           shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256"
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $name = "canopy-${{ github.ref_name }}-${{ matrix.target }}"
+          New-Item -ItemType Directory $name | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/canopy.exe", README.md, LICENSE $name
+          Compress-Archive -Path $name -DestinationPath "$name.zip"
+          $hash = (Get-FileHash "$name.zip" -Algorithm SHA256).Hash.ToLower()
+          "$hash  $name.zip" | Out-File -Encoding ascii "$name.zip.sha256"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
-          path: canopy-*.tar.gz*
+          path: |
+            canopy-*.tar.gz*
+            canopy-*.zip*
 
   release:
     needs: build
@@ -54,7 +72,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ github.ref_name }}" canopy-*.tar.gz* \
+          shopt -s nullglob
+          files=(canopy-*.tar.gz* canopy-*.zip*)
+          gh release create "${{ github.ref_name }}" "${files[@]}" \
             --repo "${{ github.repository }}" --generate-notes --title "Canopy ${{ github.ref_name }}"
 
   homebrew:

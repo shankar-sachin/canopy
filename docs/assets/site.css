@@ -375,3 +375,5 @@
   .search-results .empty { color: var(--faint); padding: 18px 12px; }
   .search-foot { display: flex; gap: 18px; padding: 10px 16px; border-top: 1px solid var(--border); color: var(--faint); font-size: 13px; }
   .search-foot kbd { margin-right: 4px; }
+
+  .alt-install { margin: 14px 0 0; font-size: 14px; color: var(--muted); }

@@ -982,7 +982,7 @@ impl App {
     }
 
     /// Process queued messages until nothing arrives for a short while.
-    #[cfg(test)]
+    #[cfg(all(test, unix))]
     pub async fn settle(&mut self) {
         let mut rx = self.rx.take().expect("receiver");
         let deadline = Instant::now() + Duration::from_secs(30);
