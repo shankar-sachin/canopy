@@ -644,7 +644,7 @@ case "$1 $2" in
   "release list") cat "{f}/release_list.json" ;;
   "release view") cat "{f}/release_view.json" ;;
   "api --method") case "$*" in *GET*notifications*) cat "{f}/notifications.json" ;; *GET*pulls*comments*) cat "{f}/review_comments.json" ;; *) : ;; esac ;;
-  "run view") case "$*" in *--log-failed*) printf 'check (ubuntu)\tRun cargo test\t2026-09-26T00:32:32.4188517Z thread main panicked at src/lib.rs:10\n' ;; *) cat "{f}/run_jobs.json" ;; esac ;;
+  "run view") case "$*" in *--log-failed*) printf 'check (ubuntu)\tRun cargo test\t2026-09-26T00:32:32.4188517Z thread main panicked at src/lib.rs:10\n' ;; *--log*) printf 'lint\tRun clippy\t2026-09-26T00:30:00.1Z clippy is happy\ncheck (ubuntu-latest)\tUNKNOWN STEP\t2026-09-26T00:31:00.1Z ##[group]Run cargo test\ncheck (ubuntu-latest)\tUNKNOWN STEP\t2026-09-26T00:31:01.1Z thread main panicked at src/lib.rs:10\ncheck (ubuntu-latest)\tUNKNOWN STEP\t2026-09-26T00:31:02.1Z ##[error]Process completed with exit code 101.\n' ;; *) cat "{f}/run_jobs.json" ;; esac ;;
   "pr diff") printf 'diff --git a/csv.rs b/csv.rs\n--- a/csv.rs\n+++ b/csv.rs\n@@ -0,0 +1 @@\n+fn parse() {{}}\n' ;;
   *) : ;;
 esac
@@ -911,6 +911,46 @@ async fn actions_tab() {
     press(&mut app, KeyCode::Char('f')).await;
     let last = gh_calls(bin.path()).into_iter().rfind(|l| l.starts_with("run list")).unwrap();
     assert!(!last.contains("--branch"), "{last}");
+}
+
+#[tokio::test]
+async fn run_log_viewer() {
+    let dir = demo_repo();
+    let bin = TempDir::new().unwrap();
+    let gh = fake_gh(bin.path(), true);
+    let mut app = github_app(dir.path(), &gh).await;
+    press(&mut app, KeyCode::Char('0')).await;
+    press(&mut app, KeyCode::Char('L')).await;
+    assert!(gh_calls(bin.path()).contains(&"run view 1001 --log".to_string()), "{:?}", gh_calls(bin.path()));
+    let s = render(&mut app, 120, 30);
+    assert!(s.contains("Log · CI #"), "{s}");
+    // The failed job comes first, without timestamps or ##[…] markers.
+    let failed = s.find("✗ check (ubuntu-latest)").expect(&s);
+    let passed = s.find("✓ lint").expect(&s);
+    assert!(failed < passed, "{s}");
+    assert!(s.contains("── Run cargo test") && s.contains("Process completed with exit code 101."), "{s}");
+    assert!(!s.contains("##[") && !s.contains("2026-09-26T00:31"), "{s}");
+    let Modal::RunLog(v) = &app.modal else { panic!("log viewer open") };
+    assert_eq!(v.lines[v.cursor].text, "Process completed with exit code 101.", "starts on the error");
+
+    // / search, n/N between matches.
+    press(&mut app, KeyCode::Char('/')).await;
+    chars(&mut app, "clippy").await;
+    let s = render(&mut app, 120, 30);
+    assert!(s.contains("/clippy"), "{s}");
+    press(&mut app, KeyCode::Enter).await;
+    let s = render(&mut app, 120, 30);
+    assert!(s.contains("1/2 matches"), "{s}");
+    press(&mut app, KeyCode::Char('n')).await;
+    let s = render(&mut app, 120, 30);
+    assert!(s.contains("2/2 matches"), "{s}");
+    press(&mut app, KeyCode::Esc).await;
+    assert!(!app.modal.is_open());
+
+    // A run that's still going has no full log yet.
+    press(&mut app, KeyCode::Char('j')).await;
+    press(&mut app, KeyCode::Char('L')).await;
+    assert!(app.toast.as_ref().unwrap().text.contains("once the run finishes"));
 }
 
 #[tokio::test]

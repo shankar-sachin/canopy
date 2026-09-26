@@ -349,6 +349,12 @@ impl Gh {
         Ok(self.run(&["run", "view", &id, "--log-failed"]).await?.stdout)
     }
 
+    /// The whole log of a run: lines of `job<TAB>step<TAB>timestamp text`.
+    pub async fn run_log(&self, id: u64) -> Result<String> {
+        let id = id.to_string();
+        Ok(self.run(&["run", "view", &id, "--log"]).await?.stdout)
+    }
+
     pub async fn run_rerun_failed(&self, id: u64) -> Result<Output> {
         let id = id.to_string();
         self.run(&["run", "rerun", &id, "--failed"]).await

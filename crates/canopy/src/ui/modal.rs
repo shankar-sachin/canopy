@@ -125,6 +125,7 @@ pub fn draw(f: &mut Frame, app: &App) {
             f.render_widget(Paragraph::new(text).scroll((*scroll, 0)).block(block), r);
         }
         Modal::Blame(v) => blame(f, area, t, v),
+        Modal::RunLog(v) => run_log(f, area, app, v),
         Modal::Compose(c) => compose(f, area, t, c),
         Modal::Rebase { items, sel, .. } => {
             let (ew, eh) = modal_extra();
@@ -334,6 +335,105 @@ fn blame(f: &mut Frame, area: Rect, t: &Theme, v: &crate::modal::BlameView) {
         };
         f.render_widget(Paragraph::new(text), footer);
     }
+}
+
+fn run_log(f: &mut Frame, area: Rect, app: &App, v: &crate::views::runlog::LogView) {
+    use crate::views::runlog::Kind;
+    let t = &app.theme;
+    let r = Rect {
+        x: area.x + 1,
+        y: area.y + 1,
+        width: area.width.saturating_sub(2),
+        height: area.height.saturating_sub(2),
+    };
+    f.render_widget(Clear, r);
+    let block = modal_block(t, format!(" Log · {} ", trunc(&v.title, r.width.saturating_sub(12) as usize)), false);
+    let inner = block.inner(r);
+    f.render_widget(block, r);
+    let [body, _, footer] =
+        Layout::vertical([Constraint::Fill(1), Constraint::Length(1), Constraint::Length(1)]).areas(inner);
+
+    let h = body.height as usize;
+    app.last_log_height.set(body.height);
+    let n = v.lines.len();
+    // Keep the cursor a third of the way down so there's context below it.
+    let start = v.cursor.saturating_sub(h / 3).min(n.saturating_sub(h));
+    let gw = n.to_string().len();
+    let q = v.query.to_lowercase();
+    let lines: Vec<Line> = v
+        .lines
+        .iter()
+        .enumerate()
+        .skip(start)
+        .take(h)
+        .map(|(i, l)| {
+            let num = Span::styled(format!("{:>gw$} ", i + 1), t.muted());
+            let mut spans = vec![num];
+            match l.kind {
+                Kind::Job { failed } => {
+                    let (icon, color) = if failed { ("✗", t.removed) } else { ("✓", t.added) };
+                    spans.push(Span::styled(
+                        format!("▌{icon} {}", l.text),
+                        Style::default().fg(color).add_modifier(Modifier::BOLD),
+                    ));
+                }
+                Kind::Step => spans.push(Span::styled(format!("── {}", l.text), t.fg(t.accent_alt))),
+                Kind::Error | Kind::Text => {
+                    let style = if l.kind == Kind::Error { t.fg(t.removed) } else { Style::default().fg(t.fg) };
+                    spans.extend(highlight(&l.text, &q, style, t));
+                }
+            }
+            let mut line = Line::from(spans);
+            if i == v.cursor {
+                line = line.style(t.selected());
+            }
+            line
+        })
+        .collect();
+    f.render_widget(Paragraph::new(lines), body);
+
+    let text = match &v.typing {
+        Some(q) => Line::from(vec![Span::styled("/", t.accent()), Span::raw(q.clone()), Span::styled("▌", t.accent())]),
+        None => {
+            let mut h = Vec::new();
+            if let Some((i, of)) = v.match_position() {
+                h.push(Span::styled(format!("{i}/{of} matches  "), t.accent()));
+            } else if !v.query.is_empty() {
+                h.push(Span::styled(format!("{} matches  ", v.matches.len()), t.muted()));
+            }
+            for (k, l) in
+                [("j/k", "scroll"), ("/", "search"), ("n/N", "next/prev match"), ("g/G", "top/end"), ("esc", "close")]
+            {
+                h.extend(key_hint(t, k, l));
+            }
+            Line::from(h)
+        }
+    };
+    f.render_widget(Paragraph::new(text), footer);
+}
+
+/// Split `text` into spans, marking every case-insensitive match of `q`.
+fn highlight<'a>(text: &str, q: &str, style: Style, t: &Theme) -> Vec<Span<'a>> {
+    let lower = text.to_lowercase();
+    // Lowercasing can change byte lengths (rare); skip highlighting then.
+    if q.is_empty() || lower.len() != text.len() {
+        return vec![Span::styled(text.to_string(), style)];
+    }
+    let hit = Style::default().fg(t.bg).bg(t.accent).add_modifier(Modifier::BOLD);
+    let mut out = Vec::new();
+    let mut pos = 0;
+    while let Some(i) = lower[pos..].find(q) {
+        let (a, b) = (pos + i, pos + i + q.len());
+        if a > pos {
+            out.push(Span::styled(text[pos..a].to_string(), style));
+        }
+        out.push(Span::styled(text[a..b].to_string(), hit));
+        pos = b;
+    }
+    if pos < text.len() {
+        out.push(Span::styled(text[pos..].to_string(), style));
+    }
+    out
 }
 
 fn compose(f: &mut Frame, area: Rect, t: &Theme, c: &crate::modal::Compose) {

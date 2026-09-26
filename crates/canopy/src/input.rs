@@ -732,7 +732,7 @@ fn repo_action(app: &mut App, action: Action) {
         }
         Bisect => bisect(app),
         PrCheckout | PrCreate | PrReview | Comment | PrMerge | CloseItem | IssueCreate | OpenInBrowser
-        | CycleFilter | ToggleDiff | RerunFailed | MarkRead | MarkAllRead | ToggleUnread | ReleaseCreate => {
+        | CycleFilter | ToggleDiff | RerunFailed | RunLog | MarkRead | MarkAllRead | ToggleUnread | ReleaseCreate => {
             github_action(app, action)
         }
         FileHistory => {
@@ -1078,6 +1078,27 @@ fn github_action(app: &mut App, action: Action) {
             let which = if app.github.runs_all { "all branches" } else { "this branch" };
             app.toast(Level::Info, format!("Showing runs for {which}"));
             crate::github::load_runs(app);
+        }
+        Action::RunLog => {
+            let Some(run) = run else { return };
+            if run.status != "completed" {
+                app.toast(Level::Info, "The full log is ready once the run finishes");
+                return;
+            }
+            let id = run.database_id;
+            let title = format!("{} #{} · {}", run.workflow_name, run.number, run.display_title);
+            app.busy = Some(format!("Loading the log of {} #{}", run.workflow_name, run.number));
+            app.spawn(async move {
+                let (log, jobs) = tokio::join!(gh.run_log(id), gh.run_jobs(id));
+                let failed: Vec<String> = jobs
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter(|j| j.conclusion.eq_ignore_ascii_case("failure"))
+                    .map(|j| j.name)
+                    .collect();
+                let view = log.map(|l| crate::views::runlog::LogView::new(title, &l, &failed));
+                Msg::RunLog(view.map_err(|e| e.to_string()))
+            });
         }
         Action::RerunFailed => {
             let Some(run) = run else { return };
@@ -1693,6 +1714,47 @@ fn modal_key(app: &mut App, key: KeyEvent) {
                 }
             }
             Modal::Compose(c)
+        }
+        Modal::RunLog(mut v) => {
+            if let Some(q) = v.typing.as_mut() {
+                match key.code {
+                    KeyCode::Esc => v.typing = None,
+                    KeyCode::Enter => {
+                        let q = v.typing.take().unwrap_or_default();
+                        v.set_query(&q);
+                        if !q.is_empty() && v.matches.is_empty() {
+                            app.toast(Level::Info, format!("No lines match \"{q}\""));
+                        }
+                    }
+                    KeyCode::Backspace => {
+                        q.pop();
+                    }
+                    KeyCode::Char(c) if !ctrl => q.push(c),
+                    _ => {}
+                }
+                app.modal = Modal::RunLog(v);
+                return;
+            }
+            let page = app.last_log_height.get().max(2) as isize - 1;
+            match (key.code, ctrl) {
+                (KeyCode::Esc | KeyCode::Char('q'), _) => return,
+                (KeyCode::Char('j') | KeyCode::Down, false) => v.move_cursor(1),
+                (KeyCode::Char('k') | KeyCode::Up, false) => v.move_cursor(-1),
+                (KeyCode::Char('d'), true) | (KeyCode::PageDown | KeyCode::Char(' '), _) => v.move_cursor(page),
+                (KeyCode::Char('u'), true) | (KeyCode::PageUp, _) => v.move_cursor(-page),
+                (KeyCode::Char('g') | KeyCode::Home, _) => v.cursor = 0,
+                (KeyCode::Char('G') | KeyCode::End, _) => v.cursor = v.lines.len().saturating_sub(1),
+                (KeyCode::Char('/'), false) => v.typing = Some(String::new()),
+                (KeyCode::Char(c @ ('n' | 'N')), false) => {
+                    if v.query.is_empty() {
+                        app.toast(Level::Info, "Search first with /");
+                    } else if !v.next_match(c == 'n') {
+                        app.toast(Level::Info, format!("No lines match \"{}\"", v.query));
+                    }
+                }
+                _ => {}
+            }
+            Modal::RunLog(v)
         }
         Modal::Blame(mut v) => {
             let n = v.blame.lines.len();
