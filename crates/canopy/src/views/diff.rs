@@ -5,6 +5,8 @@ use canopy_git::{DiffLineKind, FileDiff, FileKind};
 
 use crate::app::{App, Level, Msg, Section, Then};
 use crate::keymap::{RefsView, Screen};
+use crate::views::conflict::ConflictView;
+use canopy_git::parse::conflict;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Row {
@@ -209,6 +211,17 @@ pub fn load_for_selection(app: &mut App) {
     app.spawn(async move {
         let view = match req {
             Req::Status { path, section, untracked } => {
+                // Conflicted text files get the conflict panel instead of a diff.
+                if section == Section::Conflicts {
+                    let file = git.repo.root.join(&path);
+                    let text = tokio::task::spawn_blocking(move || std::fs::read_to_string(file).unwrap_or_default())
+                        .await
+                        .unwrap_or_default();
+                    if let Some(segments) = conflict::parse(&text).filter(|s| conflict::count(s) > 0) {
+                        let view = ConflictView { path, segments, current: 0, scroll: 0 };
+                        return Msg::Conflict { gen, view };
+                    }
+                }
                 let res = match (section, untracked) {
                     (Section::Unstaged, true) => git.diff_untracked(&path).await,
                     (Section::Staged, _) => git.diff_file(&path, true, 3).await,

@@ -398,3 +398,50 @@ async fn tags_and_remotes_views() {
     press(&mut app, KeyCode::Char('y')).await;
     assert_eq!(git_out(dir.path(), &["remote"]).trim(), "");
 }
+
+#[tokio::test]
+async fn resolve_conflicts_one_by_one() {
+    let dir = demo_repo();
+    sh(
+        dir.path(),
+        r#"
+set -e
+git stash -q -u
+printf '1\nshared\n2\n3\n4\n5\n6\nshared\n7\n' > c.txt; git add c.txt; git commit -qm base
+git switch -qc other; printf '1\nTHEIRS-A\n2\n3\n4\n5\n6\nTHEIRS-B\n7\n' > c.txt; git commit -qam other
+git switch -q main; printf '1\nOURS-A\n2\n3\n4\n5\n6\nOURS-B\n7\n' > c.txt; git commit -qam main
+git merge other >/dev/null 2>&1 || true
+"#,
+    );
+    let mut app = app_for(dir.path()).await;
+    press(&mut app, KeyCode::Char('2')).await;
+    let s = render(&mut app, 130, 34);
+    assert!(s.contains("Conflict 1 of 2") && s.contains("ours · HEAD") && s.contains("theirs · other"), "{s}");
+    assert!(s.contains("to resolve conflicts one by one"), "{s}");
+
+    press(&mut app, KeyCode::Enter).await;
+    let s = render(&mut app, 130, 34);
+    assert!(s.contains(" o  ours") && s.contains(" t  theirs"), "hint bar:\n{s}");
+
+    // Resolve the first, change our mind, restore, then do it properly.
+    press(&mut app, KeyCode::Char('o')).await;
+    let text = std::fs::read_to_string(dir.path().join("c.txt")).unwrap();
+    assert!(text.starts_with("1\nOURS-A\n2\n") && text.contains("<<<<<<<"), "{text}");
+    press(&mut app, KeyCode::Char('u')).await;
+    let text = std::fs::read_to_string(dir.path().join("c.txt")).unwrap();
+    assert_eq!(text.matches("<<<<<<<").count(), 2);
+
+    press(&mut app, KeyCode::Enter).await;
+    press(&mut app, KeyCode::Char('t')).await; // conflict 1 -> theirs
+    let s = render(&mut app, 130, 34);
+    assert!(s.contains("Conflict 1 of 1"), "{s}");
+    press(&mut app, KeyCode::Char('b')).await; // conflict 2 -> both
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("c.txt")).unwrap(),
+        "1\nTHEIRS-A\n2\n3\n4\n5\n6\nOURS-B\nTHEIRS-B\n7\n"
+    );
+    // Fully resolved: staged automatically, merge can continue.
+    assert_eq!(app.data.status.conflicted().count(), 0);
+    press(&mut app, KeyCode::Char('C')).await;
+    assert!(!dir.path().join(".git/MERGE_HEAD").exists());
+}

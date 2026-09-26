@@ -258,3 +258,41 @@ async fn tags_and_remotes() {
     git.remove_remote("origin").await.unwrap();
     assert!(git.remotes().await.unwrap().is_empty());
 }
+
+#[tokio::test]
+async fn real_conflicts_parse_resolve_and_restore() {
+    use canopy_git::parse::conflict::{self, Choice};
+    for style in ["merge", "diff3"] {
+        let dir = repo();
+        sh(dir.path(), &["config", "merge.conflictStyle", style]);
+        let git = Git::open(dir.path()).await.unwrap();
+        write(&dir, "f.txt", "1\nshared\n2\n3\n4\n5\n6\nshared\n7\n");
+        commit_all(&git, "base").await;
+        git.create_branch("other", None, true).await.unwrap();
+        write(&dir, "f.txt", "1\nTHEIRS-A\n2\n3\n4\n5\n6\nTHEIRS-B\n7\n");
+        commit_all(&git, "other").await;
+        git.checkout("main").await.unwrap();
+        write(&dir, "f.txt", "1\nOURS-A\n2\n3\n4\n5\n6\nOURS-B\n7\n");
+        commit_all(&git, "main").await;
+        assert!(git.merge("other", false).await.is_err());
+
+        let path = dir.path().join("f.txt");
+        let text = std::fs::read_to_string(&path).unwrap();
+        let segs = conflict::parse(&text).unwrap();
+        assert_eq!(conflict::count(&segs), 2, "{style}: {text}");
+        if style == "diff3" {
+            assert!(segs.iter().any(|s| matches!(s, conflict::Segment::Conflict(c) if c.base.is_some())));
+        }
+
+        let once = conflict::resolve_one(&segs, 0, Choice::Ours);
+        let segs = conflict::parse(&once).unwrap();
+        let done = conflict::resolve_one(&segs, 0, Choice::Theirs);
+        assert_eq!(done, "1\nOURS-A\n2\n3\n4\n5\n6\nTHEIRS-B\n7\n");
+        std::fs::write(&path, &done).unwrap();
+
+        // Changed our mind: bring the markers back.
+        git.restore_conflict("f.txt").await.unwrap();
+        let again = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(conflict::count(&conflict::parse(&again).unwrap()), 2);
+    }
+}

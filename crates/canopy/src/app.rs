@@ -18,6 +18,7 @@ use crate::config::Config;
 use crate::keymap::{Focus, Keymap, RefsView, Screen};
 use crate::modal::Modal;
 use crate::theme::Theme;
+use crate::views::conflict::ConflictView;
 use crate::views::diff::DiffView;
 use crate::workspace::RepoSummary;
 
@@ -50,6 +51,10 @@ pub enum Msg {
     Diff {
         gen: u64,
         view: Result<DiffView, String>,
+    },
+    Conflict {
+        gen: u64,
+        view: ConflictView,
     },
     OpDone {
         label: String,
@@ -111,6 +116,8 @@ pub struct App {
     pub lists: HashMap<Screen, ListState>,
     pub filters: HashMap<Screen, String>,
     pub diff: Option<DiffView>,
+    /// Conflict panel for the selected conflicted file (replaces the diff).
+    pub conflict: Option<ConflictView>,
     pub diff_gen: u64,
     pub modal: Modal,
     pub toast: Option<Toast>,
@@ -152,6 +159,7 @@ impl App {
             lists: HashMap::new(),
             filters: HashMap::new(),
             diff: None,
+            conflict: None,
             diff_gen: 0,
             modal: Modal::None,
             toast: None,
@@ -456,9 +464,23 @@ impl App {
                     self.refresh();
                 }
             }
+            Msg::Conflict { gen, mut view } => {
+                if gen != self.diff_gen {
+                    return;
+                }
+                if let Some(old) = self.conflict.as_ref().filter(|c| c.path == view.path) {
+                    view.current = old.current.min(view.count().saturating_sub(1));
+                }
+                self.conflict = Some(view);
+                self.diff = None;
+            }
             Msg::Diff { gen, view } => {
                 if gen != self.diff_gen {
                     return;
+                }
+                self.conflict = None;
+                if self.focus == Focus::Conflict {
+                    self.focus = Focus::List;
                 }
                 match view {
                     Ok(mut v) => {

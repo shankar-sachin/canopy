@@ -42,6 +42,7 @@ impl Screen {
 pub enum Focus {
     List,
     Diff,
+    Conflict,
 }
 
 /// Which bindings apply.
@@ -53,6 +54,8 @@ pub enum Ctx {
     /// Sub-views of the Branches tab.
     Tags,
     Remotes,
+    /// The conflict panel on the Changes tab.
+    Conflict,
 }
 
 /// Which list the Branches tab is showing.
@@ -146,6 +149,13 @@ pub enum Action {
     FetchAll,
     // Reflog
     ResetToEntry,
+    // Conflict panel
+    NextConflict,
+    PrevConflict,
+    KeepOurs,
+    KeepTheirs,
+    KeepBoth,
+    RestoreConflict,
     // Branches tab sub-views
     NextRefsView,
     PrevRefsView,
@@ -239,6 +249,12 @@ impl Action {
             TakeTheirs => "resolve: take theirs",
             ContinueOp => "continue merge/rebase",
             AbortOp => "abort merge/rebase",
+            NextConflict => "next conflict",
+            PrevConflict => "previous conflict",
+            KeepOurs => "keep ours for this conflict",
+            KeepTheirs => "take theirs for this conflict",
+            KeepBoth => "keep both (ours, then theirs)",
+            RestoreConflict => "restore conflict markers",
             NextRefsView => "next view (branches/tags/remotes)",
             PrevRefsView => "previous view (branches/tags/remotes)",
             CheckoutTag => "checkout tag",
@@ -294,6 +310,11 @@ impl Action {
             Quit => "quit",
             RebaseInteractive => "rebase -i",
             NextRefsView => "switch view",
+            NextConflict => "next",
+            KeepOurs => "ours",
+            KeepTheirs => "theirs",
+            KeepBoth => "both",
+            RestoreConflict => "restore",
             CheckoutTag => "checkout",
             NewTag => "new",
             DeleteTag => "delete",
@@ -419,6 +440,17 @@ pub static REFLOG: &[Binding] = &[b(&["enter", "l"], Action::Enter, true), b(&["
 
 pub static HOME: &[Binding] = &[];
 
+pub static CONFLICT: &[Binding] = &[
+    b(&["o"], Action::KeepOurs, true),
+    b(&["t"], Action::KeepTheirs, true),
+    b(&["b"], Action::KeepBoth, true),
+    b(&["j", "down", "n"], Action::NextConflict, true),
+    b(&["k", "up", "N"], Action::PrevConflict, false),
+    b(&["u"], Action::RestoreConflict, false),
+    b(&["e"], Action::OpenEditor, false),
+    b(&["h", "left"], Action::Back, true),
+];
+
 pub static TAGS: &[Binding] = &[
     b(&["space", "enter"], Action::CheckoutTag, true),
     b(&["n"], Action::NewTag, true),
@@ -451,6 +483,7 @@ pub fn defaults(ctx: Ctx) -> &'static [Binding] {
         Ctx::Screen(Screen::Workspace) => WORKSPACE,
         Ctx::Screen(Screen::Reflog) => REFLOG,
         Ctx::Tags => TAGS,
+        Ctx::Conflict => CONFLICT,
         Ctx::Remotes => REMOTES,
     }
 }
@@ -485,7 +518,7 @@ pub fn key_name(ev: &KeyEvent) -> String {
     }
 }
 
-pub const ALL_CTX: [Ctx; 11] = [
+pub const ALL_CTX: [Ctx; 12] = [
     Ctx::Global,
     Ctx::Diff,
     Ctx::Screen(Screen::Home),
@@ -497,6 +530,7 @@ pub const ALL_CTX: [Ctx; 11] = [
     Ctx::Screen(Screen::Reflog),
     Ctx::Tags,
     Ctx::Remotes,
+    Ctx::Conflict,
 ];
 
 impl Action {

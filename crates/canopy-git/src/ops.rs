@@ -452,6 +452,11 @@ impl Git {
         self.stage(&[path]).await
     }
 
+    /// Put the conflict markers back into a file (undoes a manual resolution).
+    pub async fn restore_conflict(&self, path: &str) -> Result<Output> {
+        self.run(&["checkout", "-m", "--", path]).await
+    }
+
     /// Run an arbitrary git command typed by the user.
     pub async fn raw(&self, args: &[&str]) -> Result<Output> {
         self.run(args).await

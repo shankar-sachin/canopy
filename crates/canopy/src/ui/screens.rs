@@ -420,7 +420,12 @@ fn status(f: &mut Frame, area: Rect, app: &mut App) {
     f.render_stateful_widget(list, la, &mut st);
     *app.list(Screen::Status).offset_mut() = st.offset();
 
-    diff::draw(f, da, app);
+    let on_conflict = app.selected_status_row().is_some_and(|r| r.section == Section::Conflicts);
+    if on_conflict && app.conflict.is_some() {
+        crate::ui::conflict::draw(f, da, app);
+    } else {
+        diff::draw(f, da, app);
+    }
 }
 
 // --------------------------------------------------------------- history

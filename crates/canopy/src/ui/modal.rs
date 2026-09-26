@@ -315,6 +315,9 @@ fn help(f: &mut Frame, area: Rect, app: &App, scroll: u16) {
         _ => screen_name,
     };
     section(&mut lines, &format!("{screen_name} (this screen)"), crate::input::screen_ctx(app));
+    if app.screen == Screen::Status {
+        section(&mut lines, "Conflict panel (⏎ on a conflicted file)", Ctx::Conflict);
+    }
     if matches!(app.screen, Screen::Status | Screen::Log | Screen::Branches | Screen::Stash | Screen::Reflog) {
         section(&mut lines, "Diff panel (after ⏎)", Ctx::Diff);
     }

@@ -1,6 +1,7 @@
 //! Key handling: dispatch to actions, modal dialogs, and pending operations.
 
 use canopy_git::ops::{CommitOpts, ResetMode};
+use canopy_git::parse::conflict::Choice;
 use canopy_git::{FileKind, Output, RepoState};
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEventKind};
 use tokio::sync::mpsc;
@@ -24,6 +25,8 @@ pub fn screen_ctx(app: &App) -> Ctx {
 pub fn contexts(app: &App) -> Vec<Ctx> {
     if app.focus == Focus::Diff && app.diff.is_some() {
         vec![Ctx::Diff, Ctx::Global]
+    } else if app.focus == Focus::Conflict && app.conflict.is_some() {
+        vec![Ctx::Conflict, Ctx::Global]
     } else {
         vec![screen_ctx(app), Ctx::Global]
     }
@@ -88,6 +91,10 @@ fn navigate(app: &mut App, delta: isize) {
         if let Some(d) = app.diff.as_mut() {
             d.move_cursor(delta);
         }
+    } else if app.focus == Focus::Conflict {
+        if let Some(c) = app.conflict.as_mut() {
+            c.step(delta.signum());
+        }
     } else {
         move_list(app, delta);
     }
@@ -151,7 +158,7 @@ pub fn do_action(app: &mut App, action: Action) {
         Back => {
             if let Some(d) = app.diff.as_mut().filter(|d| d.anchor.is_some()) {
                 d.anchor = None;
-            } else if app.focus == Focus::Diff {
+            } else if app.focus != Focus::List {
                 app.focus = Focus::List;
             } else if app.filters.remove(&app.screen).is_some() {
                 app.clamp_selections();
@@ -162,7 +169,10 @@ pub fn do_action(app: &mut App, action: Action) {
             Screen::Workspace => do_action(app, OpenRepo),
             Screen::Home => {}
             _ => {
-                if app.diff.as_ref().is_some_and(|d| !d.rows.is_empty()) {
+                let on_conflict = app.selected_status_row().is_some_and(|r| r.section == Section::Conflicts);
+                if app.screen == Screen::Status && on_conflict && app.conflict.is_some() {
+                    app.focus = Focus::Conflict;
+                } else if app.diff.as_ref().is_some_and(|d| !d.rows.is_empty()) {
                     app.focus = Focus::Diff;
                 }
             }
@@ -647,6 +657,15 @@ fn repo_action(app: &mut App, action: Action) {
             let p = progress_sender(app);
             app.run_op(format!("Fetch {}", r.name), Then::Refresh, async move { git.fetch(Some(&r.name), p).await });
         }
+        NextConflict | PrevConflict => {
+            if let Some(c) = app.conflict.as_mut() {
+                c.step(if action == NextConflict { 1 } else { -1 });
+            }
+        }
+        KeepOurs => crate::views::conflict::choose(app, Choice::Ours),
+        KeepTheirs => crate::views::conflict::choose(app, Choice::Theirs),
+        KeepBoth => crate::views::conflict::choose(app, Choice::Both),
+        RestoreConflict => crate::views::conflict::restore(app),
         StashApply | StashPop => {
             let Some(s) = app.data.stashes.get(app.selected(Screen::Stash)).cloned() else { return };
             if action == StashApply {
