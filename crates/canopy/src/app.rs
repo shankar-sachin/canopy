@@ -107,6 +107,7 @@ pub enum Msg {
         comments: Vec<canopy_gh::ReviewComment>,
     },
     Blame(Result<crate::modal::BlameView, String>),
+    RunLog(Result<crate::views::runlog::LogView, String>),
 }
 
 /// What to do after an operation finishes.
@@ -189,6 +190,8 @@ pub struct App {
     pub github: crate::github::GithubState,
     /// Inner width of the diff panel at the last draw (for wrapping text).
     pub last_diff_width: usize,
+    /// Rows of log shown at the last draw of the log viewer (for paging).
+    pub last_log_height: std::cell::Cell<u16>,
     /// Git's answer to the last bisect step, while bisecting.
     pub bisect: Option<BisectStep>,
     /// Select this commit in History once the next refresh lands.
@@ -254,6 +257,7 @@ impl App {
             splash_start: None,
             github: Default::default(),
             last_diff_width: 72,
+            last_log_height: std::cell::Cell::new(20),
             bisect: None,
             jump_after_load: None,
             refs_view: RefsView::Branches,
@@ -726,6 +730,18 @@ impl App {
                 } else if !self.modal.is_open() || matches!(self.modal, Modal::Blame(_)) {
                     self.modal = Modal::Blame(view);
                 }
+            }
+            Msg::RunLog(Ok(view)) => {
+                self.busy = None;
+                if view.lines.is_empty() {
+                    self.toast(Level::Info, "That run's log is empty");
+                } else if !self.modal.is_open() {
+                    self.modal = Modal::RunLog(view);
+                }
+            }
+            Msg::RunLog(Err(e)) => {
+                self.busy = None;
+                self.toast(Level::Error, e);
             }
             Msg::Blame(Err(e)) => {
                 self.busy = None;

@@ -171,6 +171,8 @@ pub enum Modal {
     },
     Welcome,
     Blame(BlameView),
+    /// A CI run's whole log, with search.
+    RunLog(crate::views::runlog::LogView),
     /// Write a title and/or body for something on GitHub.
     Compose(Compose),
 }
