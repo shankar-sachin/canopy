@@ -128,6 +128,8 @@ crates/canopy       the TUI (Ratatui): app loop, screens, keymap, themes
 - [x] Full git dashboard (v1)
 - [x] GitHub pull requests and issues via `gh`
 - [x] GitHub Actions runs
+- [x] The Canopy wiki, the logo, a startup animation, and a roomier layout (v0.4)
+- [ ] More GitHub: notifications, releases, inline review comments (v0.5)
 - [ ] Syntax-highlighted diffs
 - [x] Conflict editor with per-conflict ours/theirs
 - [x] File history and blame
