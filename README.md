@@ -1,4 +1,6 @@
-# 🌳 Canopy
+<p align="center"><img src="docs/assets/logo.svg" alt="Canopy logo" width="96" height="96"></p>
+
+<h1 align="center">Canopy</h1>
 
 **A beautiful, powerful git dashboard for your terminal.**
 

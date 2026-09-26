@@ -1223,3 +1223,19 @@ async fn modifier_shortcuts() {
     let s = render(&mut app, 160, 24);
     assert!(s.contains(" q  quit"), "{s}");
 }
+
+#[tokio::test]
+async fn logo_on_welcome_and_no_repo() {
+    let dir = demo_repo();
+    let mut app = app_for(dir.path()).await;
+    app.modal = Modal::Welcome;
+    let s = render(&mut app, 100, 30);
+    assert!(s.contains("▄") && s.contains("Welcome to Canopy"), "{s}");
+    let line = s.lines().find(|l| l.contains("Welcome to Canopy")).unwrap();
+    assert!(line.contains('█') || line.contains('▀'), "tree beside the title: {line}");
+
+    let mut app = App::new(None, Config::default(), dir.path().to_path_buf());
+    app.screen = Screen::Home;
+    let s = render(&mut app, 100, 30);
+    assert!(s.contains("██") && s.contains("No repository open"), "{s}");
+}

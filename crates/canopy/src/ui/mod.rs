@@ -1,6 +1,7 @@
 pub mod conflict;
 pub mod diff;
 pub mod graph;
+pub mod logo;
 pub mod modal;
 pub mod screens;
 pub mod util;
