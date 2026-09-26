@@ -3,7 +3,7 @@
 
 use tokio::sync::mpsc;
 
-use crate::cli::{Git, Output, Result};
+use crate::cli::{display_cmd, Git, Output, Result};
 use crate::model::*;
 use crate::parse::{self, diff::PatchMode};
 
@@ -132,13 +132,18 @@ impl Git {
     /// Diff for an untracked file, shown as a new file.
     pub async fn diff_untracked(&self, path: &str) -> Result<Vec<FileDiff>> {
         // `--no-index` exits 1 when there are differences; treat as success.
+        // Read stdout either way: stderr may hold warnings (Git for Windows
+        // warns about CRLF conversion) that aren't the diff.
         let args = ["diff", "--no-ext-diff", "--no-index", "--", "/dev/null", path];
-        let out = match self.run(&args).await {
-            Ok(o) => o.stdout,
-            Err(crate::GitError::Failed { code: 1, stderr, .. }) => stderr,
-            Err(e) => return Err(e),
-        };
-        Ok(parse::diff::parse(&out))
+        let out = self.command(&args).output().await?;
+        if !matches!(out.status.code(), Some(0 | 1)) {
+            return Err(crate::GitError::Failed {
+                cmd: display_cmd(&args),
+                code: out.status.code().unwrap_or(-1),
+                stderr: String::from_utf8_lossy(&out.stderr).into_owned(),
+            });
+        }
+        Ok(parse::diff::parse(&String::from_utf8_lossy(&out.stdout)))
     }
 
     pub async fn show(&self, rev: &str) -> Result<(String, Vec<FileDiff>)> {

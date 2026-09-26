@@ -25,6 +25,12 @@ fn write(dir: &TempDir, path: &str, content: &str) {
     std::fs::write(dir.path().join(path), content).unwrap();
 }
 
+/// A file git checked out, with CRLF turned back into LF (Git for Windows
+/// checks out CRLF by default).
+fn read(dir: &TempDir, path: &str) -> String {
+    std::fs::read_to_string(dir.path().join(path)).unwrap().replace("\r\n", "\n")
+}
+
 async fn commit_all(git: &Git, msg: &str) {
     git.stage_all().await.unwrap();
     git.commit(msg, &CommitOpts::default()).await.unwrap();
@@ -161,7 +167,7 @@ async fn branches_merge_and_conflict() {
     git.checkout_side("f.txt", false).await.unwrap();
     git.merge_continue().await.unwrap();
     assert_eq!(git.state(), RepoState::Clean);
-    assert_eq!(std::fs::read_to_string(dir.path().join("f.txt")).unwrap(), "feature\n");
+    assert_eq!(read(&dir, "f.txt"), "feature\n");
 }
 
 #[tokio::test]
@@ -179,7 +185,7 @@ async fn stash_roundtrip_and_reflog_reset() {
     assert_eq!(stashes.len(), 1);
     assert!(stashes[0].message.contains("my wip"));
     git.stash_pop("stash@{0}").await.unwrap();
-    assert_eq!(std::fs::read_to_string(dir.path().join("f.txt")).unwrap(), "wip\n");
+    assert_eq!(read(&dir, "f.txt"), "wip\n");
     git.discard(&["f.txt"]).await.unwrap();
 
     git.reset("HEAD~1", ResetMode::Hard).await.unwrap();
@@ -205,7 +211,7 @@ async fn interactive_rebase_squash() {
     let log = git.log(&LogQuery::default()).await.unwrap();
     assert_eq!(log.len(), 2);
     assert_eq!(log[0].subject, "c2");
-    assert_eq!(std::fs::read_to_string(dir.path().join("f.txt")).unwrap(), "3\n");
+    assert_eq!(read(&dir, "f.txt"), "3\n");
 }
 
 #[tokio::test]
@@ -287,7 +293,7 @@ async fn real_conflicts_parse_resolve_and_restore() {
         let once = conflict::resolve_one(&segs, 0, Choice::Ours);
         let segs = conflict::parse(&once).unwrap();
         let done = conflict::resolve_one(&segs, 0, Choice::Theirs);
-        assert_eq!(done, "1\nOURS-A\n2\n3\n4\n5\n6\nTHEIRS-B\n7\n");
+        assert_eq!(done.replace("\r\n", "\n"), "1\nOURS-A\n2\n3\n4\n5\n6\nTHEIRS-B\n7\n");
         std::fs::write(&path, &done).unwrap();
 
         // Changed our mind: bring the markers back.

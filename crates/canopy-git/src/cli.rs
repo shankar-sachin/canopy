@@ -35,13 +35,33 @@ pub struct Git {
     pub repo: Repo,
 }
 
-/// Quote an argument for display only (never passed to a shell).
+/// Quote an argument for display only (never passed to a shell): POSIX sh
+/// on macOS/Linux, PowerShell on Windows.
 pub fn shell_quote(arg: &str) -> String {
+    if cfg!(windows) {
+        powershell_quote(arg)
+    } else {
+        posix_quote(arg)
+    }
+}
+
+fn posix_quote(arg: &str) -> String {
     let safe = !arg.is_empty() && arg.chars().all(|c| c.is_ascii_alphanumeric() || "-_./=:@%+,^~".contains(c));
     if safe {
         arg.to_string()
     } else {
         format!("'{}'", arg.replace('\'', r"'\''"))
+    }
+}
+
+/// PowerShell treats `,` `@` and more specially; inside '…' only `'` is,
+/// and it doubles.
+fn powershell_quote(arg: &str) -> String {
+    let safe = !arg.is_empty() && arg.chars().all(|c| c.is_ascii_alphanumeric() || "-_./=:%+^~\\".contains(c));
+    if safe {
+        arg.to_string()
+    } else {
+        format!("'{}'", arg.replace('\'', "''"))
     }
 }
 
@@ -80,7 +100,7 @@ impl Git {
         Ok(Git { repo: Repo { root: PathBuf::from(root), git_dir: PathBuf::from(git_dir) } })
     }
 
-    fn command(&self, args: &[&str]) -> Command {
+    pub(crate) fn command(&self, args: &[&str]) -> Command {
         let mut cmd = Command::new("git");
         cmd.arg("-C")
             .arg(&self.repo.root)
@@ -217,10 +237,15 @@ mod tests {
 
     #[test]
     fn quoting() {
-        assert_eq!(shell_quote("main"), "main");
-        assert_eq!(shell_quote("HEAD~1"), "HEAD~1");
-        assert_eq!(shell_quote("fix bug"), "'fix bug'");
-        assert_eq!(shell_quote("it's"), r"'it'\''s'");
+        assert_eq!(posix_quote("main"), "main");
+        assert_eq!(posix_quote("HEAD~1"), "HEAD~1");
+        assert_eq!(posix_quote("fix bug"), "'fix bug'");
+        assert_eq!(posix_quote("it's"), r"'it'\''s'");
+        assert_eq!(powershell_quote("HEAD~1"), "HEAD~1");
+        assert_eq!(powershell_quote(r"src\main.rs"), r"src\main.rs");
+        assert_eq!(powershell_quote("a,b"), "'a,b'");
+        assert_eq!(powershell_quote("@{u}"), "'@{u}'");
+        assert_eq!(powershell_quote("it's"), "'it''s'");
         assert_eq!(display_cmd(&["commit", "-m", "hello world"]), "git commit -m 'hello world'");
     }
 }
