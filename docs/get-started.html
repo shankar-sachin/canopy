@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Get started · Canopy</title>
+<meta name="description" content="Install Canopy with Homebrew or Cargo, run it from source, and configure it.">
+<meta property="og:title" content="Get started · Canopy">
+<meta property="og:description" content="Install Canopy with Homebrew or Cargo, run it from source, and configure it.">
+<meta name="theme-color" content="#0b100c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌳</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+
+<nav class="top" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="leaf" aria-hidden="true">🌳</span> canopy</a>
+    <div class="links">
+      <a href="features.html" class="hide-sm">Features</a>
+      <a href="github.html" class="hide-sm">GitHub</a>
+      <a href="keys.html" class="hide-sm">Keys</a>
+      <a href="changelog.html" class="hide-sm">Changelog</a>
+      <a href="get-started.html">Get started</a>
+    </div>
+    <a class="gh-btn" href="https://github.com/shankar-sachin/canopy"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> GitHub</a>
+  </div>
+</nav>
+
+<header class="page-head">
+  <div class="wrap">
+    <div class="eyebrow">Get started</div>
+    <h1>Up and running in a minute.</h1>
+    <p class="lede">Canopy runs on macOS and Linux. It needs <code>git</code>; GitHub features also use the <a href="https://cli.github.com">GitHub CLI</a>.</p>
+  </div>
+</header>
+<main class="wrap doc">
+  <aside class="toc"><b>On this page</b><a href="#brew">Homebrew</a><a href="#cargo">With Cargo</a><a href="#source">From source</a><a href="#first">First run</a><a href="#config">Configuration</a><a href="#themes">Themes</a><a href="#update">Updating</a></aside>
+  <article class="prose">
+
+<h2 id="brew">Install with Homebrew</h2>
+<p>The easiest way on a Mac:</p>
+<pre class="code"><span class="p">$ </span>brew install shankar-sachin/canopy/canopy<button class="copy" data-copy-text="brew install shankar-sachin/canopy/canopy" type="button">Copy</button></pre>
+<p>Then run <code>canopy</code> inside any git repository.</p>
+
+<h2 id="cargo">Install with Cargo</h2>
+<p>If you have Rust installed (<a href="https://rustup.rs">rustup.rs</a>), Cargo can build and install Canopy straight from GitHub. It lands in <code>~/.cargo/bin</code>, which rustup already put on your <code>PATH</code>:</p>
+<pre class="code"><span class="p">$ </span>cargo install --locked --git https://github.com/shankar-sachin/canopy canopy-git-tui<button class="copy" data-copy-text="cargo install --locked --git https://github.com/shankar-sachin/canopy canopy-git-tui" type="button">Copy</button></pre>
+<div class="note"><b>Why <code>canopy-git-tui</code>?</b> That's the package name (the name <code>canopy</code> was already taken on crates.io). The command it installs is still <code>canopy</code>.</div>
+
+<h2 id="source">Run from a clone of the source</h2>
+<p>To try the latest code, or hack on it:</p>
+<pre class="code"><span class="p">$ </span>git clone https://github.com/shankar-sachin/canopy.git
+<span class="p">$ </span>cd canopy
+<span class="m"># run it without installing (the -- passes arguments to canopy)</span>
+<span class="p">$ </span>cargo run --release -- ~/code/your-repo
+<span class="m"># or install your local build as `canopy`</span>
+<span class="p">$ </span>cargo install --locked --path crates/canopy</pre>
+<p><code>cargo run</code> builds and starts Canopy in one step; the first build takes a minute or two, later ones are quick. Without a path after <code>--</code>, Canopy opens the repository you're in. Since you're in the Canopy clone itself, that's a handy way to try it on a real history.</p>
+<p>Running the tests: <code>cargo test --workspace</code>.</p>
+
+<h2 id="first">First run</h2>
+<p>The first time, Canopy shows a short welcome with the keys that matter and writes a starter config. From then on:</p>
+<ul>
+  <li><kbd>1</kbd>–<kbd>0</kbd> switch tabs; the footer always lists the keys that work right now.</li>
+  <li><kbd>?</kbd> shows every key for the current screen; <kbd>:</kbd> searches every action by name.</li>
+  <li><kbd>q</kbd> or <kbd>ctrl-c</kbd> quits.</li>
+</ul>
+
+<h2 id="config">Configuration</h2>
+<p>The config file lives at <code>~/.config/canopy/config.toml</code> (<code>canopy --config-path</code> prints it; <code>canopy --example-config</code> prints a template).</p>
+<pre class="code">theme = "canopy"            <span class="m"># canopy | catppuccin | gruvbox | nord | light</span>
+teach_mode = true           <span class="m"># show the git command behind each action</span>
+confirm_destructive = true
+workspace_dirs = ["~/code"] <span class="m"># folders the Workspace tab scans</span>
+
+[keys]                      <span class="m"># remap any action (names are on the Keys page)</span>
+toggle_stage = "s"
+commit = ["c", "ctrl-s"]
+
+[[custom_commands]]
+key = "X"
+cmd = "git push --force-with-lease"
+description = "force push (safely)"
+confirm = true</pre>
+
+<h2 id="themes">Themes</h2>
+<p>Five built in: <b>canopy</b> (forest greens), <b>catppuccin</b>, <b>gruvbox</b>, <b>nord</b>, and <b>light</b>. Set one in the config, pass <code>-t nord</code>, or cycle live with <kbd>ctrl-t</kbd>.</p>
+
+<h2 id="update">Updating</h2>
+<pre class="code"><span class="p">$ </span>brew upgrade canopy                      <span class="m"># Homebrew</span>
+<span class="p">$ </span>cargo install --locked --force --git https://github.com/shankar-sachin/canopy canopy-git-tui   <span class="m"># Cargo</span></pre>
+
+<div class="next-links"><a href="github.html"><small>Previous</small>GitHub</a><a href="keys.html" style="text-align:right"><small>Next</small>Keys</a></div>
+  </article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>🌳 Canopy · MIT licensed · made by <a href="https://github.com/shankar-sachin">Sachin Shankar</a></span>
+    <span><a href="get-started.html">Get started</a> · <a href="keys.html">Keys</a> · <a href="changelog.html">Changelog</a> · <a href="https://github.com/shankar-sachin/canopy">Source</a> · <a href="https://github.com/shankar-sachin/canopy/issues">Report a bug</a></span>
+  </div>
+</footer>
+<script src="assets/site.js"></script>
+</body>
+</html>
