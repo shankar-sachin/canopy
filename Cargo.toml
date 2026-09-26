@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/canopy", "crates/canopy-git"]
+members = ["crates/canopy", "crates/canopy-git", "crates/canopy-gh"]
 
 [workspace.package]
 version = "0.2.0"
