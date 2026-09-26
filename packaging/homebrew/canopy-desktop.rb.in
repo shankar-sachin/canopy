@@ -12,8 +12,6 @@ cask "canopy-desktop" do
   desc "Beautiful, powerful git dashboard"
   homepage "https://shankar-sachin.github.io/canopy/"
 
-  depends_on macos: ">= :catalina"
-
   app "canopy.app"
 
   zap trash: "~/.config/canopy/desktop.json"
