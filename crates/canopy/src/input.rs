@@ -365,30 +365,7 @@ fn repo_action(app: &mut App, action: Action) {
                 _ => None,
             };
             let Some(path) = path else { return };
-            let full = git.repo.root.join(path);
-            let fallback = if cfg!(windows) { "notepad" } else { "vi" };
-            let editor =
-                std::env::var("VISUAL").or_else(|_| std::env::var("EDITOR")).unwrap_or_else(|_| fallback.into());
-            let status = app.suspend(|| {
-                if cfg!(windows) {
-                    // No POSIX shell on Windows: run the editor directly.
-                    // "code --wait" becomes program "code", args ["--wait", file].
-                    let mut parts = split_args(&editor);
-                    let program = if parts.is_empty() { "notepad".to_string() } else { parts.remove(0) };
-                    std::process::Command::new(program).args(parts).arg(&full).status()
-                } else {
-                    // Through sh, so EDITOR can use any shell syntax.
-                    std::process::Command::new("sh")
-                        .arg("-c")
-                        .arg(format!("{editor} \"$1\""))
-                        .arg("sh")
-                        .arg(&full)
-                        .status()
-                }
-            });
-            if let Err(e) = status {
-                app.toast(Level::Error, format!("Could not run {editor}: {e}"));
-            }
+            open_in_editor(app, &git.repo.root.join(path));
             app.refresh();
         }
         Ignore => {
@@ -733,8 +710,8 @@ fn repo_action(app: &mut App, action: Action) {
         }
         Bisect => bisect(app),
         PrCheckout | PrCreate | PrReview | Comment | PrMerge | CloseItem | IssueCreate | OpenInBrowser
-        | CycleFilter | ToggleDiff | RerunFailed | FixWithAi | RunLog | MarkRead | MarkAllRead | ToggleUnread
-        | ReleaseCreate => github_action(app, action),
+        | CycleFilter | ToggleDiff | RerunFailed | FixWithAi | RunDetails | RunLog | MarkRead | MarkAllRead
+        | ToggleUnread | ReleaseCreate => github_action(app, action),
         FileHistory => {
             let Some((path, _)) = target_file(app) else { return };
             app.set_log_path(Some(path));
@@ -1098,6 +1075,22 @@ fn github_action(app: &mut App, action: Action) {
                     .collect();
                 let view = log.map(|l| crate::views::runlog::LogView::new(title, &l, &failed));
                 Msg::RunLog(view.map_err(|e| e.to_string()))
+            });
+        }
+        Action::RunDetails => {
+            let Some(run) = run else { return };
+            if run.state() != canopy_gh::CheckState::Failed {
+                app.toast(Level::Info, "Pick a failed run: e opens the details of what went wrong");
+                return;
+            }
+            let Some(git) = app.git.clone() else { return };
+            let repo = app.github.repo_name().map(String::from).unwrap_or_default();
+            app.busy = Some(format!("Gathering why {} #{} failed", run.workflow_name, run.number));
+            app.spawn(async move {
+                use canopy_gh::assist;
+                let branch = run.head_branch.clone();
+                let failure = assist::gather(&gh, &repo, &branch, run).await;
+                Msg::DetailsReady(assist::write_prompt(&git.repo.git_dir, &failure.prompt()).map_err(|e| e.to_string()))
             });
         }
         Action::FixWithAi => {
@@ -2307,6 +2300,28 @@ mod tests {
         assert_eq!(split_args("commit -m 'it''s'"), vec!["commit", "-m", "its"]);
         assert_eq!(split_args(r"a\ b c"), vec!["a b", "c"]);
         assert_eq!(split_args("x ''"), vec!["x", ""]);
+    }
+}
+
+/// Open `file` in $VISUAL / $EDITOR (vi, or Notepad on Windows); Canopy
+/// steps aside until the editor exits.
+pub fn open_in_editor(app: &mut App, file: &std::path::Path) {
+    let fallback = if cfg!(windows) { "notepad" } else { "vi" };
+    let editor = std::env::var("VISUAL").or_else(|_| std::env::var("EDITOR")).unwrap_or_else(|_| fallback.into());
+    let status = app.suspend(|| {
+        if cfg!(windows) {
+            // No POSIX shell on Windows: run the editor directly.
+            // "code --wait" becomes program "code", args ["--wait", file].
+            let mut parts = split_args(&editor);
+            let program = if parts.is_empty() { "notepad".to_string() } else { parts.remove(0) };
+            std::process::Command::new(program).args(parts).arg(file).status()
+        } else {
+            // Through sh, so EDITOR can use any shell syntax.
+            std::process::Command::new("sh").arg("-c").arg(format!("{editor} \"$1\"")).arg("sh").arg(file).status()
+        }
+    });
+    if let Err(e) = status {
+        app.toast(Level::Error, format!("Could not run {editor}: {e}"));
     }
 }
 

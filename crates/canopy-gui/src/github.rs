@@ -261,6 +261,68 @@ pub async fn latest_failure(state: State<'_, AppState>) -> Res<Option<LatestFail
     }))
 }
 
+/// Gather why run `id` failed and write it to `.git/canopy/fix-ci.md`.
+async fn prepare_failure(git: &canopy_git::Git, id: u64) -> Res<(canopy_gh::assist::Failure, std::path::PathBuf)> {
+    use canopy_gh::assist;
+    let gh = Gh::new(&git.repo.root, None);
+    let runs = gh.run_list(None, 50).await.map_err(err)?;
+    let run = runs.into_iter().find(|r| r.database_id == id).ok_or("That run wasn't found.")?;
+    let repo = match gh.detect().await {
+        GhStatus::Ready(info) => info.name_with_owner,
+        _ => git.repo.root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
+    };
+    let branch = run.head_branch.clone();
+    let failure = assist::gather(&gh, &repo, &branch, run).await;
+    let file = assist::write_prompt(&git.repo.git_dir, &failure.prompt()).map_err(|e| e.to_string())?;
+    Ok((failure, file))
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct FailureDetails {
+    pub headline: String,
+    /// The full write-up (the same text the AI assistant gets).
+    pub text: String,
+    /// Where it was saved.
+    pub file: String,
+    pub url: String,
+}
+
+/// The details of why run `id` failed, for the Details popup.
+#[tauri::command]
+pub async fn failure_details(id: u64, state: State<'_, AppState>) -> Res<FailureDetails> {
+    let git = current(&state).await?;
+    let (failure, file) = prepare_failure(&git, id).await?;
+    Ok(FailureDetails {
+        headline: failure.headline(),
+        text: failure.prompt(),
+        file: file.display().to_string(),
+        url: failure.run.map(|r| r.url).unwrap_or_default(),
+    })
+}
+
+/// Open the saved details in the system's default app for .md files.
+#[tauri::command]
+pub async fn open_details(state: State<'_, AppState>) -> Res<()> {
+    let git = current(&state).await?;
+    let file = git.repo.git_dir.join("canopy").join("fix-ci.md");
+    if !file.exists() {
+        return Err("There are no details saved yet.".into());
+    }
+    let mut cmd = if cfg!(target_os = "macos") {
+        let mut c = std::process::Command::new("open");
+        // TextEdit when nothing claims .md files.
+        c.arg("-t");
+        c
+    } else if cfg!(windows) {
+        let mut c = std::process::Command::new("cmd");
+        c.args(["/C", "start", "", "notepad"]);
+        c
+    } else {
+        std::process::Command::new("xdg-open")
+    };
+    cmd.arg(&file).spawn().map(|_| ()).map_err(|e| format!("Couldn't open an editor: {e}"))
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct FixLaunched {
     pub assistant: String,
@@ -279,16 +341,7 @@ pub async fn fix_with_ai(id: u64, state: State<'_, AppState>) -> Res<FixLaunched
     let assistant = tauri::async_runtime::spawn_blocking(move || assist::pick(&setting)).await.ok().flatten().ok_or(
         "No AI assistant is set up. Install Claude Code or Codex, or choose a command in Settings → AI assistant.",
     )?;
-    let gh = Gh::new(&git.repo.root, None);
-    let runs = gh.run_list(None, 50).await.map_err(err)?;
-    let run = runs.into_iter().find(|r| r.database_id == id).ok_or("That run wasn't found.")?;
-    let repo = match gh.detect().await {
-        GhStatus::Ready(info) => info.name_with_owner,
-        _ => git.repo.root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
-    };
-    let branch = run.head_branch.clone();
-    let failure = assist::gather(&gh, &repo, &branch, run).await;
-    let file = assist::write_prompt(&git.repo.git_dir, &failure.prompt()).map_err(|e| e.to_string())?;
+    let (_, file) = prepare_failure(&git, id).await?;
     let root = git.repo.root.clone();
     let argv = assistant.argv(&assist::kickoff(&file, &root));
     let launched =

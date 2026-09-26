@@ -67,6 +67,8 @@ pub enum Msg {
     Progress(String),
     Workspace(Vec<RepoSummary>),
     RepoOpened(Result<Git, String>),
+    /// A failure's details are written; open them in the editor.
+    DetailsReady(Result<std::path::PathBuf, String>),
     /// A fix-it prompt is written; open the AI assistant.
     AiReady(Result<AiLaunch, String>),
     /// `git init` finished (setup.rs).
@@ -777,6 +779,17 @@ impl App {
                 self.set_repo(git);
             }
             Msg::SetupCreated(res) => crate::setup::created(self, res),
+            Msg::DetailsReady(res) => {
+                self.busy = None;
+                match res {
+                    Err(e) => self.toast(Level::Error, e),
+                    // Tests check the file instead of opening an editor.
+                    #[cfg(test)]
+                    Ok(file) => self.toast(Level::Success, format!("would edit: {}", file.display())),
+                    #[cfg(not(test))]
+                    Ok(file) => crate::input::open_in_editor(self, &file),
+                }
+            }
             Msg::AiReady(res) => {
                 self.busy = None;
                 match res {
