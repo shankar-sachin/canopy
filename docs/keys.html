@@ -40,35 +40,37 @@
 <main class="wrap doc">
   <aside class="toc"><b>On this page</b><a href="#k-global">Everywhere</a><a href="#k-status">Changes</a><a href="#k-diff">Diff panel</a><a href="#k-conflict">Conflict panel</a><a href="#k-log">History</a><a href="#k-branches">Branches</a><a href="#k-tags">Tags</a><a href="#k-remotes">Remotes</a><a href="#k-worktrees">Worktrees</a><a href="#k-submodules">Submodules</a><a href="#k-stash">Stash</a><a href="#k-workspace">Workspace</a><a href="#k-reflog">Reflog</a><a href="#k-pulls">Pull requests</a><a href="#k-issues">Issues</a><a href="#k-runs">Actions</a></aside>
   <article class="prose">
+<div class="note"><b>On a Mac, "alt" is the Option key (⌥).</b> Option shortcuts work in any terminal: Canopy understands both terminals that send Option as Alt/Meta and macOS Terminal's default, where Option types a special character. <kbd>ctrl-q</kbd> and <kbd>alt-q</kbd> quit from anywhere, even inside a dialog.</div>
 <!-- KEYS:START -->
 <h2 id="k-global">Everywhere</h2>
 <table class="ref">
-<tr><td><kbd>?</kbd></td><td>help</td><td><code>help</code></td></tr>
-<tr><td><kbd>:</kbd> <kbd>^p</kbd></td><td>command palette</td><td><code>palette</code></td></tr>
-<tr><td><kbd>q</kbd> <kbd>^c</kbd></td><td>quit</td><td><code>quit</code></td></tr>
-<tr><td><kbd>1</kbd></td><td>go to home</td><td><code>goto_home</code></td></tr>
-<tr><td><kbd>2</kbd></td><td>go to changes</td><td><code>goto_changes</code></td></tr>
-<tr><td><kbd>3</kbd></td><td>go to history</td><td><code>goto_history</code></td></tr>
-<tr><td><kbd>4</kbd></td><td>go to branches</td><td><code>goto_branches</code></td></tr>
-<tr><td><kbd>5</kbd></td><td>go to stash</td><td><code>goto_stash</code></td></tr>
-<tr><td><kbd>6</kbd></td><td>go to workspace</td><td><code>goto_workspace</code></td></tr>
-<tr><td><kbd>7</kbd></td><td>go to reflog</td><td><code>goto_reflog</code></td></tr>
-<tr><td><kbd>8</kbd></td><td>go to pull requests</td><td><code>goto_pull requests</code></td></tr>
-<tr><td><kbd>9</kbd></td><td>go to issues</td><td><code>goto_issues</code></td></tr>
-<tr><td><kbd>0</kbd></td><td>go to actions</td><td><code>goto_actions</code></td></tr>
-<tr><td><kbd>tab</kbd></td><td>next tab</td><td><code>next_screen</code></td></tr>
-<tr><td><kbd>shift-tab</kbd></td><td>previous tab</td><td><code>prev_screen</code></td></tr>
-<tr><td><kbd>^r</kbd></td><td>refresh</td><td><code>refresh</code></td></tr>
-<tr><td><kbd>c</kbd></td><td>commit</td><td><code>commit</code></td></tr>
-<tr><td><kbd>f</kbd></td><td>fetch</td><td><code>fetch</code></td></tr>
-<tr><td><kbd>p</kbd></td><td>pull</td><td><code>pull</code></td></tr>
-<tr><td><kbd>P</kbd></td><td>push</td><td><code>push</code></td></tr>
-<tr><td><kbd>z</kbd></td><td>undo last action</td><td><code>undo</code></td></tr>
-<tr><td><kbd>S</kbd></td><td>stash changes</td><td><code>stash_push</code></td></tr>
+<tr><td><kbd>?</kbd> <kbd>alt-h</kbd> <kbd>f1</kbd></td><td>help</td><td><code>help</code></td></tr>
+<tr><td><kbd>:</kbd> <kbd>^p</kbd> <kbd>^k</kbd></td><td>command palette</td><td><code>palette</code></td></tr>
+<tr><td><kbd>q</kbd> <kbd>^q</kbd> <kbd>alt-q</kbd> <kbd>^c</kbd></td><td>quit</td><td><code>quit</code></td></tr>
+<tr><td><kbd>1</kbd> <kbd>alt-1</kbd></td><td>go to home</td><td><code>goto_home</code></td></tr>
+<tr><td><kbd>2</kbd> <kbd>alt-2</kbd></td><td>go to changes</td><td><code>goto_changes</code></td></tr>
+<tr><td><kbd>3</kbd> <kbd>alt-3</kbd></td><td>go to history</td><td><code>goto_history</code></td></tr>
+<tr><td><kbd>4</kbd> <kbd>alt-4</kbd></td><td>go to branches</td><td><code>goto_branches</code></td></tr>
+<tr><td><kbd>5</kbd> <kbd>alt-5</kbd></td><td>go to stash</td><td><code>goto_stash</code></td></tr>
+<tr><td><kbd>6</kbd> <kbd>alt-6</kbd></td><td>go to workspace</td><td><code>goto_workspace</code></td></tr>
+<tr><td><kbd>7</kbd> <kbd>alt-7</kbd></td><td>go to reflog</td><td><code>goto_reflog</code></td></tr>
+<tr><td><kbd>8</kbd> <kbd>alt-8</kbd></td><td>go to pull requests</td><td><code>goto_pull requests</code></td></tr>
+<tr><td><kbd>9</kbd> <kbd>alt-9</kbd></td><td>go to issues</td><td><code>goto_issues</code></td></tr>
+<tr><td><kbd>0</kbd> <kbd>alt-0</kbd></td><td>go to actions</td><td><code>goto_actions</code></td></tr>
+<tr><td><kbd>tab</kbd> <kbd>alt-→</kbd> <kbd>^right</kbd></td><td>next tab</td><td><code>next_screen</code></td></tr>
+<tr><td><kbd>shift-tab</kbd> <kbd>alt-←</kbd> <kbd>^left</kbd></td><td>previous tab</td><td><code>prev_screen</code></td></tr>
+<tr><td><kbd>^r</kbd> <kbd>alt-r</kbd></td><td>refresh</td><td><code>refresh</code></td></tr>
+<tr><td><kbd>^l</kbd></td><td>redraw the screen</td><td><code>redraw</code></td></tr>
+<tr><td><kbd>c</kbd> <kbd>alt-c</kbd> <kbd>^s</kbd></td><td>commit</td><td><code>commit</code></td></tr>
+<tr><td><kbd>f</kbd> <kbd>alt-f</kbd></td><td>fetch</td><td><code>fetch</code></td></tr>
+<tr><td><kbd>p</kbd> <kbd>alt-p</kbd></td><td>pull</td><td><code>pull</code></td></tr>
+<tr><td><kbd>P</kbd> <kbd>alt-P</kbd></td><td>push</td><td><code>push</code></td></tr>
+<tr><td><kbd>z</kbd> <kbd>alt-z</kbd></td><td>undo last action</td><td><code>undo</code></td></tr>
+<tr><td><kbd>S</kbd> <kbd>alt-s</kbd></td><td>stash changes</td><td><code>stash_push</code></td></tr>
 <tr><td><kbd>b</kbd></td><td>bisect: find the commit that broke something</td><td><code>bisect</code></td></tr>
-<tr><td><kbd>!</kbd></td><td>run git command</td><td><code>raw_git</code></td></tr>
+<tr><td><kbd>!</kbd> <kbd>alt-g</kbd></td><td>run git command</td><td><code>raw_git</code></td></tr>
 <tr><td><kbd>T</kbd></td><td>toggle teach mode</td><td><code>toggle_teach</code></td></tr>
-<tr><td><kbd>^t</kbd></td><td>cycle theme</td><td><code>cycle_theme</code></td></tr>
+<tr><td><kbd>^t</kbd> <kbd>alt-t</kbd></td><td>cycle theme</td><td><code>cycle_theme</code></td></tr>
 <tr><td><kbd>k</kbd> <kbd>↑</kbd></td><td>up</td><td><code>up</code></td></tr>
 <tr><td><kbd>j</kbd> <kbd>↓</kbd></td><td>down</td><td><code>down</code></td></tr>
 <tr><td><kbd>^u</kbd> <kbd>pageup</kbd></td><td>page up</td><td><code>page_up</code></td></tr>

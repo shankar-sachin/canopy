@@ -133,6 +133,7 @@ pub enum Action {
     Push,
     Commit,
     Undo,
+    Redraw,
     RawGit,
     ToggleTeach,
     CycleTheme,
@@ -262,6 +263,7 @@ impl Action {
             Push => "push",
             Commit => "commit",
             Undo => "undo last action",
+            Redraw => "redraw the screen",
             RawGit => "run git command",
             ToggleTeach => "toggle teach mode",
             CycleTheme => "cycle theme",
@@ -444,32 +446,35 @@ const fn b(keys: &'static [&'static str], action: Action, hint: bool) -> Binding
 }
 
 pub static GLOBAL: &[Binding] = &[
-    b(&["?"], Action::Help, true),
-    b(&[":", "ctrl-p"], Action::Palette, true),
-    b(&["q", "ctrl-c"], Action::Quit, false),
-    b(&["1"], Action::Goto(Screen::Home), false),
-    b(&["2"], Action::Goto(Screen::Status), false),
-    b(&["3"], Action::Goto(Screen::Log), false),
-    b(&["4"], Action::Goto(Screen::Branches), false),
-    b(&["5"], Action::Goto(Screen::Stash), false),
-    b(&["6"], Action::Goto(Screen::Workspace), false),
-    b(&["7"], Action::Goto(Screen::Reflog), false),
-    b(&["8"], Action::Goto(Screen::Pulls), false),
-    b(&["9"], Action::Goto(Screen::Issues), false),
-    b(&["0"], Action::Goto(Screen::Runs), false),
-    b(&["tab"], Action::NextScreen, false),
-    b(&["backtab"], Action::PrevScreen, false),
-    b(&["ctrl-r"], Action::Refresh, false),
-    b(&["c"], Action::Commit, true),
-    b(&["f"], Action::Fetch, false),
-    b(&["p"], Action::Pull, true),
-    b(&["P"], Action::Push, true),
-    b(&["z"], Action::Undo, false),
-    b(&["S"], Action::StashPush, false),
+    b(&["?", "alt-h", "f1"], Action::Help, true),
+    b(&[":", "ctrl-p", "ctrl-k"], Action::Palette, true),
+    b(&["q", "ctrl-q", "alt-q", "ctrl-c"], Action::Quit, true),
+    // Number keys jump to tabs; alt-<number> does too, even on screens
+    // that use digits for something else.
+    b(&["1", "alt-1"], Action::Goto(Screen::Home), false),
+    b(&["2", "alt-2"], Action::Goto(Screen::Status), false),
+    b(&["3", "alt-3"], Action::Goto(Screen::Log), false),
+    b(&["4", "alt-4"], Action::Goto(Screen::Branches), false),
+    b(&["5", "alt-5"], Action::Goto(Screen::Stash), false),
+    b(&["6", "alt-6"], Action::Goto(Screen::Workspace), false),
+    b(&["7", "alt-7"], Action::Goto(Screen::Reflog), false),
+    b(&["8", "alt-8"], Action::Goto(Screen::Pulls), false),
+    b(&["9", "alt-9"], Action::Goto(Screen::Issues), false),
+    b(&["0", "alt-0"], Action::Goto(Screen::Runs), false),
+    b(&["tab", "alt-right", "ctrl-right"], Action::NextScreen, false),
+    b(&["backtab", "alt-left", "ctrl-left"], Action::PrevScreen, false),
+    b(&["ctrl-r", "alt-r"], Action::Refresh, false),
+    b(&["ctrl-l"], Action::Redraw, false),
+    b(&["c", "alt-c", "ctrl-s"], Action::Commit, true),
+    b(&["f", "alt-f"], Action::Fetch, false),
+    b(&["p", "alt-p"], Action::Pull, true),
+    b(&["P", "alt-P"], Action::Push, true),
+    b(&["z", "alt-z"], Action::Undo, false),
+    b(&["S", "alt-s"], Action::StashPush, false),
     b(&["b"], Action::Bisect, false),
-    b(&["!"], Action::RawGit, false),
+    b(&["!", "alt-g"], Action::RawGit, false),
     b(&["T"], Action::ToggleTeach, false),
-    b(&["ctrl-t"], Action::CycleTheme, false),
+    b(&["ctrl-t", "alt-t"], Action::CycleTheme, false),
     b(&["k", "up"], Action::Up, false),
     b(&["j", "down"], Action::Down, false),
     b(&["ctrl-u", "pageup"], Action::PageUp, false),
@@ -650,11 +655,65 @@ pub fn defaults(ctx: Ctx) -> &'static [Binding] {
     }
 }
 
-/// Canonical string for a key event, matching the names used in the tables.
+/// On a US keyboard, macOS's Option key types these characters unless the
+/// terminal is set to send Option as Meta/Alt. Treat them as `alt-<key>` so
+/// Option shortcuts work out of the box (dead keys like ⌥E are skipped).
+pub fn mac_option_key(c: char) -> Option<char> {
+    Some(match c {
+        'å' => 'a',
+        '∫' => 'b',
+        'ç' => 'c',
+        '∂' => 'd',
+        'ƒ' => 'f',
+        '©' => 'g',
+        '˙' => 'h',
+        '∆' => 'j',
+        '˚' => 'k',
+        '¬' => 'l',
+        'µ' => 'm',
+        'ø' => 'o',
+        'π' => 'p',
+        'œ' => 'q',
+        '®' => 'r',
+        'ß' => 's',
+        '†' => 't',
+        '√' => 'v',
+        '∑' => 'w',
+        '≈' => 'x',
+        '¥' => 'y',
+        'Ω' => 'z',
+        '∏' => 'P',
+        '÷' => '/',
+        '¡' => '1',
+        '™' => '2',
+        '£' => '3',
+        '¢' => '4',
+        '∞' => '5',
+        '§' => '6',
+        '¶' => '7',
+        '•' => '8',
+        'ª' => '9',
+        'º' => '0',
+        _ => return None,
+    })
+}
+
+/// Canonical string for a key event, matching the names used in the tables:
+/// `x`, `X`, `ctrl-x`, `alt-x`, `ctrl-alt-x`, `enter`, `alt-left`, ...
 pub fn key_name(ev: &KeyEvent) -> String {
-    let ctrl = ev.modifiers.contains(KeyModifiers::CONTROL);
+    let mut ctrl = ev.modifiers.contains(KeyModifiers::CONTROL);
+    let mut alt = ev.modifiers.contains(KeyModifiers::ALT);
     let base = match ev.code {
         KeyCode::Char(' ') => "space".to_string(),
+        KeyCode::Char(c) if !ctrl && !alt && mac_option_key(c).is_some() => {
+            alt = true;
+            mac_option_key(c).unwrap_or(c).to_string()
+        }
+        // Some terminals report ctrl-letter as the control character itself.
+        KeyCode::Char(c) if ('\u{1}'..='\u{1a}').contains(&c) && !matches!(c, '\t' | '\r' | '\n') => {
+            ctrl = true;
+            ((c as u8 - 1 + b'a') as char).to_string()
+        }
         KeyCode::Char(c) => c.to_string(),
         KeyCode::Enter => "enter".into(),
         KeyCode::Esc => "esc".into(),
@@ -673,10 +732,11 @@ pub fn key_name(ev: &KeyEvent) -> String {
         KeyCode::F(n) => format!("f{n}"),
         _ => String::new(),
     };
-    if ctrl {
-        format!("ctrl-{base}")
-    } else {
-        base
+    match (ctrl, alt) {
+        (true, true) => format!("ctrl-alt-{base}"),
+        (true, false) => format!("ctrl-{base}"),
+        (false, true) => format!("alt-{base}"),
+        (false, false) => base,
     }
 }
 
@@ -849,7 +909,8 @@ const NAMED_KEYS: &[&str] = &[
 ];
 
 fn is_valid_key(k: &str) -> bool {
-    let base = k.strip_prefix("ctrl-").unwrap_or(k);
+    let k = k.strip_prefix("ctrl-").unwrap_or(k);
+    let base = k.strip_prefix("alt-").unwrap_or(k);
     base.chars().count() == 1
         || NAMED_KEYS.contains(&base)
         || base.strip_prefix('f').is_some_and(|n| n.parse::<u8>().is_ok_and(|n| (1..=12).contains(&n)))
@@ -865,10 +926,18 @@ pub fn pretty_key(k: &str) -> String {
         "down" => "↓".into(),
         "left" => "←".into(),
         "right" => "→".into(),
-        _ => match k.strip_prefix("ctrl-") {
-            Some(rest) => format!("^{rest}"),
-            None => k.to_string(),
-        },
+        // ctrl-x -> ^x; alt stays spelled out ("alt" is Option on a Mac).
+        _ => {
+            if let Some(r) = k.strip_prefix("ctrl-alt-") {
+                format!("^alt-{}", pretty_key(r))
+            } else if let Some(r) = k.strip_prefix("ctrl-") {
+                format!("^{r}")
+            } else if let Some(r) = k.strip_prefix("alt-") {
+                format!("alt-{}", pretty_key(r))
+            } else {
+                k.to_string()
+            }
+        }
     }
 }
 
@@ -931,6 +1000,26 @@ mod tests {
         assert_eq!(km.lookup(&[Ctx::Global], "q"), Some(Action::Quit));
         // bogus action, bad key, and stage_all losing `a`.
         assert_eq!(warnings.len(), 3, "{warnings:?}");
+    }
+
+    #[test]
+    fn modifier_key_names() {
+        let k = |c, m| key_name(&KeyEvent::new(c, m));
+        assert_eq!(k(KeyCode::Char('q'), KeyModifiers::ALT), "alt-q");
+        assert_eq!(k(KeyCode::Char('q'), KeyModifiers::CONTROL | KeyModifiers::ALT), "ctrl-alt-q");
+        assert_eq!(k(KeyCode::Left, KeyModifiers::ALT), "alt-left");
+        // macOS Terminal without "Option as Meta": Option+Q types œ, Option+1 types ¡.
+        assert_eq!(k(KeyCode::Char('œ'), KeyModifiers::NONE), "alt-q");
+        assert_eq!(k(KeyCode::Char('¡'), KeyModifiers::NONE), "alt-1");
+        assert_eq!(k(KeyCode::Char('∏'), KeyModifiers::SHIFT), "alt-P");
+        // Raw control characters.
+        assert_eq!(k(KeyCode::Char('\u{11}'), KeyModifiers::NONE), "ctrl-q");
+        assert_eq!(pretty_key("ctrl-q"), "^q");
+        assert_eq!(pretty_key("alt-left"), "alt-←");
+        assert_eq!(pretty_key("ctrl-alt-x"), "^alt-x");
+        let km = Keymap::default();
+        assert_eq!(km.lookup(&[Ctx::Screen(Screen::Pulls), Ctx::Global], "alt-q"), Some(Action::Quit));
+        assert_eq!(km.lookup(&[Ctx::Global], "alt-3"), Some(Action::Goto(Screen::Log)));
     }
 
     #[test]

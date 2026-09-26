@@ -63,6 +63,8 @@ Press `?` on any screen for its keys, or `:` to search every action by name.
 | `L` | history of a file (follows renames) | | `B` | blame: who changed each line |
 | `b` | bisect: find the commit that broke something | | | |
 | `:` or `ctrl-p` | command palette | | `ctrl-t` | cycle theme |
+| `ctrl-q` / `option-q` | quit, from anywhere (even in a dialog) | | `option-1`…`option-0` | jump to a tab |
+| `option-←` / `option-→` | previous / next tab | | `option-c` `option-p` `option-P` | commit, pull, push |
 
 ### Made for learning git
 
