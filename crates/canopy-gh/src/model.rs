@@ -252,6 +252,9 @@ pub struct Run {
     pub workflow_name: String,
     #[serde(default)]
     pub head_branch: String,
+    /// The commit the run tested.
+    #[serde(default)]
+    pub head_sha: String,
     /// queued / in_progress / completed / ...
     #[serde(default)]
     pub status: String,

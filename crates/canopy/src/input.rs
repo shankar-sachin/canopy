@@ -733,9 +733,8 @@ fn repo_action(app: &mut App, action: Action) {
         }
         Bisect => bisect(app),
         PrCheckout | PrCreate | PrReview | Comment | PrMerge | CloseItem | IssueCreate | OpenInBrowser
-        | CycleFilter | ToggleDiff | RerunFailed | RunLog | MarkRead | MarkAllRead | ToggleUnread | ReleaseCreate => {
-            github_action(app, action)
-        }
+        | CycleFilter | ToggleDiff | RerunFailed | FixWithAi | RunLog | MarkRead | MarkAllRead | ToggleUnread
+        | ReleaseCreate => github_action(app, action),
         FileHistory => {
             let Some((path, _)) = target_file(app) else { return };
             app.set_log_path(Some(path));
@@ -1099,6 +1098,41 @@ fn github_action(app: &mut App, action: Action) {
                     .collect();
                 let view = log.map(|l| crate::views::runlog::LogView::new(title, &l, &failed));
                 Msg::RunLog(view.map_err(|e| e.to_string()))
+            });
+        }
+        Action::FixWithAi => {
+            let Some(run) = run else { return };
+            if run.state() != canopy_gh::CheckState::Failed {
+                app.toast(Level::Info, "Pick a failed run: A writes a fix-it prompt from its error");
+                return;
+            }
+            let Some(git) = app.git.clone() else { return };
+            let setting = app.config.ai.clone();
+            let repo = app.github.repo_name().map(String::from).unwrap_or_default();
+            app.busy = Some(format!("Gathering why {} #{} failed", run.workflow_name, run.number));
+            app.spawn(async move {
+                use canopy_gh::assist;
+                let assistant = tokio::task::spawn_blocking(move || assist::pick(&setting)).await.ok().flatten();
+                let Some(assistant) = assistant else {
+                    return Msg::AiReady(Err(
+                        "No AI assistant set up: install Claude Code or Codex, or set ai = \"<command>\" in the config"
+                            .into(),
+                    ));
+                };
+                let branch = run.head_branch.clone();
+                let failure = assist::gather(&gh, &repo, &branch, run).await;
+                let res = assist::write_prompt(&git.repo.git_dir, &failure.prompt())
+                    .map(|file| {
+                        let argv = assistant.argv(&assist::kickoff(&file, &git.repo.root));
+                        crate::app::AiLaunch {
+                            assistant: assistant.name(),
+                            root: git.repo.root.clone(),
+                            argv,
+                            headline: failure.headline(),
+                        }
+                    })
+                    .map_err(|e| e.to_string());
+                Msg::AiReady(res)
             });
         }
         Action::RerunFailed => {

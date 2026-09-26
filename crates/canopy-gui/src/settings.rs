@@ -21,6 +21,9 @@ pub struct Settings {
     pub check_updates: bool,
     /// Unix time of the last update check.
     pub last_update_check: i64,
+    /// "Fix with AI": auto (the first installed), claude, codex, off, or a
+    /// command line (`{prompt}` marks where the prompt goes).
+    pub ai_assistant: String,
 }
 
 impl Default for Settings {
@@ -32,6 +35,7 @@ impl Default for Settings {
             pull_mode: "default".into(),
             check_updates: true,
             last_update_check: 0,
+            ai_assistant: "auto".into(),
         }
     }
 }
@@ -47,6 +51,9 @@ impl Settings {
             self.pull_mode = d.pull_mode;
         }
         self.refresh_secs = self.refresh_secs.min(3600);
+        if self.ai_assistant.trim().is_empty() {
+            self.ai_assistant = "auto".into();
+        }
         self
     }
 }

@@ -45,10 +45,19 @@
   </div>
 </header>
 <main class="wrap doc">
-  <aside class="toc"><b>On this page</b><a href="#v1-0-4">v1.0.4</a><a href="#v1-0-3">v1.0.3</a><a href="#v1-0-2">v1.0.2</a><a href="#v1-0-1">v1.0.1</a><a href="#v1-0-0">v1.0.0</a><a href="#v0-4-0">v0.4.0</a><a href="#v0-3-0">v0.3.0</a><a href="#v0-2-0">v0.2.0</a><a href="#v0-1-0">v0.1.0</a><a href="#next">What's next</a></aside>
+  <aside class="toc"><b>On this page</b><a href="#v1-0-5">v1.0.5</a><a href="#v1-0-4">v1.0.4</a><a href="#v1-0-3">v1.0.3</a><a href="#v1-0-2">v1.0.2</a><a href="#v1-0-1">v1.0.1</a><a href="#v1-0-0">v1.0.0</a><a href="#v0-4-0">v0.4.0</a><a href="#v0-3-0">v0.3.0</a><a href="#v0-2-0">v0.2.0</a><a href="#v0-1-0">v0.1.0</a><a href="#next">What's next</a></aside>
   <article class="prose">
 
-<div class="release" id="v1-0-4"><h2>v1.0.4 <span class="tag-new">Latest</span></h2><div class="date">September 2026</div>
+<div class="release" id="v1-0-5"><h2>v1.0.5 <span class="tag-new">Latest</span></h2><div class="date">September 2026</div>
+<p><b><a href="github.html#fix-with-ai">Fix with AI</a></b>: when CI fails, hand it to Claude Code or Codex.</p>
+<ul>
+  <li>Canopy writes a prompt from the failure (the failed job and step, GitHub's summary, including why a workflow file is invalid, and the cleaned-up log) into <code>.git/canopy/fix-ci.md</code>, then opens your assistant in a new terminal tab or window, already working on it.</li>
+  <li>Terminal app: <kbd>A</kbd> on a failed run in Actions. Home's next steps point to it when checks fail. Configure with <code>ai</code> and <code>ai_open</code>.</li>
+  <li>Desktop app: a banner on Home when your latest commit fails, and <b>Fix with …</b> on failed runs; choose the assistant in Settings.</li>
+  <li>Works with Claude Code, Codex (whichever is installed) or any command you set.</li>
+</ul></div>
+
+<div class="release" id="v1-0-4"><h2>v1.0.4</h2><div class="date">September 2026</div>
 <p><b><a href="wiki/new-repo.html">Start a new repository</a></b>, in the terminal and the desktop app.</p>
 <ul>
   <li>Open a folder that isn't a repository and Canopy offers to create one instead of stopping: pick a branch name, a <code>.gitignore</code> for your language, a README and an MIT license, and make the first commit.</li>

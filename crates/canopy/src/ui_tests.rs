@@ -300,6 +300,32 @@ async fn starting_a_repository_explains_https_and_ssh() {
 }
 
 #[tokio::test]
+async fn fix_a_failed_run_with_ai() {
+    let dir = demo_repo();
+    let bin = TempDir::new().unwrap();
+    let gh = fake_gh(bin.path(), true);
+    let mut app = github_app(dir.path(), &gh).await;
+    app.config.ai = "my-ai --task {prompt}".into();
+    press(&mut app, KeyCode::Char('0')).await;
+    app.settle().await;
+    let s = render(&mut app, 120, 30);
+    assert!(s.contains("fix with AI"), "the hint bar offers it: {s}");
+    // The first run in the fixture failed.
+    press(&mut app, KeyCode::Char('A')).await;
+    app.settle().await;
+    let toast = app.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    assert!(toast.starts_with("would run: my-ai --task Canopy found an error"), "{toast}");
+    assert!(toast.contains(".git/canopy/fix-ci.md"), "{toast}");
+    let prompt = std::fs::read_to_string(dir.path().join(".git/canopy/fix-ci.md")).unwrap();
+    assert!(prompt.contains("# Fix a failing CI run") && prompt.contains("Don't commit or push"), "{prompt}");
+    // Off: says how to set one up.
+    app.config.ai = "off".into();
+    press(&mut app, KeyCode::Char('A')).await;
+    app.settle().await;
+    assert!(app.toast.as_ref().unwrap().text.contains("No AI assistant set up"));
+}
+
+#[tokio::test]
 async fn merge_conflict_resolution() {
     let dir = demo_repo();
     sh(
