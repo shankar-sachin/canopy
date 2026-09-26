@@ -16,8 +16,8 @@ rebase, and a command palette, all without leaving the keyboard.
 
 ## Install
 
-> **New: Canopy Desktop (release preview).** The same dashboard as a Mac and Linux app:
-> `brew install --cask shankar-sachin/canopy/canopy-desktop`, or a `.dmg`, `.deb` or AppImage from
+> **New: Canopy Desktop (release preview).** The same dashboard as a Mac, Windows and Linux app:
+> `brew install --cask shankar-sachin/canopy/canopy-desktop`, `winget install shankars.canopy-desktop`, or a `.dmg`, installer, `.deb` or AppImage from
 > [Releases](https://github.com/shankar-sachin/canopy/releases). It isn't notarized by Apple yet, so macOS asks you to
 > confirm the first time you open it. [More →](https://shankar-sachin.github.io/canopy/desktop.html)
 
