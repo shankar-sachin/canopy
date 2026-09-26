@@ -857,3 +857,27 @@ async fn tab_bar_fits_any_width() {
     let tabs = narrow.lines().nth(1).unwrap();
     assert!(tabs.contains(" 0 CI ") && tabs.contains(" 8 ") && !tabs.contains("PRs"), "{tabs}");
 }
+
+#[tokio::test]
+async fn home_github_card() {
+    let dir = demo_repo();
+    let bin = TempDir::new().unwrap();
+    let gh = fake_gh(bin.path(), true);
+    let mut app = github_app(dir.path(), &gh).await;
+    let s = render(&mut app, 150, 36);
+    // The fake returns PR #12 (1 failing check, approved) for this branch,
+    // and 2 PRs for "review requested".
+    assert!(s.contains("GitHub · o/r") && s.contains("#12 Add CSV parser"), "{s}");
+    assert!(s.contains("✗ 1 check(s) failing") && s.contains("✓ approved") && s.contains("2 review request(s)"), "{s}");
+    assert!(s.contains("Checks are failing on #12") && s.contains("waiting for your review"), "{s}");
+    let calls = gh_calls(bin.path());
+    assert!(calls.iter().any(|l| l.contains("--head main")), "{calls:?}");
+
+    // Logged out: a one-line hint, and no PR calls.
+    let bin2 = TempDir::new().unwrap();
+    let gh2 = fake_gh(bin2.path(), false);
+    let mut app = github_app(dir.path(), &gh2).await;
+    let s = render(&mut app, 150, 36);
+    assert!(s.contains("Run gh auth login to connect GitHub"), "{s}");
+    assert_eq!(gh_calls(bin2.path()), vec!["auth status"]);
+}

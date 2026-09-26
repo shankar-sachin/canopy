@@ -168,6 +168,30 @@ fn suggestions(app: &App) -> Vec<Suggestion> {
             add(&push, format!("This branch isn't on the remote yet. Press {push} to publish it."), 1);
         }
     }
+    // GitHub: this branch's PR and review requests (only when gh is ready).
+    let (prs_key, runs_key) =
+        (key(Action::Goto(Screen::Pulls), Screen::Home), key(Action::Goto(Screen::Runs), Screen::Home));
+    if let Some(Some(pr)) = &app.github.branch_pr {
+        let c = pr.checks();
+        if c.failed > 0 {
+            add(
+                &runs_key,
+                format!("Checks are failing on #{} ({} failed). Press {runs_key} to see why.", pr.number, c.failed),
+                2,
+            );
+        } else if pr.review_decision == "CHANGES_REQUESTED" {
+            add(&prs_key, format!("Changes were requested on #{}. Press {prs_key} to read the review.", pr.number), 2);
+        } else if pr.review_decision == "APPROVED" && c.pending == 0 {
+            add(
+                &prs_key,
+                format!("#{} is approved and checks pass. Merge it from Pull requests ({prs_key}).", pr.number),
+                1,
+            );
+        }
+    }
+    if let Some(n) = app.github.review_requests.filter(|n| *n > 0) {
+        add(&prs_key, format!("{n} pull request(s) are waiting for your review. Press {prs_key}, then f."), 1);
+    }
     if app.data.log.is_empty() && app.loaded {
         add(&commit, format!("Fresh repository. Create some files, then press {commit} to make your first commit."), 1);
     }
@@ -283,8 +307,17 @@ fn home(f: &mut Frame, area: Rect, app: &mut App) {
 
     // --- Right column: activity, branches, remotes
     let Some(right) = right else { return };
-    let [act, br, misc] =
-        Layout::vertical([Constraint::Length(7), Constraint::Fill(1), Constraint::Length(6)]).areas(right);
+    let [gh_area, act, br, misc] = Layout::vertical([
+        Constraint::Length(if app.github.status.is_some() { 5 } else { 0 }),
+        Constraint::Length(7),
+        Constraint::Fill(1),
+        Constraint::Length(6),
+    ])
+    .areas(right);
+    if gh_area.height > 0 {
+        let title = format!(" GitHub · {} ", app.github.repo_name().unwrap_or("not connected"));
+        f.render_widget(Paragraph::new(github_card(app, &theme)).block(panel(&theme, title, false)), gh_area);
+    }
     let days = 30usize;
     let today = now() / 86400;
     let mut buckets = vec![0u64; days];
@@ -353,6 +386,60 @@ fn home(f: &mut Frame, area: Rect, app: &mut App) {
 }
 
 // --------------------------------------------------------------- changes
+
+/// Lines for the Home GitHub card.
+fn github_card<'a>(app: &App, theme: &Theme) -> Vec<Line<'a>> {
+    use canopy_gh::{CheckState, GhStatus};
+    match &app.github.status {
+        None => vec![Line::styled("Checking GitHub…", theme.muted())],
+        Some(GhStatus::NotInstalled) => vec![
+            Line::styled("Install the GitHub CLI to see PRs, issues and", theme.muted()),
+            Line::styled("CI here: brew install gh, then gh auth login", theme.muted()),
+        ],
+        Some(GhStatus::NotLoggedIn) => vec![Line::styled("Run gh auth login to connect GitHub", theme.muted())],
+        Some(GhStatus::NotGitHub) => vec![Line::styled("This repo has no GitHub remote", theme.muted())],
+        Some(GhStatus::Ready(_)) => {
+            let mut lines = Vec::new();
+            match &app.github.branch_pr {
+                None => lines.push(Line::styled("Loading…", theme.muted())),
+                Some(None) => {
+                    let what =
+                        if app.current_branch().is_some() { "No open PR for this branch" } else { "Not on a branch" };
+                    lines.push(Line::styled(what, theme.muted()));
+                }
+                Some(Some(pr)) => {
+                    lines.push(Line::from(vec![
+                        Span::styled(format!("#{} ", pr.number), theme.fg(theme.added).add_modifier(Modifier::BOLD)),
+                        Span::raw(trunc(&pr.title, 40)),
+                    ]));
+                    let c = pr.checks();
+                    let checks = match c.overall() {
+                        None => Span::styled("no checks", theme.muted()),
+                        Some(CheckState::Passed) => {
+                            Span::styled(format!("✓ checks pass ({})", c.total), theme.fg(theme.added))
+                        }
+                        Some(CheckState::Failed) => {
+                            Span::styled(format!("✗ {} check(s) failing", c.failed), theme.fg(theme.error))
+                        }
+                        Some(_) => Span::styled(format!("… {} check(s) running", c.pending), theme.fg(theme.warn)),
+                    };
+                    let review = match pr.review_decision.as_str() {
+                        "APPROVED" => Span::styled("  ✓ approved", theme.fg(theme.added)),
+                        "CHANGES_REQUESTED" => Span::styled("  ✗ changes requested", theme.fg(theme.error)),
+                        "REVIEW_REQUIRED" => Span::styled("  awaiting review", theme.fg(theme.warn)),
+                        _ => Span::raw(""),
+                    };
+                    lines.push(Line::from(vec![checks, review]));
+                }
+            }
+            if let Some(n) = app.github.review_requests {
+                let style = if n > 0 { theme.fg(theme.accent_alt) } else { theme.muted() };
+                lines.push(Line::styled(format!("{n} review request(s) for you"), style));
+            }
+            lines
+        }
+    }
+}
 
 fn change_color(theme: &Theme, c: Change) -> ratatui::style::Color {
     match c {
