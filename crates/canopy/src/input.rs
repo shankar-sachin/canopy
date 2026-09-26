@@ -18,6 +18,7 @@ pub fn screen_ctx(app: &App) -> Ctx {
     match (app.screen, app.refs_view) {
         (Screen::Branches, RefsView::Tags) => Ctx::Tags,
         (Screen::Branches, RefsView::Remotes) => Ctx::Remotes,
+        (Screen::Branches, RefsView::Worktrees) => Ctx::Worktrees,
         (s, _) => Ctx::Screen(s),
     }
 }
@@ -677,6 +678,56 @@ fn repo_action(app: &mut App, action: Action) {
         KeepTheirs => crate::views::conflict::choose(app, Choice::Theirs),
         KeepBoth => crate::views::conflict::choose(app, Choice::Both),
         RestoreConflict => crate::views::conflict::restore(app),
+        OpenWorktree => {
+            let Some(w) = app.selected_worktree().cloned() else { return };
+            if w.prunable.is_some() || w.bare {
+                app.toast(Level::Warn, "That worktree can't be opened (missing or bare)");
+            } else if app.git.as_ref().is_some_and(|g| g.repo.root == w.path) {
+                app.toast(Level::Info, "Already open");
+            } else {
+                app.open_repo(w.path);
+            }
+        }
+        NewWorktree => {
+            app.modal = Modal::input(
+                "New worktree",
+                "branch name (existing or new) · folder goes next to this repo",
+                "",
+                InputKind::NewWorktree,
+            );
+        }
+        RemoveWorktree => {
+            let Some(w) = app.selected_worktree().cloned() else { return };
+            if app.data.worktrees.first().is_some_and(|m| m.path == w.path) {
+                app.toast(Level::Warn, "That's the main worktree; it can't be removed");
+                return;
+            }
+            if app.git.as_ref().is_some_and(|g| g.repo.root == w.path) {
+                app.toast(Level::Warn, "Canopy has this worktree open; open another one first");
+                return;
+            }
+            let path = w.path.display().to_string();
+            let items = vec![
+                MenuItem {
+                    key: 'd',
+                    label: "Remove".into(),
+                    detail: "only if it has no uncommitted changes".into(),
+                    pending: Pending::RemoveWorktree { path: path.clone(), force: false },
+                    danger: false,
+                },
+                MenuItem {
+                    key: 'D',
+                    label: "Force remove".into(),
+                    detail: "throws away its uncommitted changes".into(),
+                    pending: Pending::RemoveWorktree { path: path.clone(), force: true },
+                    danger: true,
+                },
+            ];
+            app.modal = Modal::Menu { title: format!("Remove worktree {path}"), items, sel: 0 };
+        }
+        PruneWorktrees => {
+            app.run_op("Prune worktrees", Then::Refresh, async move { git.prune_worktrees().await });
+        }
         StashApply | StashPop => {
             let Some(s) = app.data.stashes.get(app.selected(Screen::Stash)).cloned() else { return };
             if action == StashApply {
@@ -892,6 +943,14 @@ fn jump_to_commit(app: &mut App, oid: &str) {
         }
         None => app.toast(Level::Info, "That commit isn't in the loaded History yet (scroll down to load more)"),
     }
+}
+
+/// Where a new worktree goes: next to the repo, e.g. `~/code/app` + `fix/login`
+/// becomes `~/code/app-fix-login`.
+pub fn worktree_path(root: &std::path::Path, branch: &str) -> std::path::PathBuf {
+    let name = root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| "repo".into());
+    let parent = root.parent().unwrap_or(root);
+    parent.join(format!("{name}-{}", branch.replace('/', "-")))
 }
 
 /// `origin` if it exists, else the first remote.
@@ -1290,6 +1349,15 @@ fn submit_input(app: &mut App, text: String, kind: InputKind) {
                 async move { git.set_remote_url(&name, &text).await },
             );
         }
+        InputKind::NewWorktree => {
+            let git = git.expect("repo");
+            let branch = text.replace(' ', "-");
+            let exists = app.data.branches.iter().any(|b| !b.is_remote && b.name == branch);
+            let path = worktree_path(&git.repo.root, &branch);
+            let label = format!("Worktree for {branch} at {}", path.display());
+            let path = path.display().to_string();
+            app.run_op(label, Then::Refresh, async move { git.add_worktree(&path, &branch, !exists).await });
+        }
         InputKind::SetUpstream => {
             let git = git.expect("repo");
             app.run_op(format!("Set upstream {text}"), Then::Refresh, async move { git.set_upstream(&text).await });
@@ -1300,7 +1368,9 @@ fn submit_input(app: &mut App, text: String, kind: InputKind) {
             let label = format!("git {text}");
             let tx = app.tx.clone();
             app.busy = Some(label.clone());
+            let guard = app.in_flight();
             tokio::spawn(async move {
+                let _guard = guard;
                 let argv: Vec<&str> = args.iter().map(String::as_str).collect();
                 let result = git.raw(&argv).await.map_err(|e| e.to_string());
                 // Show output in a scrollable panel.
@@ -1402,6 +1472,11 @@ pub fn execute(app: &mut App, pending: Pending) {
                 git.delete_tag(&name).await
             });
         }
+        Pending::RemoveWorktree { path, force } => {
+            app.run_op(format!("Remove worktree {path}"), Then::Refresh, async move {
+                git.remove_worktree(&path, force).await
+            });
+        }
         Pending::RemoveRemote(name) => {
             app.run_op(format!("Remove remote {name}"), Then::Refresh, async move { git.remove_remote(&name).await });
         }
@@ -1468,7 +1543,9 @@ pub fn execute(app: &mut App, pending: Pending) {
             let label = if c.description.is_empty() { c.cmd.clone() } else { c.description.clone() };
             let tx = app.tx.clone();
             app.busy = Some(label.clone());
+            let guard = app.in_flight();
             tokio::spawn(async move {
+                let _guard = guard;
                 let res = tokio::process::Command::new("sh")
                     .arg("-c")
                     .arg(&c.cmd)

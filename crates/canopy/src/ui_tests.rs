@@ -494,3 +494,51 @@ async fn file_history_and_blame() {
     assert_eq!(v.blame.lines.len(), 3);
     render(&mut app, 130, 30);
 }
+
+#[tokio::test]
+async fn worktrees_view() {
+    // Put the repo in a subfolder so sibling worktrees land inside our temp dir.
+    let outer = TempDir::new().unwrap();
+    let repo = outer.path().join("app");
+    std::fs::create_dir(&repo).unwrap();
+    sh(&repo, "git init -q -b main && git config user.name T && git config user.email t@t.io && git commit -q --allow-empty -m init");
+    let mut app = app_for(&repo).await;
+    press(&mut app, KeyCode::Char('4')).await;
+    for _ in 0..3 {
+        press(&mut app, KeyCode::Char(']')).await;
+    }
+    let s = render(&mut app, 130, 24);
+    assert!(s.contains("Worktrees") && s.contains("1 worktrees"), "{s}");
+
+    press(&mut app, KeyCode::Char('n')).await;
+    chars(&mut app, "fix/login").await;
+    press(&mut app, KeyCode::Enter).await;
+    let wt = outer.path().join("app-fix-login");
+    assert!(wt.join(".git").exists(), "worktree folder created");
+    assert_eq!(app.data.worktrees.len(), 2);
+    let s = render(&mut app, 130, 24);
+    assert!(s.contains("fix/login"), "{s}");
+
+    // Open it in Canopy, then back to the main one.
+    app.set_selected(Screen::Branches, 1);
+    press(&mut app, KeyCode::Enter).await;
+    assert_eq!(app.git.as_ref().unwrap().repo.root.canonicalize().unwrap(), wt.canonicalize().unwrap());
+    assert_eq!(app.current_branch(), Some("fix/login"));
+    app.open_repo(repo.clone());
+    app.settle().await;
+
+    // Remove it (safe remove).
+    press(&mut app, KeyCode::Char('4')).await;
+    app.refs_view = crate::keymap::RefsView::Worktrees;
+    app.set_selected(Screen::Branches, 1);
+    press(&mut app, KeyCode::Char('d')).await;
+    press(&mut app, KeyCode::Char('d')).await;
+    assert!(!wt.exists());
+    assert_eq!(app.data.worktrees.len(), 1);
+}
+
+#[test]
+fn worktree_folder_names() {
+    use std::path::Path;
+    assert_eq!(crate::input::worktree_path(Path::new("/code/app"), "fix/login"), Path::new("/code/app-fix-login"));
+}

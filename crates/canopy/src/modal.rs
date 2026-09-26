@@ -44,6 +44,10 @@ pub enum Pending {
         remote: Option<String>,
     },
     RemoveRemote(String),
+    RemoveWorktree {
+        path: String,
+        force: bool,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -62,6 +66,8 @@ pub enum InputKind {
     AddRemote,
     RenameRemote(String),
     EditRemoteUrl(String),
+    /// Branch name; the folder is derived from it.
+    NewWorktree,
 }
 
 #[derive(Debug, Clone)]

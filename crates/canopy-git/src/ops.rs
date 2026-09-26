@@ -457,6 +457,33 @@ impl Git {
         self.stage(&[path]).await
     }
 
+    pub async fn worktrees(&self) -> Result<Vec<crate::parse::worktree::Worktree>> {
+        let out = self.run(&["worktree", "list", "--porcelain"]).await?;
+        Ok(crate::parse::worktree::parse(&out.stdout))
+    }
+
+    /// Add a worktree at `path` for `branch`, creating the branch from HEAD
+    /// if it doesn't exist yet.
+    pub async fn add_worktree(&self, path: &str, branch: &str, create: bool) -> Result<Output> {
+        if create {
+            self.run(&["worktree", "add", "-b", branch, path]).await
+        } else {
+            self.run(&["worktree", "add", path, branch]).await
+        }
+    }
+
+    pub async fn remove_worktree(&self, path: &str, force: bool) -> Result<Output> {
+        if force {
+            self.run(&["worktree", "remove", "--force", path]).await
+        } else {
+            self.run(&["worktree", "remove", path]).await
+        }
+    }
+
+    pub async fn prune_worktrees(&self) -> Result<Output> {
+        self.run(&["worktree", "prune", "--verbose"]).await
+    }
+
     /// Who last changed each line of `path` at `rev` (working tree if `None`).
     pub async fn blame(&self, path: &str, rev: Option<&str>) -> Result<crate::parse::blame::Blame> {
         let mut args = vec!["blame", "--porcelain"];

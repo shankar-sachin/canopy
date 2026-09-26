@@ -330,3 +330,37 @@ async fn blame_and_file_history_follow_renames() {
     let b = git.blame("new.txt", Some(&rename.oid)).await.unwrap();
     assert_eq!(b.lines.iter().map(|l| l.content.as_str()).collect::<Vec<_>>(), vec!["one", "two"]);
 }
+
+#[tokio::test]
+async fn worktrees_add_list_remove_prune() {
+    let dir = repo();
+    let git = Git::open(dir.path()).await.unwrap();
+    write(&dir, "f.txt", "x\n");
+    commit_all(&git, "x").await;
+    git.create_branch("existing", None, false).await.unwrap();
+
+    let base = TempDir::new().unwrap();
+    let new_path = base.path().join("wt-new");
+    let old_path = base.path().join("wt-existing");
+    git.add_worktree(new_path.to_str().unwrap(), "feature", true).await.unwrap();
+    git.add_worktree(old_path.to_str().unwrap(), "existing", false).await.unwrap();
+
+    let wts = git.worktrees().await.unwrap();
+    assert_eq!(wts.len(), 3);
+    // The main worktree comes first; git orders the rest by path.
+    assert_eq!(wts[0].branch.as_deref(), Some("main"));
+    let mut branches: Vec<_> = wts.iter().filter_map(|w| w.branch.clone()).collect();
+    branches.sort();
+    assert_eq!(branches, vec!["existing", "feature", "main"]);
+
+    // A dirty worktree needs --force to remove.
+    std::fs::write(new_path.join("f.txt"), "dirty\n").unwrap();
+    assert!(git.remove_worktree(new_path.to_str().unwrap(), false).await.is_err());
+    git.remove_worktree(new_path.to_str().unwrap(), true).await.unwrap();
+
+    // Deleting a worktree's folder by hand makes it prunable.
+    std::fs::remove_dir_all(&old_path).unwrap();
+    assert!(git.worktrees().await.unwrap().iter().any(|w| w.prunable.is_some()));
+    git.prune_worktrees().await.unwrap();
+    assert_eq!(git.worktrees().await.unwrap().len(), 1);
+}

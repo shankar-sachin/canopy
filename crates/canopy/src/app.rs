@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::future::Future;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -33,6 +33,7 @@ pub struct Snapshot {
     pub tags: Vec<Tag>,
     pub reflog: Vec<ReflogEntry>,
     pub state: Option<RepoState>,
+    pub worktrees: Vec<canopy_git::parse::worktree::Worktree>,
     /// How many commits were requested; fewer means we reached the root.
     pub log_limit: usize,
 }
@@ -91,6 +92,15 @@ pub struct Toast {
     pub at: Instant,
 }
 
+/// Decrements the in-flight task count when dropped.
+pub struct InFlight(Arc<AtomicUsize>);
+
+impl Drop for InFlight {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
 /// One row in the Changes list.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Section {
@@ -140,6 +150,8 @@ pub struct App {
     pub tx: UnboundedSender<Msg>,
     rx: Option<UnboundedReceiver<Msg>>,
     pub paused: Arc<AtomicBool>,
+    /// Background tasks that haven't finished sending their results.
+    inflight: Arc<AtomicUsize>,
     pub needs_redraw_full: bool,
     last_status_poll: Instant,
 }
@@ -177,6 +189,7 @@ impl App {
             tx,
             rx: Some(rx),
             paused: Arc::new(AtomicBool::new(false)),
+            inflight: Arc::new(AtomicUsize::new(0)),
             needs_redraw_full: false,
             last_status_poll: Instant::now(),
             log_loading: false,
@@ -287,6 +300,7 @@ impl App {
                 RefsView::Branches => self.visible_branches().len(),
                 RefsView::Tags => self.visible_tags().len(),
                 RefsView::Remotes => self.data.remotes.len(),
+                RefsView::Worktrees => self.data.worktrees.len(),
             },
             Screen::Stash => self.data.stashes.len(),
             Screen::Workspace => self.visible_workspace().len(),
@@ -321,6 +335,13 @@ impl App {
         self.data.remotes.get(self.selected(Screen::Branches))
     }
 
+    pub fn selected_worktree(&self) -> Option<&canopy_git::parse::worktree::Worktree> {
+        if self.refs_view != RefsView::Worktrees {
+            return None;
+        }
+        self.data.worktrees.get(self.selected(Screen::Branches))
+    }
+
     pub fn selected_branch(&self) -> Option<&Branch> {
         if self.refs_view != RefsView::Branches {
             return None;
@@ -340,9 +361,17 @@ impl App {
         F: Future<Output = Msg> + Send + 'static,
     {
         let tx = self.tx.clone();
+        let guard = self.in_flight();
         tokio::spawn(async move {
             let _ = tx.send(fut.await);
+            drop(guard);
         });
+    }
+
+    /// Count a background task as running until the guard is dropped.
+    pub fn in_flight(&self) -> InFlight {
+        self.inflight.fetch_add(1, Ordering::SeqCst);
+        InFlight(self.inflight.clone())
     }
 
     /// Run a git operation in the background and report the result.
@@ -365,7 +394,7 @@ impl App {
         let path = self.log_path.clone();
         self.spawn(async move {
             let q = LogQuery { limit, follow: path.is_some(), path, ..Default::default() };
-            let (status, log, branches, stashes, remotes, tags, reflog) = tokio::join!(
+            let (status, log, branches, stashes, remotes, tags, reflog, worktrees) = tokio::join!(
                 git.status(),
                 git.log(&q),
                 git.branches(),
@@ -373,6 +402,7 @@ impl App {
                 git.remotes(),
                 git.tags(),
                 git.reflog(200),
+                git.worktrees(),
             );
             let snap = (|| -> Result<Snapshot, GitError> {
                 Ok(Snapshot {
@@ -383,6 +413,7 @@ impl App {
                     remotes: remotes.unwrap_or_default(),
                     tags: tags.unwrap_or_default(),
                     reflog: reflog.unwrap_or_default(),
+                    worktrees: worktrees.unwrap_or_default(),
                     state: Some(git.state()),
                     log_limit: limit,
                 })
@@ -674,8 +705,14 @@ impl App {
     #[cfg(test)]
     pub async fn settle(&mut self) {
         let mut rx = self.rx.take().expect("receiver");
-        while let Ok(Some(msg)) = tokio::time::timeout(Duration::from_millis(400), rx.recv()).await {
-            self.update(msg);
+        let deadline = Instant::now() + Duration::from_secs(30);
+        loop {
+            match tokio::time::timeout(Duration::from_millis(20), rx.recv()).await {
+                Ok(Some(msg)) => self.update(msg),
+                // Idle: done only once no background task is still running.
+                _ if self.inflight.load(Ordering::SeqCst) == 0 => break,
+                _ => assert!(Instant::now() < deadline, "background work never finished"),
+            }
         }
         self.rx = Some(rx);
     }
