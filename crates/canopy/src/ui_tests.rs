@@ -271,12 +271,9 @@ async fn get_canopy_desktop_from_the_palette() {
     assert!(s.contains("get Canopy Desktop"), "{s}");
     press(&mut app, KeyCode::Enter).await;
     let s = render(&mut app, 120, 34);
-    if cfg!(windows) {
-        assert!(s.contains("coming soon"), "{s}");
-    } else {
-        assert!(s.contains("release preview") && s.contains("Open the download page"), "{s}");
-        assert_eq!(cfg!(target_os = "macos"), s.contains("Copy the Homebrew command"), "{s}");
-    }
+    assert!(s.contains("release preview") && s.contains("Open the download page"), "{s}");
+    assert_eq!(cfg!(target_os = "macos"), s.contains("Copy the Homebrew command"), "{s}");
+    assert_eq!(cfg!(windows), s.contains("Copy the winget command"), "{s}");
 }
 
 #[tokio::test]
@@ -1100,6 +1097,67 @@ fn frame_html(app: &mut App, w: u16, h: u16) -> String {
 /// Fills `<!-- SCREEN:name -->…<!-- /SCREEN:name -->` and
 /// `<!-- KEYS:START -->…<!-- KEYS:END -->` in every `docs/*.html`.
 /// Run with: cargo test -p canopy-git-tui export_site_screens -- --ignored
+/// A short tour as numbered HTML frames (for a screen recording):
+/// `CANOPY_SHOT_DIR=/tmp/tour cargo test -p canopy-git-tui export_tui_tour -- --ignored`
+#[tokio::test]
+#[ignore]
+async fn export_tui_tour() {
+    let out = std::path::PathBuf::from(std::env::var("CANOPY_SHOT_DIR").expect("set CANOPY_SHOT_DIR"));
+    std::fs::create_dir_all(&out).unwrap();
+    let page = |frame: &str| {
+        format!(
+            "<!doctype html><meta charset=utf-8><link rel=stylesheet href=\"https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap\">\
+             <style>body{{margin:0;background:#101612}}pre{{margin:0;padding:14px;font:14px/1.25 'JetBrains Mono',ui-monospace,Menlo,monospace;color:#d6e2d6;white-space:pre}}\
+             i.g{{font-style:normal;display:inline-block;width:1ch;text-align:center;vertical-align:top}}</style><pre>{frame}</pre>"
+        )
+    };
+    let (w, h) = (118, 32);
+    let base = Path::new("/tmp/canopy-tour");
+    let _ = std::fs::remove_dir_all(base);
+    let dir = base.join("acme-app");
+    std::fs::create_dir_all(&dir).unwrap();
+    demo_repo_at(&dir);
+    let bin = TempDir::new().unwrap();
+    let gh = fake_gh(bin.path(), true);
+    let mut app = github_app(&dir, &gh).await;
+    let mut n = 0;
+    let mut shot = |app: &mut App, name: &str| {
+        std::fs::write(out.join(format!("{n:03}-{name}.html")), page(&frame_html(app, w, h))).unwrap();
+        n += 1;
+    };
+    // Home, with the logo shimmering (one frame per step of the glint).
+    for t in 0..32u64 {
+        app.tick = t;
+        shot(&mut app, "home");
+    }
+    app.tick = 40;
+    press(&mut app, KeyCode::Char('2')).await;
+    let i = app.status_rows().iter().position(|r| app.data.status.files[r.file].path == "main.rs").unwrap();
+    app.set_selected(Screen::Status, i);
+    crate::views::diff::load_for_selection(&mut app);
+    app.settle().await;
+    shot(&mut app, "changes");
+    press(&mut app, KeyCode::Enter).await;
+    press(&mut app, KeyCode::Char('j')).await;
+    press(&mut app, KeyCode::Char('j')).await;
+    shot(&mut app, "stage-line");
+    press(&mut app, KeyCode::Esc).await;
+    press(&mut app, KeyCode::Char('3')).await;
+    app.settle().await;
+    shot(&mut app, "history");
+    press(&mut app, KeyCode::Char('8')).await;
+    app.settle().await;
+    shot(&mut app, "prs");
+    press(&mut app, KeyCode::Char('0')).await;
+    app.settle().await;
+    shot(&mut app, "actions");
+    press(&mut app, KeyCode::Char(':')).await;
+    chars(&mut app, "desk").await;
+    shot(&mut app, "palette");
+    press(&mut app, KeyCode::Enter).await;
+    shot(&mut app, "get-desktop");
+}
+
 /// A few frames as standalone HTML pages, for sharing previews:
 /// `CANOPY_SHOT_DIR=/tmp/shots cargo test -p canopy-git-tui export_preview_frames -- --ignored`
 #[tokio::test]

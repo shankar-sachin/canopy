@@ -2259,39 +2259,48 @@ mod tests {
     }
 }
 
-/// The Homebrew command for Canopy Desktop (macOS only: casks are Mac apps).
+/// How to install Canopy Desktop here: the Homebrew cask on macOS, winget on
+/// Windows (Linux gets the download page: a .deb or an AppImage).
 pub const DESKTOP_CASK: &str = "brew install --cask shankar-sachin/canopy/canopy-desktop";
+pub const DESKTOP_WINGET: &str = "winget install shankars.canopy-desktop";
 pub const DESKTOP_PAGE: &str = "https://shankar-sachin.github.io/canopy/desktop.html";
 
 /// "Get Canopy Desktop": the install command for this platform, or its page.
 fn desktop_menu(app: &mut App) {
-    if cfg!(windows) {
-        app.toast_for(
-            Level::Info,
-            "Canopy Desktop for Windows 11 is coming soon (on winget). It's out for macOS and Linux as a preview.",
-            10,
-        );
-        return;
-    }
     let mut items = Vec::new();
-    if cfg!(target_os = "macos") {
+    let command = if cfg!(target_os = "macos") {
+        Some(("Copy the Homebrew command", DESKTOP_CASK))
+    } else if cfg!(windows) {
+        Some(("Copy the winget command", DESKTOP_WINGET))
+    } else {
+        None
+    };
+    if let Some((label, cmd)) = command {
         items.push(MenuItem {
             key: 'c',
-            label: "Copy the Homebrew command".into(),
-            detail: DESKTOP_CASK.into(),
-            pending: Pending::CopyText { text: DESKTOP_CASK.into(), what: "the install command".into() },
+            label: label.into(),
+            detail: cmd.into(),
+            pending: Pending::CopyText { text: cmd.into(), what: "the install command".into() },
             danger: false,
         });
     }
+    let files = if cfg!(target_os = "macos") {
+        ".dmg for Apple silicon and Intel"
+    } else if cfg!(windows) {
+        "installer for x64 and Arm"
+    } else {
+        ".deb and AppImage"
+    };
     items.push(MenuItem {
         key: 'o',
         label: "Open the download page".into(),
-        detail: if cfg!(target_os = "macos") { ".dmg for Apple silicon and Intel" } else { ".deb and AppImage" }.into(),
+        detail: files.into(),
         pending: Pending::OpenUrl(DESKTOP_PAGE.into()),
         danger: false,
     });
-    app.modal =
-        Modal::Menu { title: "Canopy Desktop (release preview, not notarized by Apple yet)".into(), items, sel: 0 };
+    let note =
+        if cfg!(target_os = "macos") { "release preview, not notarized by Apple yet" } else { "release preview" };
+    app.modal = Modal::Menu { title: format!("Canopy Desktop ({note})"), items, sel: 0 };
 }
 
 /// Whether to show the Canopy Desktop tip this launch: at most once a week,

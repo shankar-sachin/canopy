@@ -545,7 +545,11 @@ window.addEventListener("DOMContentLoaded", start);
 
 async function start() {
   if (/Mac/.test(navigator.platform)) document.documentElement.classList.add("mac");
-  else for (const k of document.querySelectorAll(".k")) k.textContent = k.textContent.replace("⌘", "Ctrl+");
+  else {
+    // Windows and Linux: Ctrl instead of ⌘ in key labels and tooltips.
+    for (const k of document.querySelectorAll(".k")) k.textContent = k.textContent.replace("⌘", "Ctrl+");
+    for (const el of document.querySelectorAll("[title*='⌘']")) el.title = el.title.replace(/⌘/g, "Ctrl+");
+  }
   applyTheme(savedTheme());
   await loadSettings();
   $("#version").textContent = "canopy " + (await invoke("app_version"));

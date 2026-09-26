@@ -25,8 +25,11 @@ jobs:
             os: macos-latest
           - target: x86_64-apple-darwin
             os: macos-latest
+          # Ubuntu 22.04 so the Linux builds also run on older glibc.
           - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
+            os: ubuntu-22.04
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-22.04-arm
           - target: x86_64-pc-windows-msvc
             os: windows-latest
           - target: aarch64-pc-windows-msvc
@@ -83,6 +86,13 @@ jobs:
             # The oldest supported Ubuntu, so the builds run on older glibc.
             os: ubuntu-22.04
             bundles: deb,appimage
+          # Windows 11 (WebView2 is built in): a per-user NSIS installer.
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            bundles: nsis
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+            bundles: nsis
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -111,7 +121,10 @@ jobs:
           for f in $b/dmg/*.dmg; do cp "$f" "canopy-desktop-$v-${{ matrix.target }}.dmg"; done
           for f in $b/deb/*.deb; do cp "$f" "canopy-desktop-$v-amd64.deb"; done
           for f in $b/appimage/*.AppImage; do cp "$f" "canopy-desktop-$v-x86_64.AppImage"; done
-          for f in canopy-desktop-*; do shasum -a 256 "$f" > "$f.sha256"; done
+          arch=${{ matrix.target }}; arch=${arch%%-*}
+          for f in $b/nsis/*.exe; do cp "$f" "canopy-desktop-$v-$arch-setup.exe"; done
+          sum() { if command -v shasum >/dev/null; then shasum -a 256 "$1"; else sha256sum "$1"; fi; }
+          for f in canopy-desktop-*; do sum "$f" > "$f.sha256"; done
           ls -la canopy-desktop-*
       - uses: actions/upload-artifact@v4
         with:
@@ -159,13 +172,13 @@ jobs:
           pattern: desktop-*-apple-darwin
           merge-multiple: true
           path: desktop
-      - name: Compute source tarball checksum
-        id: src
+      - name: Checksums of the prebuilt terminal builds
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          url="https://github.com/${{ github.repository }}/archive/refs/tags/${{ github.ref_name }}.tar.gz"
-          sha=$(curl -sL "$url" | shasum -a 256 | cut -d' ' -f1)
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          mkdir sums
+          gh release download "${{ github.ref_name }}" --repo "${{ github.repository }}" -p 'canopy-v*.tar.gz.sha256' -D sums
+          ls sums
       - uses: actions/checkout@v4
         with:
           repository: shankar-sachin/homebrew-canopy
@@ -174,9 +187,13 @@ jobs:
       - name: Update formula
         run: |
           mkdir -p tap/Formula
-          sed -e "s|@URL@|${{ steps.src.outputs.url }}|" \
-              -e "s|@SHA256@|${{ steps.src.outputs.sha }}|" \
-              packaging/homebrew/canopy.rb.in > tap/Formula/canopy.rb
+          v=${{ github.ref_name }}
+          args=(-e "s|@VERSION@|${v#v}|g")
+          for t in aarch64-apple-darwin x86_64-apple-darwin aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu; do
+            args+=(-e "s|@SHA_$t@|$(cut -d' ' -f1 "sums/canopy-$v-$t.tar.gz.sha256")|")
+          done
+          sed "${args[@]}" packaging/homebrew/canopy.rb.in > tap/Formula/canopy.rb
+          if grep -n '@[A-Za-z_0-9-]*@' tap/Formula/canopy.rb; then echo "unfilled placeholders"; exit 1; fi
           cd tap
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
