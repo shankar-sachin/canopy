@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canopy</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- Shown until a repository is open. -->
+<div id="welcome" class="welcome" hidden>
+  <div class="drag-strip" data-tauri-drag-region></div>
+  <div class="welcome-in">
+    <img class="welcome-logo" src="logo.svg" alt="" width="84" height="84">
+    <h1>Canopy</h1>
+    <p class="welcome-sub">A beautiful, powerful git dashboard.</p>
+    <button class="btn primary big" id="open-btn" type="button">Open a repository… <kbd class="k">⌘O</kbd></button>
+    <div class="recent" id="recent"></div>
+  </div>
+</div>
+
+<div id="shell" class="shell" hidden>
+  <aside class="sidebar">
+    <div class="side-top" data-tauri-drag-region></div>
+    <button class="repo-switch" id="repo-switch" type="button" title="Switch repository (⌘O)">
+      <img src="logo.svg" alt="" width="28" height="28">
+      <span class="repo-names"><b id="repo-name"></b><small id="repo-branch"></small></span>
+      <svg class="chev" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <nav class="nav" id="nav"></nav>
+    <div class="side-foot">
+      <div class="seg" id="theme-seg" role="radiogroup" aria-label="Theme">
+        <button type="button" data-theme-choice="system" title="Follow the system">Auto</button>
+        <button type="button" data-theme-choice="light" title="Light">Light</button>
+        <button type="button" data-theme-choice="dark" title="Dark">Dark</button>
+      </div>
+      <span class="version" id="version"></span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar" data-tauri-drag-region>
+      <h2 id="page-title" data-tauri-drag-region>Home</h2>
+      <div class="top-actions">
+        <span class="sync" id="sync"></span>
+        <button class="btn icon" id="refresh" type="button" title="Refresh (⌘R)">
+          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </header>
+    <section class="view" id="view"></section>
+  </main>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 /// State of one side (index or worktree) of a changed file.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Change {
     Unmodified,
     Modified,
@@ -42,6 +43,7 @@ impl Change {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum FileKind {
     Tracked,
     Untracked,
@@ -50,6 +52,7 @@ pub enum FileKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FileStatus {
     pub path: String,
     /// Original path for renames/copies.
@@ -74,6 +77,7 @@ impl FileStatus {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BranchInfo {
     /// `None` when HEAD is detached.
     pub head: Option<String>,
@@ -84,6 +88,7 @@ pub struct BranchInfo {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Status {
     pub branch: BranchInfo,
     pub files: Vec<FileStatus>,
@@ -105,6 +110,7 @@ impl Status {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Commit {
     pub oid: String,
     pub short: String,
@@ -118,6 +124,7 @@ pub struct Commit {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Branch {
     pub name: String,
     pub is_remote: bool,
@@ -131,6 +138,7 @@ pub struct Branch {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Stash {
     pub index: usize,
     pub name: String,
@@ -139,6 +147,7 @@ pub struct Stash {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Remote {
     pub name: String,
     pub fetch_url: String,
@@ -146,6 +155,7 @@ pub struct Remote {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tag {
     pub name: String,
     pub oid: String,
@@ -154,6 +164,7 @@ pub struct Tag {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ReflogEntry {
     pub oid: String,
     pub selector: String,
@@ -162,6 +173,7 @@ pub struct ReflogEntry {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DiffLineKind {
     Context,
     Added,
@@ -171,6 +183,7 @@ pub enum DiffLineKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DiffLine {
     pub kind: DiffLineKind,
     pub content: String,
@@ -179,6 +192,7 @@ pub struct DiffLine {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hunk {
     pub header: String,
     pub old_start: u32,
@@ -189,6 +203,7 @@ pub struct Hunk {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FileDiff {
     pub old_path: String,
     pub new_path: String,
@@ -199,6 +214,7 @@ pub struct FileDiff {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Repo {
     pub root: PathBuf,
     pub git_dir: PathBuf,
@@ -206,6 +222,7 @@ pub struct Repo {
 
 /// In-progress multi-step operation, detected from `.git` state files.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum RepoState {
     Clean,
     Merging,
