@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use ratatui::layout::{Constraint, Flex, Layout, Rect};
@@ -7,6 +8,56 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Borders, Padding};
 
 use crate::theme::Theme;
+
+thread_local! {
+    /// `compact = true` in the config restores the tight, dense layout.
+    /// Per thread: the UI draws on one thread, and each test gets its own.
+    static COMPACT: Cell<bool> = const { Cell::new(false) };
+}
+
+pub fn set_compact(on: bool) {
+    COMPACT.with(|c| c.set(on));
+}
+
+pub fn compact() -> bool {
+    COMPACT.with(Cell::get)
+}
+
+/// Space between neighbouring panels (columns side by side, rows stacked).
+pub fn gap() -> u16 {
+    if compact() {
+        0
+    } else {
+        1
+    }
+}
+
+/// Extra (width, height) dialogs need for their roomier padding.
+pub fn modal_extra() -> (u16, u16) {
+    if compact() {
+        (0, 0)
+    } else {
+        (2, 1)
+    }
+}
+
+/// Extra rows a panel needs for its top padding.
+pub fn pad_top() -> u16 {
+    if compact() {
+        0
+    } else {
+        1
+    }
+}
+
+/// Space between table columns.
+pub fn col_gap() -> u16 {
+    if compact() {
+        1
+    } else {
+        2
+    }
+}
 
 pub fn now() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0)
@@ -36,7 +87,7 @@ pub fn panel<'a>(theme: &Theme, title: impl Into<Line<'a>>, focused: bool) -> Bl
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(color))
         .title(title.into().style(if focused { theme.accent() } else { theme.fg(theme.fg) }))
-        .padding(Padding::horizontal(1))
+        .padding(if compact() { Padding::horizontal(1) } else { Padding::new(2, 2, 1, 0) })
 }
 
 pub fn modal_block<'a>(theme: &Theme, title: impl Into<Line<'a>>, danger: bool) -> Block<'a> {
@@ -47,7 +98,7 @@ pub fn modal_block<'a>(theme: &Theme, title: impl Into<Line<'a>>, danger: bool) 
         .border_style(Style::default().fg(color))
         .title(title.into().style(Style::default().fg(color).add_modifier(ratatui::style::Modifier::BOLD)))
         .style(theme.base())
-        .padding(Padding::new(2, 2, 1, 0))
+        .padding(if compact() { Padding::new(2, 2, 1, 0) } else { Padding::new(3, 3, 1, 1) })
 }
 
 pub fn centered(area: Rect, w: u16, h: u16) -> Rect {

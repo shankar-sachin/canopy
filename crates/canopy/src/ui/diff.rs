@@ -3,7 +3,7 @@ use canopy_git::{DiffLine, DiffLineKind};
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::Paragraph;
+use ratatui::widgets::{Paragraph, Wrap};
 use ratatui::Frame;
 
 use crate::app::App;
@@ -42,6 +42,16 @@ pub fn draw(f: &mut Frame, area: Rect, app: &mut App) {
     if view.rows.is_empty() {
         let text = if view.files.iter().any(|f| f.binary) { "Binary file" } else { "No changes" };
         f.render_widget(Paragraph::new(Line::styled(text, theme.muted())), inner);
+        return;
+    }
+
+    // Info-only panels (PR, issue and run details, remotes, worktrees) wrap
+    // to the panel at draw time, so text fits whatever the width; ↑/↓ scroll.
+    if view.files.is_empty() {
+        view.cursor = view.cursor.min(view.meta.len().saturating_sub(1));
+        let lines: Vec<Line> = view.meta.iter().map(|m| meta_line(m, &theme)).collect();
+        let para = Paragraph::new(lines).wrap(Wrap { trim: false }).scroll((view.cursor as u16, 0));
+        f.render_widget(para, inner);
         return;
     }
 

@@ -91,6 +91,7 @@ theme = "canopy"            # canopy | catppuccin | gruvbox | nord | light
 nerd_font = false
 teach_mode = true
 confirm_destructive = true
+compact = false             # true: tighter layout, no gaps between panels
 workspace_dirs = ["~/code"]
 workspace_depth = 3
 

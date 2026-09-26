@@ -25,10 +25,14 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     let area = f.area();
     f.render_widget(Block::default().style(app.theme.base()), area);
     let teach = app.config.teach_mode && app.git.is_some();
-    let [header, tabs, body, teach_area, footer] = Layout::vertical([
+    // A blank row under the tabs and above the footer, when there's room.
+    let air = (!util::compact() && area.height >= 20) as u16;
+    let [header, tabs, _, body, _, teach_area, footer] = Layout::vertical([
         Constraint::Length(1),
         Constraint::Length(1),
+        Constraint::Length(air),
         Constraint::Fill(1),
+        Constraint::Length(air),
         Constraint::Length(teach as u16),
         Constraint::Length(1),
     ])
@@ -174,16 +178,33 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
         f.render_widget(Paragraph::new(line), area);
         return;
     }
+    // "? help" is pinned to the right so it's never cut off; the other
+    // hints fill the space to its left, whole hints only.
+    let help_key = app.keymap.key_for(&[crate::keymap::Ctx::Global], crate::keymap::Action::Help).unwrap_or("?");
+    let help = Line::from(key_hint(t, &pretty_key(help_key), "help"));
+    let help_w = help.width() as u16;
+    let avail = area.width.saturating_sub(help_w + 1) as usize;
     let mut spans = vec![Span::raw(" ")];
-    let mut seen = Vec::new();
+    let mut used = 1;
+    let mut seen = vec![crate::keymap::Action::Help];
     for ctx in contexts(app) {
         for b in app.keymap.bindings(ctx).iter().filter(|b| b.hint && !b.keys.is_empty()) {
             if seen.contains(&b.action) {
                 continue;
             }
             seen.push(b.action);
-            spans.extend(key_hint(t, &pretty_key(&b.keys[0]), b.action.short()));
+            let chip = key_hint(t, &pretty_key(&b.keys[0]), b.action.short());
+            let w: usize = chip.iter().map(|s| s.width()).sum();
+            if used + w > avail {
+                continue;
+            }
+            used += w;
+            spans.extend(chip);
         }
     }
     f.render_widget(Paragraph::new(Line::from(spans)), area);
+    if area.width > help_w {
+        let r = Rect { x: area.x + area.width - help_w, width: help_w, ..area };
+        f.render_widget(Paragraph::new(help), r);
+    }
 }

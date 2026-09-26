@@ -785,7 +785,7 @@ async fn issues_tab() {
     press(&mut app, KeyCode::Char('9')).await;
     let s = render(&mut app, 140, 30);
     assert!(s.contains("Issues · o/r · open · 1") && s.contains("#7") && s.contains("Crash on empty repo"), "{s}");
-    assert!(s.contains("bug") && s.contains("crashes when you press 3") && s.contains("ada commented"), "{s}");
+    assert!(s.contains("bug") && s.contains("crashes when you press") && s.contains("ada commented"), "{s}");
 
     // New issue: title required.
     press(&mut app, KeyCode::Char('n')).await;
@@ -1238,4 +1238,36 @@ async fn logo_on_welcome_and_no_repo() {
     app.screen = Screen::Home;
     let s = render(&mut app, 100, 30);
     assert!(s.contains("██") && s.contains("No repository open"), "{s}");
+}
+
+#[tokio::test]
+async fn spacious_layout_fits_80x24() {
+    let dir = demo_repo();
+    let mut app = app_for(dir.path()).await;
+    for key in ['1', '2', '3', '4'] {
+        press(&mut app, KeyCode::Char(key)).await;
+        let s = render(&mut app, 80, 24);
+        // The footer keys and the tab bar are always visible.
+        assert!(s.lines().nth(1).unwrap().contains(" 1 "), "tabs:\n{s}");
+        assert!(s.lines().last().unwrap().contains("help"), "footer:\n{s}");
+    }
+    press(&mut app, KeyCode::Char('2')).await;
+    let s = render(&mut app, 80, 24);
+    assert!(s.contains("main.rs") && s.contains("TODO.md"), "{s}");
+    press(&mut app, KeyCode::Char('3')).await;
+    let s = render(&mut app, 80, 24);
+    assert!(s.contains("Add CSV parser"), "{s}");
+}
+
+#[tokio::test]
+async fn compact_restores_dense_layout() {
+    let dir = demo_repo();
+    let git = canopy_git::Git::open(dir.path()).await.unwrap();
+    let config = Config { compact: true, ..Config::default() };
+    let mut app = App::new(Some(git), config, dir.path().to_path_buf());
+    app.refresh();
+    app.settle().await;
+    let s = render(&mut app, 120, 30);
+    // No blank row between the tabs and the first panel.
+    assert!(s.lines().nth(2).unwrap().starts_with('╭'), "{s}");
 }

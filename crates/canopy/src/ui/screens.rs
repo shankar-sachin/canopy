@@ -9,16 +9,17 @@ use crate::app::{App, Section};
 use crate::input::state_word;
 use crate::keymap::{Focus, RefsView, Screen};
 use crate::theme::Theme;
-use crate::ui::util::{ago, now, panel, trunc};
+use crate::ui::util::{ago, gap, now, panel, trunc};
 use crate::ui::{diff, graph};
 
 /// Split into list + diff panes, stacking vertically on narrow terminals.
 fn split(area: Rect, list_pct: u16) -> (Rect, Rect) {
     if area.width >= 100 {
-        let [a, b] = Layout::horizontal([Constraint::Percentage(list_pct), Constraint::Fill(1)]).areas(area);
+        let [a, b] =
+            Layout::horizontal([Constraint::Percentage(list_pct), Constraint::Fill(1)]).spacing(gap()).areas(area);
         (a, b)
     } else {
-        let [a, b] = Layout::vertical([Constraint::Percentage(40), Constraint::Fill(1)]).areas(area);
+        let [a, b] = Layout::vertical([Constraint::Percentage(40), Constraint::Fill(1)]).spacing(gap()).areas(area);
         (a, b)
     }
 }
@@ -210,7 +211,7 @@ fn home(f: &mut Frame, area: Rect, app: &mut App) {
     // Narrow terminals get the essentials only: overview, next steps, commits.
     let wide = area.width >= 110;
     let (left, right) = if wide {
-        let [l, r] = Layout::horizontal([Constraint::Percentage(58), Constraint::Fill(1)]).areas(area);
+        let [l, r] = Layout::horizontal([Constraint::Percentage(58), Constraint::Fill(1)]).spacing(gap()).areas(area);
         (l, Some(r))
     } else {
         (area, None)
@@ -218,9 +219,13 @@ fn home(f: &mut Frame, area: Rect, app: &mut App) {
 
     // --- Overview + suggestions
     let sugg = suggestions(app);
-    let [overview, next, recent] =
-        Layout::vertical([Constraint::Length(7), Constraint::Length(sugg.len() as u16 * 2 + 2), Constraint::Fill(1)])
-            .areas(left);
+    let [overview, next, recent] = Layout::vertical([
+        Constraint::Length(6 + crate::ui::util::pad_top()),
+        Constraint::Length(sugg.len() as u16 * 2 + 2 + crate::ui::util::pad_top()),
+        Constraint::Fill(1),
+    ])
+    .spacing(gap())
+    .areas(left);
 
     let s = &app.data.status;
     let b = &s.branch;
@@ -307,13 +312,18 @@ fn home(f: &mut Frame, area: Rect, app: &mut App) {
 
     // --- Right column: activity, branches, remotes
     let Some(right) = right else { return };
-    let [gh_area, act, br, misc] = Layout::vertical([
-        Constraint::Length(if app.github.status.is_some() { 5 } else { 0 }),
-        Constraint::Length(7),
-        Constraint::Fill(1),
-        Constraint::Length(6),
-    ])
-    .areas(right);
+    let pad = crate::ui::util::pad_top();
+    // Only reserve the GitHub card (and its gap) when there's something to show.
+    let (gh_area, right) = if app.github.status.is_some() {
+        let [g, rest] =
+            Layout::vertical([Constraint::Length(5 + pad), Constraint::Fill(1)]).spacing(gap()).areas(right);
+        (g, rest)
+    } else {
+        (Rect::default(), right)
+    };
+    let [act, br, misc] = Layout::vertical([Constraint::Length(7), Constraint::Fill(1), Constraint::Length(6 + pad)])
+        .spacing(gap())
+        .areas(right);
     if gh_area.height > 0 {
         let title = format!(" GitHub · {} ", app.github.repo_name().unwrap_or("not connected"));
         f.render_widget(Paragraph::new(github_card(app, &theme)).block(panel(&theme, title, false)), gh_area);
@@ -597,7 +607,7 @@ fn log(f: &mut Frame, area: Rect, app: &mut App) {
         empty(f, area, &theme, "History", msg);
         return;
     }
-    let (la, da) = split(area, 55);
+    let (la, da) = split(area, 60);
     let filtered = app.filters.contains_key(&Screen::Log);
     // The graph only makes sense for the unfiltered, contiguous history.
     let graph = if filtered || app.log_path.is_some() { Vec::new() } else { graph::build(&app.data.log) };
@@ -616,7 +626,7 @@ fn log(f: &mut Frame, area: Rect, app: &mut App) {
                 Cell::from(g),
                 Cell::from(Span::styled(c.short.clone(), theme.fg(theme.hash))),
                 Cell::from(Line::from(subj)),
-                Cell::from(Span::styled(trunc(&c.author, 14), theme.muted())),
+                Cell::from(Span::styled(trunc(&c.author, 12), theme.muted())),
                 Cell::from(Span::styled(ago(c.time), theme.muted())),
             ])
         })
@@ -644,11 +654,11 @@ fn log(f: &mut Frame, area: Rect, app: &mut App) {
             Constraint::Length(gw.max(1)),
             Constraint::Length(8),
             Constraint::Fill(1),
-            Constraint::Length(14),
+            Constraint::Length(12),
             Constraint::Length(4),
         ],
     )
-    .column_spacing(1)
+    .column_spacing(crate::ui::util::col_gap())
     .block(panel(&theme, title, focused))
     .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
     let sel = app.selected(Screen::Log);
@@ -734,7 +744,7 @@ fn submodules(f: &mut Frame, area: Rect, app: &mut App) {
         .collect();
     let table =
         Table::new(rows, [Constraint::Fill(1), Constraint::Length(8), Constraint::Length(16), Constraint::Length(16)])
-            .column_spacing(1)
+            .column_spacing(crate::ui::util::col_gap())
             .block(panel(&theme, title, focused))
             .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
     let sel = app.selected(Screen::Branches);
@@ -783,7 +793,7 @@ fn worktrees(f: &mut Frame, area: Rect, app: &mut App) {
         rows,
         [Constraint::Length(1), Constraint::Percentage(30), Constraint::Fill(1), Constraint::Length(8)],
     )
-    .column_spacing(1)
+    .column_spacing(crate::ui::util::col_gap())
     .block(panel(&theme, title, focused))
     .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
     let sel = app.selected(Screen::Branches);
@@ -825,7 +835,7 @@ fn tags(f: &mut Frame, area: Rect, app: &mut App) {
         rows,
         [Constraint::Percentage(30), Constraint::Length(8), Constraint::Fill(1), Constraint::Length(4)],
     )
-    .column_spacing(1)
+    .column_spacing(crate::ui::util::col_gap())
     .block(panel(&theme, title, focused))
     .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
     let sel = app.selected(Screen::Branches);
@@ -865,7 +875,7 @@ fn remotes(f: &mut Frame, area: Rect, app: &mut App) {
         })
         .collect();
     let table = Table::new(rows, [Constraint::Length(12), Constraint::Fill(1), Constraint::Length(12)])
-        .column_spacing(1)
+        .column_spacing(crate::ui::util::col_gap())
         .block(panel(&theme, title, focused))
         .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
     let sel = app.selected(Screen::Branches);
@@ -940,7 +950,7 @@ fn branch_list(f: &mut Frame, area: Rect, app: &mut App) {
             Constraint::Length(4),
         ],
     )
-    .column_spacing(1)
+    .column_spacing(crate::ui::util::col_gap())
     .block(panel(
         &theme,
         refs_title(app, &theme, format!("{nl} local · {} remote", app.data.branches.len() - nl), la.width),
@@ -1073,7 +1083,7 @@ fn workspace(f: &mut Frame, area: Rect, app: &mut App) {
         ],
     )
     .header(header)
-    .column_spacing(2)
+    .column_spacing(crate::ui::util::col_gap() + 1)
     .block(panel(&theme, title, true))
     .row_highlight_style(theme.selected());
     let sel = app.selected(Screen::Workspace);
@@ -1193,7 +1203,7 @@ fn pulls(f: &mut Frame, area: Rect, app: &mut App) {
             Constraint::Length(4),
         ],
     )
-    .column_spacing(1)
+    .column_spacing(crate::ui::util::col_gap())
     .block(panel(&theme, title, focused))
     .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
     let sel = app.selected(Screen::Pulls);
@@ -1261,7 +1271,7 @@ fn issues(f: &mut Frame, area: Rect, app: &mut App) {
             Constraint::Length(4),
         ],
     )
-    .column_spacing(1)
+    .column_spacing(crate::ui::util::col_gap())
     .block(panel(&theme, title, focused))
     .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
     let sel = app.selected(Screen::Issues);
@@ -1326,7 +1336,7 @@ fn runs(f: &mut Frame, area: Rect, app: &mut App) {
             Constraint::Length(4),
         ],
     )
-    .column_spacing(1)
+    .column_spacing(crate::ui::util::col_gap())
     .block(panel(&theme, title, focused))
     .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
     let sel = app.selected(Screen::Runs);
