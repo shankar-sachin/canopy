@@ -859,8 +859,8 @@ fn is_valid_key(k: &str) -> bool {
 pub fn pretty_key(k: &str) -> String {
     match k {
         "space" => "space".into(),
-        "enter" => "⏎".into(),
-        "backtab" => "⇧tab".into(),
+        "enter" => "↵".into(),
+        "backtab" => "shift-tab".into(),
         "up" => "↑".into(),
         "down" => "↓".into(),
         "left" => "←".into(),

@@ -100,7 +100,7 @@ async fn home_dashboard() {
     assert!(s.contains("Next steps"));
     assert!(s.contains("1 file(s) staged and ready. Press c to commit."), "{s}");
     assert!(s.contains("Merge branch 'feature/parser'"));
-    assert!(s.contains("(⌂ v0.1.0)"));
+    assert!(s.contains("(tag v0.1.0)") && s.contains("(HEAD → main)"));
     assert!(s.contains("Activity"));
     // Narrow terminal still renders.
     render(&mut app, 70, 24);
@@ -160,7 +160,7 @@ async fn history_graph_and_undo() {
     let mut app = app_for(dir.path()).await;
     press(&mut app, KeyCode::Char('3')).await;
     let s = render(&mut app, 130, 30);
-    assert!(s.contains("◉"), "merge commit glyph:\n{s}");
+    assert!(s.contains("○─╮"), "merge commit glyph:\n{s}");
     assert!(s.contains("Add CSV parser"));
 
     // Filter
@@ -880,4 +880,180 @@ async fn home_github_card() {
     let s = render(&mut app, 150, 36);
     assert!(s.contains("Run gh auth login to connect GitHub"), "{s}");
     assert_eq!(gh_calls(bin2.path()), vec!["auth status"]);
+}
+
+// ------------------------------------------------------------ site export
+
+/// Render the current frame as HTML: one `<span>` per run of same-styled cells.
+fn frame_html(app: &mut App, w: u16, h: u16) -> String {
+    use ratatui::style::{Color, Modifier};
+    let mut term = Terminal::new(TestBackend::new(w, h)).unwrap();
+    term.draw(|f| crate::ui::draw(f, app)).unwrap();
+    let buf = term.backend().buffer().clone();
+    let hex = |c: Color| match c {
+        Color::Rgb(r, g, b) => Some(format!("#{r:02x}{g:02x}{b:02x}")),
+        _ => None,
+    };
+    // Pin every non-ASCII glyph to one column so browser font fallback
+    // can't push the box-drawing borders out of line.
+    let esc = |s: &str| {
+        let mut out = String::with_capacity(s.len());
+        for c in s.chars() {
+            match c {
+                '&' => out.push_str("&amp;"),
+                '<' => out.push_str("&lt;"),
+                '>' => out.push_str("&gt;"),
+                c if c.is_ascii() => out.push(c),
+                c => out.push_str(&format!("<i class=\"g\">{c}</i>")),
+            }
+        }
+        out
+    };
+    let mut out = String::new();
+    for y in 0..h {
+        let mut x = 0;
+        let mut run = String::new();
+        let mut run_style: Option<String> = None;
+        let flush = |out: &mut String, run: &mut String, style: &Option<String>| {
+            if run.is_empty() {
+                return;
+            }
+            match style {
+                Some(st) if !st.is_empty() => out.push_str(&format!("<span style=\"{st}\">{}</span>", esc(run))),
+                _ => out.push_str(&esc(run)),
+            }
+            run.clear();
+        };
+        while x < w {
+            let cell = &buf[(x, y)];
+            let mut css = String::new();
+            let (mut fg, mut bg) = (cell.fg, cell.bg);
+            if cell.modifier.contains(Modifier::REVERSED) {
+                std::mem::swap(&mut fg, &mut bg);
+            }
+            if let Some(c) = hex(fg) {
+                css.push_str(&format!("color:{c};"));
+            }
+            if let Some(c) = hex(bg) {
+                css.push_str(&format!("background:{c};"));
+            }
+            if cell.modifier.contains(Modifier::BOLD) {
+                css.push_str("font-weight:700;");
+            }
+            if cell.modifier.contains(Modifier::DIM) {
+                css.push_str("opacity:.6;");
+            }
+            if cell.modifier.contains(Modifier::UNDERLINED) {
+                css.push_str("text-decoration:underline;");
+            }
+            if run_style.as_ref() != Some(&css) {
+                flush(&mut out, &mut run, &run_style);
+                run_style = Some(css);
+            }
+            let sym = cell.symbol();
+            run.push_str(sym);
+            // A wide glyph (emoji) covers the next cell too: skip its filler.
+            x += if ratatui::text::Span::raw(sym).width() > 1 { 2 } else { 1 };
+        }
+        flush(&mut out, &mut run, &run_style);
+        out.push('\n');
+    }
+    out
+}
+
+/// Regenerates the terminal screenshots embedded in `docs/index.html`.
+/// Run with: cargo test -p canopy-git-tui export_site_screens -- --ignored
+#[tokio::test]
+#[ignore]
+async fn export_site_screens() {
+    let (w, h) = (118, 32);
+    let dir = demo_repo();
+    // A remote so Home shows sync status, and a bit more history.
+    let bare = TempDir::new().unwrap();
+    sh(bare.path(), "git init -q --bare -b main");
+    sh(dir.path(), &format!("git remote add origin {} && git push -q -u origin main 2>/dev/null; git -c user.name='Grace Hopper' -c user.email=g@h.io commit -q --allow-empty -m 'Document the parser API'", bare.path().display()));
+    let bin = TempDir::new().unwrap();
+    let gh = fake_gh(bin.path(), true);
+    let mut app = github_app(dir.path(), &gh).await;
+    app.config.teach_mode = true;
+    let mut shots: Vec<(&str, &str, String)> = Vec::new();
+
+    shots.push(("home", "Home", frame_html(&mut app, w, h)));
+
+    press(&mut app, KeyCode::Char('2')).await;
+    let i = app.status_rows().iter().position(|r| app.data.status.files[r.file].path == "main.rs").unwrap();
+    app.set_selected(Screen::Status, i);
+    crate::views::diff::load_for_selection(&mut app);
+    app.settle().await;
+    press(&mut app, KeyCode::Enter).await;
+    press(&mut app, KeyCode::Char('j')).await;
+    press(&mut app, KeyCode::Char('j')).await;
+    shots.push(("changes", "Stage single lines", frame_html(&mut app, w, h)));
+    press(&mut app, KeyCode::Esc).await;
+
+    press(&mut app, KeyCode::Char('3')).await;
+    shots.push(("history", "History graph", frame_html(&mut app, w, h)));
+
+    press(&mut app, KeyCode::Char('8')).await;
+    shots.push(("prs", "Pull requests", frame_html(&mut app, w, h)));
+
+    press(&mut app, KeyCode::Char('0')).await;
+    shots.push(("actions", "CI runs", frame_html(&mut app, w, h)));
+
+    press(&mut app, KeyCode::Char(':')).await;
+    chars(&mut app, "undo").await;
+    shots.push(("palette", "Command palette", frame_html(&mut app, w, h)));
+
+    let site = concat!(env!("CARGO_MANIFEST_DIR"), "/../../docs/index.html");
+    let page = std::fs::read_to_string(site).expect("docs/index.html");
+    let (start, end) = ("<!-- SCREENS:START -->", "<!-- SCREENS:END -->");
+    let (a, b) = (page.find(start).expect("start marker"), page.find(end).expect("end marker"));
+    let mut html = String::from("\n");
+    for (i, (id, label, frame)) in shots.iter().enumerate() {
+        let hidden = if i == 0 { "" } else { " hidden" };
+        html.push_str(&format!(
+            "<pre class=\"frame\" id=\"shot-{id}\" data-label=\"{label}\" role=\"img\" aria-label=\"Canopy: {label}\"{hidden}>{frame}</pre>\n"
+        ));
+    }
+    let out = format!("{}{start}{html}{}", &page[..a], &page[b..]);
+    std::fs::write(site, out).unwrap();
+    println!("wrote {} screens to docs/index.html", shots.len());
+}
+
+/// Every glyph Canopy draws must be one column wide in every monospace font,
+/// or borders drift out of line. Allowed: ASCII, box drawing, block
+/// elements (sparklines) and a short list of widely supported symbols.
+#[tokio::test]
+async fn only_single_width_glyphs() {
+    const SAFE: &str = "·…✓✗●○•↑↓←→↵‹›—▌";
+    let ok = |c: char| {
+        c.is_ascii() || ('\u{2500}'..='\u{259F}').contains(&c) || SAFE.contains(c)
+    };
+    let dir = demo_repo();
+    let bin = TempDir::new().unwrap();
+    let gh = fake_gh(bin.path(), true);
+    let mut app = github_app(dir.path(), &gh).await;
+    let mut bad = std::collections::BTreeSet::new();
+    let mut check = |s: String, bad: &mut std::collections::BTreeSet<char>| {
+        bad.extend(s.chars().filter(|c| !ok(*c) && *c != '\n'));
+    };
+    for key in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'] {
+        press(&mut app, KeyCode::Char(key)).await;
+        check(render(&mut app, 140, 34), &mut bad);
+        press(&mut app, KeyCode::Enter).await;
+        check(render(&mut app, 140, 34), &mut bad);
+        press(&mut app, KeyCode::Esc).await;
+    }
+    for key in ['?', ':', 'c'] {
+        press(&mut app, KeyCode::Char('2')).await;
+        press(&mut app, KeyCode::Char(key)).await;
+        check(render(&mut app, 140, 34), &mut bad);
+        press(&mut app, KeyCode::Esc).await;
+    }
+    for _ in 0..4 {
+        press(&mut app, KeyCode::Char('4')).await;
+        press(&mut app, KeyCode::Char(']')).await;
+        check(render(&mut app, 140, 34), &mut bad);
+    }
+    assert!(bad.is_empty(), "risky glyphs on screen: {bad:?}");
 }

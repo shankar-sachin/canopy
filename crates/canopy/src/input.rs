@@ -1092,7 +1092,7 @@ fn github_action(app: &mut App, action: Action) {
                     };
                     let mut title = format!("Merge #{n} into {}", pr.base_ref_name);
                     if pr.checks().failed > 0 {
-                        title.push_str(" · ⚠ checks are failing");
+                        title.push_str(" · ! checks are failing");
                     }
                     app.modal = Modal::Menu {
                         title,
@@ -1168,7 +1168,7 @@ fn target_file(app: &mut App) -> Option<(String, Option<String>)> {
             return Some((app.data.status.files[row.file].path.clone(), None));
         }
     }
-    app.toast(Level::Info, "Pick a file first: in Changes, or open a commit (⏎) and move to a file");
+    app.toast(Level::Info, "Pick a file first: in Changes, or open a commit (↵) and move to a file");
     None
 }
 

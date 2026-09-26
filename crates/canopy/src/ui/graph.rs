@@ -62,7 +62,7 @@ pub fn build(commits: &[Commit]) -> Vec<Vec<Cell>> {
         for i in 0..width {
             let glyph = if i == col {
                 if c.parents.len() > 1 {
-                    '◉'
+                    '○'
                 } else {
                     '●'
                 }
@@ -132,6 +132,6 @@ mod tests {
     fn merge_and_branch() {
         // m merges x (feature) into b (main).
         let rows = build(&[c("m", &["b", "x"]), c("x", &["a"]), c("b", &["a"]), c("a", &[])]);
-        assert_eq!(render(&rows), vec!["◉─╮", "│ ●", "● │", "●─╯"]);
+        assert_eq!(render(&rows), vec!["○─╮", "│ ●", "● │", "●─╯"]);
     }
 }

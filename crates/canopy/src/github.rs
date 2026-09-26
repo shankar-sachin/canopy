@@ -421,7 +421,7 @@ pub fn pr_view(pr: &PullRequest, diff: Option<&str>, width: usize) -> DiffView {
         meta.push(format!("review: {decision}"));
     }
     match pr.mergeable.as_str() {
-        "CONFLICTING" => meta.push("⚠ has merge conflicts with the base branch".into()),
+        "CONFLICTING" => meta.push("! has merge conflicts with the base branch".into()),
         "MERGEABLE" => meta.push("✓ no conflicts with the base branch".into()),
         _ => {}
     }

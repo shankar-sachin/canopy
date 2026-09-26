@@ -545,7 +545,7 @@ pub fn graph_spans<'a>(cells: &[graph::Cell], theme: &Theme) -> Vec<Span<'a>> {
         .iter()
         .map(|c| {
             let color = palette[c.lane % palette.len()];
-            let st = if matches!(c.glyph, '●' | '◉') {
+            let st = if matches!(c.glyph, '●' | '○') {
                 Style::default().fg(color).add_modifier(Modifier::BOLD)
             } else {
                 Style::default().fg(color)
@@ -559,11 +559,11 @@ pub fn ref_spans<'a>(refs: &[String], theme: &Theme) -> Vec<Span<'a>> {
     let mut out = Vec::new();
     for r in refs {
         let (text, color) = if let Some(b) = r.strip_prefix("HEAD -> ") {
-            (format!("◆ {b}"), theme.accent)
+            (format!("HEAD → {b}"), theme.accent)
         } else if let Some(t) = r.strip_prefix("tag: ") {
-            (format!("⌂ {t}"), theme.tag)
+            (format!("tag {t}"), theme.tag)
         } else if r == "HEAD" {
-            ("◆ HEAD".into(), theme.accent)
+            ("HEAD".into(), theme.accent)
         } else if r.contains('/') {
             (r.clone(), theme.remote)
         } else {
@@ -1230,7 +1230,11 @@ fn issues(f: &mut Frame, area: Rect, app: &mut App) {
             for l in i.labels.iter().take(3) {
                 title.push(Span::styled(format!(" {}", l.name), theme.fg(theme.tag)));
             }
-            let comments = if i.comments.is_empty() { String::new() } else { format!("💬 {}", i.comments.len()) };
+            let comments = match i.comments.len() {
+                0 => String::new(),
+                1 => "1 comment".to_string(),
+                n => format!("{n} comments"),
+            };
             Row::new(vec![
                 Cell::from(Span::styled(
                     format!("#{}", i.number),
@@ -1253,7 +1257,7 @@ fn issues(f: &mut Frame, area: Rect, app: &mut App) {
             Constraint::Length(6),
             Constraint::Fill(1),
             Constraint::Length(14),
-            Constraint::Length(5),
+            Constraint::Length(11),
             Constraint::Length(4),
         ],
     )
@@ -1286,7 +1290,7 @@ fn runs(f: &mut Frame, area: Rect, app: &mut App) {
         return;
     }
     let (la, da) = split(area, 55);
-    let spin = ["◐", "◓", "◑", "◒"][(app.tick as usize / 3) % 4];
+    let spin = crate::ui::SPINNER[(app.tick as usize / 3) % crate::ui::SPINNER.len()];
     let rows: Vec<Row> = app
         .github
         .runs
