@@ -1,0 +1,1 @@
+[{"author":{"login":"carol","name":"Carol"},"comments":[{"author":{"login":"ada"},"body":"On it","createdAt":"2026-09-20T00:00:00Z"}],"labels":[{"name":"bug","color":"d73a4a"}],"number":7,"state":"OPEN","title":"Crash on empty repo","updatedAt":"2026-09-21T00:00:00Z","url":"https://github.com/o/r/issues/7"}]

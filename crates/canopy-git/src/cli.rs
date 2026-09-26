@@ -46,7 +46,12 @@ pub fn shell_quote(arg: &str) -> String {
 }
 
 pub fn display_cmd(args: &[&str]) -> String {
-    let mut s = String::from("git");
+    display_program_cmd("git", args)
+}
+
+/// `program args…` as a user would type it, for teach mode.
+pub fn display_program_cmd(program: &str, args: &[&str]) -> String {
+    let mut s = String::from(program);
     for a in args {
         s.push(' ');
         s.push_str(&shell_quote(a));
