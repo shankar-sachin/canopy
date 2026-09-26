@@ -45,10 +45,20 @@
   </div>
 </header>
 <main class="wrap doc">
-  <aside class="toc"><b>On this page</b><a href="#v1-0-0">v1.0.0</a><a href="#v0-4-0">v0.4.0</a><a href="#v0-3-0">v0.3.0</a><a href="#v0-2-0">v0.2.0</a><a href="#v0-1-0">v0.1.0</a><a href="#next">What's next</a></aside>
+  <aside class="toc"><b>On this page</b><a href="#v1-0-1">v1.0.1</a><a href="#v1-0-0">v1.0.0</a><a href="#v0-4-0">v0.4.0</a><a href="#v0-3-0">v0.3.0</a><a href="#v0-2-0">v0.2.0</a><a href="#v0-1-0">v0.1.0</a><a href="#next">What's next</a></aside>
   <article class="prose">
 
-<div class="release" id="v1-0-0"><h2>v1.0.0 <span class="tag-new">Latest</span></h2><div class="date">September 2026</div>
+<div class="release" id="v1-0-1"><h2>v1.0.1 <span class="tag-new">Latest</span></h2><div class="date">September 2026</div>
+<p>Windows becomes a fully supported platform.</p>
+<ul>
+  <li><b><a href="get-started.html#windows">winget</a></b>: <code>winget install SachinShankar.Canopy</code> installs Canopy and git, and <code>winget upgrade</code> keeps it current.</li>
+  <li><b>Windows on Arm</b>: a native Arm64 build with every release; the install script picks it automatically.</li>
+  <li>Fixed: on Windows, the diff of a new (untracked) file was empty when git warned about line endings.</li>
+  <li>Teach mode shows commands quoted the way PowerShell reads them.</li>
+  <li>Every change is now tested on Windows, macOS and Linux before it ships.</li>
+</ul></div>
+
+<div class="release" id="v1-0-0"><h2>v1.0.0</h2><div class="date">September 2026</div>
 <p>Canopy is feature-complete: everything you do with <code>git</code> and <code>gh</code> day to day, in one dashboard.</p>
 <h3>More GitHub</h3>
 <ul>
@@ -115,7 +125,8 @@
 
 <h2 id="next">What's next</h2>
 <ul>
-  <li><b>A desktop GUI</b>: Canopy's dashboard as an app, alongside the terminal version.</li>
+  <li><b>v1.1.0 — a desktop GUI</b> for macOS and Linux: Canopy's dashboard as an app, alongside the terminal version.</li>
+  <li><b>v1.1.1 — the desktop GUI on Windows 11</b>, installable with winget.</li>
   <li><b>Later:</b> syntax-highlighted diffs.</li>
 </ul>
 

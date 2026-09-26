@@ -1,0 +1,2 @@
+# LF everywhere, so Windows checkouts match the test fixtures and rustfmt.
+* text=auto eol=lf

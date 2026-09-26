@@ -9,12 +9,12 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # macOS and Linux are the primary platforms: everything must pass here.
+  # Everything must pass on all three platforms.
   check:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        os: [macos-latest, ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -29,21 +29,17 @@ jobs:
           git config --global init.defaultBranch main
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
-      - run: cargo test --workspace
+      - run: cargo test --workspace --no-fail-fast
       - name: Run the binary
         run: cargo run --release -- --version
 
-  # Windows is secondary: build, unit tests and a smoke run. Allowed to
-  # fail, so it never blocks a macOS/Linux change.
-  windows:
+  # Releases ship a Windows on Arm build; make sure it still builds.
+  windows-arm64:
     runs-on: windows-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-pc-windows-msvc
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release --workspace
-      - name: Unit tests
-        run: cargo test --workspace --lib --bins
-      - name: Run the binary
-        run: cargo run --release -- --version
+      - run: cargo build --release --locked --target aarch64-pc-windows-msvc -p canopy-git-tui

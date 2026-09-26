@@ -8,6 +8,7 @@
 # 3. Pushes an annotated tag and creates the GitHub release with your gh login.
 # 4. Waits for the Release workflow (builds + Homebrew tap) and verifies the
 #    tap's checksum.
+# 5. Submits the new version to winget (scripts/winget.sh --submit; asks first).
 #
 # Bump `version` in Cargo.toml (and add a changelog entry) in a PR first.
 set -eu
@@ -47,3 +48,5 @@ got=$(gh api repos/shankar-sachin/homebrew-canopy/contents/Formula/canopy.rb -q 
 [ "$want" = "$got" ] || die "the tap's checksum ($got) doesn't match the source tarball ($want)"
 echo "release: $tag is out: https://github.com/$repo/releases/tag/$tag"
 gh release view "$tag" --json assets -q '.assets[].name' | sed 's/^/  /'
+
+scripts/winget.sh --submit || echo "release: winget not submitted; retry with: scripts/winget.sh --submit $tag"

@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.9.0.schema.json
+# Rendered by scripts/winget.sh from packaging/winget/. Edit the template.
+PackageIdentifier: SachinShankar.Canopy
+PackageVersion: @VERSION@
+PackageLocale: en-US
+Publisher: Sachin Shankar
+PublisherUrl: https://github.com/shankar-sachin
+PublisherSupportUrl: https://github.com/shankar-sachin/canopy/issues
+Author: Sachin Shankar
+PackageName: Canopy
+PackageUrl: https://shankar-sachin.github.io/canopy/
+License: MIT
+LicenseUrl: https://github.com/shankar-sachin/canopy/blob/main/LICENSE
+ShortDescription: A beautiful, powerful git dashboard for your terminal.
+Description: |-
+  Canopy puts your whole repository on one screen: what changed, what's staged,
+  where your branch stands against the remote, and what to do next. Beginners get
+  guidance and a safety net. Power users get line-level staging, interactive
+  rebase, and a command palette. With the GitHub CLI it also shows pull requests,
+  issues, Actions runs, releases and notifications.
+Moniker: canopy
+Tags:
+- git
+- github
+- terminal
+- tui
+- dashboard
+- cli
+ReleaseNotesUrl: https://github.com/shankar-sachin/canopy/releases/tag/v@VERSION@
+Documentations:
+- DocumentLabel: Wiki
+  DocumentUrl: https://shankar-sachin.github.io/canopy/wiki/
+ManifestType: defaultLocale
+ManifestVersion: 1.9.0

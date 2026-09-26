@@ -13,7 +13,9 @@ $ErrorActionPreference = "Stop"
 
 $Repo = "shankar-sachin/canopy"
 $Dir = if ($env:CANOPY_INSTALL_DIR) { $env:CANOPY_INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA "Programs\canopy" }
-$Target = "x86_64-pc-windows-msvc"
+# Windows on Arm gets the native build; everything else the x64 one.
+$Arch = if ($env:PROCESSOR_ARCHITEW6432) { $env:PROCESSOR_ARCHITEW6432 } else { $env:PROCESSOR_ARCHITECTURE }
+$Target = if ($Arch -eq "ARM64") { "aarch64-pc-windows-msvc" } else { "x86_64-pc-windows-msvc" }
 
 function Remove-FromPath($d) {
     $p = [Environment]::GetEnvironmentVariable("Path", "User")
@@ -41,7 +43,17 @@ $tmp = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid())
 New-Item -ItemType Directory $tmp | Out-Null
 try {
     Write-Host "canopy: downloading $name"
-    Invoke-WebRequest $url -OutFile "$tmp\$name.zip" -UseBasicParsing
+    try {
+        Invoke-WebRequest $url -OutFile "$tmp\$name.zip" -UseBasicParsing
+    } catch {
+        # Releases before v1.0.1 have no Arm build; the x64 one runs emulated.
+        if ($Target -ne "aarch64-pc-windows-msvc") { throw }
+        $Target = "x86_64-pc-windows-msvc"
+        $name = "canopy-$Version-$Target"
+        $url = "https://github.com/$Repo/releases/download/$Version/$name.zip"
+        Write-Host "canopy: no Arm build of $Version; downloading $name"
+        Invoke-WebRequest $url -OutFile "$tmp\$name.zip" -UseBasicParsing
+    }
     Invoke-WebRequest "$url.sha256" -OutFile "$tmp\$name.zip.sha256" -UseBasicParsing
     $want = ((Get-Content "$tmp\$name.zip.sha256" -Raw).Trim() -split "\s+")[0].ToLower()
     $got = (Get-FileHash "$tmp\$name.zip" -Algorithm SHA256).Hash.ToLower()

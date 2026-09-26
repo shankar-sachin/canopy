@@ -12,6 +12,10 @@ use tempfile::TempDir;
 
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
+// Tests run one at a time: writing a fake gh while another test thread forks
+// leaks the write handle into that child, and exec then fails with ETXTBSY.
+static SERIAL: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 /// A fake gh: logs "$@" to calls.log, then prints a fixture chosen by args.
 fn fake_gh(dir: &Path, logged_in: bool) -> PathBuf {
     let script = format!(
@@ -50,6 +54,7 @@ fn calls(dir: &Path) -> Vec<String> {
 
 #[tokio::test]
 async fn detect_states() {
+    let _serial = SERIAL.lock().await;
     let dir = TempDir::new().unwrap();
     let gh = Gh::new(dir.path(), Some(fake_gh(dir.path(), true)));
     match gh.detect().await {
@@ -64,6 +69,7 @@ async fn detect_states() {
 
 #[tokio::test]
 async fn pull_requests() {
+    let _serial = SERIAL.lock().await;
     let dir = TempDir::new().unwrap();
     let gh = Gh::new(dir.path(), Some(fake_gh(dir.path(), true)));
     let prs = gh.pr_list(PrFilter::ReviewRequested, 30).await.unwrap();
@@ -100,6 +106,7 @@ async fn pull_requests() {
 
 #[tokio::test]
 async fn issues_and_runs() {
+    let _serial = SERIAL.lock().await;
     let dir = TempDir::new().unwrap();
     let gh = Gh::new(dir.path(), Some(fake_gh(dir.path(), true)));
     let issues = gh.issue_list(IssueFilter::Mine, 30).await.unwrap();
@@ -122,6 +129,7 @@ async fn issues_and_runs() {
 
 #[tokio::test]
 async fn failures_are_reported() {
+    let _serial = SERIAL.lock().await;
     let dir = TempDir::new().unwrap();
     let path = dir.path().join("gh");
     std::fs::write(&path, "#!/bin/sh\necho 'GraphQL: Could not resolve to a Repository' >&2\nexit 1\n").unwrap();
@@ -133,6 +141,7 @@ async fn failures_are_reported() {
 
 #[tokio::test]
 async fn notifications() {
+    let _serial = SERIAL.lock().await;
     let dir = TempDir::new().unwrap();
     let gh = Gh::new(dir.path(), Some(fake_gh(dir.path(), true)));
     let n = gh.notifications(true, false).await.unwrap();
@@ -156,6 +165,7 @@ async fn notifications() {
 
 #[tokio::test]
 async fn releases() {
+    let _serial = SERIAL.lock().await;
     let dir = TempDir::new().unwrap();
     let gh = Gh::new(dir.path(), Some(fake_gh(dir.path(), true)));
     let list = gh.release_list(20).await.unwrap();
@@ -177,6 +187,7 @@ async fn releases() {
 
 #[tokio::test]
 async fn review_comments() {
+    let _serial = SERIAL.lock().await;
     let dir = TempDir::new().unwrap();
     let gh = Gh::new(dir.path(), Some(fake_gh(dir.path(), true)));
     let c = gh.pr_review_comments(12).await.unwrap();
