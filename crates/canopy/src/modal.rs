@@ -48,6 +48,16 @@ pub enum Pending {
         path: String,
         force: bool,
     },
+    BisectStart {
+        good: String,
+    },
+    /// `good`, `bad`, or `skip`.
+    BisectMark(&'static str),
+    BisectReset,
+    /// Stop bisecting, then show this commit in History.
+    BisectFinish {
+        oid: String,
+    },
 }
 
 #[derive(Debug, Clone)]

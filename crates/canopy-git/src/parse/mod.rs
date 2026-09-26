@@ -1,5 +1,6 @@
 //! Parsers for git's machine-readable output formats.
 
+pub mod bisect;
 pub mod blame;
 pub mod conflict;
 pub mod diff;

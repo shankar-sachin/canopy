@@ -8,6 +8,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use canopy_git::ops::LogQuery;
+use canopy_git::parse::bisect::BisectStep;
 use canopy_git::{Branch, Commit, FileKind, Git, GitError, Output, ReflogEntry, Remote, RepoState, Stash, Status, Tag};
 use ratatui::crossterm::event::{self, Event, KeyEvent, MouseEventKind};
 use ratatui::widgets::ListState;
@@ -76,6 +77,8 @@ pub enum Msg {
 pub enum Then {
     Refresh,
     RefreshWorkspace,
+    /// A bisect step: record git's answer, then refresh.
+    Bisect,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -142,6 +145,10 @@ pub struct App {
     pub log_loading: bool,
     /// When set, History shows only commits touching this path (following renames).
     pub log_path: Option<String>,
+    /// Git's answer to the last bisect step, while bisecting.
+    pub bisect: Option<BisectStep>,
+    /// Select this commit in History once the next refresh lands.
+    pub jump_after_load: Option<String>,
     /// Branches, Tags, or Remotes in the Branches tab.
     pub refs_view: RefsView,
     pub workspace_root: PathBuf,
@@ -194,6 +201,8 @@ impl App {
             last_status_poll: Instant::now(),
             log_loading: false,
             log_path: None,
+            bisect: None,
+            jump_after_load: None,
             refs_view: RefsView::Branches,
         };
         if !key_warnings.is_empty() {
@@ -488,8 +497,13 @@ impl App {
                 self.data = *snap;
                 self.loaded = true;
                 self.clamp_selections();
-                if status_changed || self.diff.is_none() || self.screen != Screen::Status {
+                if let Some(oid) = self.jump_after_load.take() {
+                    crate::input::jump_to_commit(self, &oid);
+                } else if status_changed || self.diff.is_none() || self.screen != Screen::Status {
                     crate::views::diff::load_for_selection(self);
+                }
+                if self.data.state != Some(RepoState::Bisecting) {
+                    self.bisect = None;
                 }
             }
             Msg::Loaded(Err(e)) => self.toast(Level::Error, e),
@@ -554,6 +568,14 @@ impl App {
             Msg::OpDone { label, result, then } => {
                 self.busy = None;
                 self.progress = None;
+                if then == Then::Bisect {
+                    self.bisect = match &result {
+                        Ok(out) if self.git.as_ref().is_some_and(|g| g.state() == RepoState::Bisecting) => {
+                            canopy_git::parse::bisect::parse(&out.stdout)
+                        }
+                        _ => None,
+                    };
+                }
                 match result {
                     Ok(out) => {
                         self.history.push(out.cmd.clone());
@@ -584,6 +606,12 @@ impl App {
                 match then {
                     Then::Refresh => self.refresh(),
                     Then::RefreshWorkspace => self.scan_workspace(),
+                    Then::Bisect => {
+                        self.refresh();
+                        if let Some(BisectStep::Found { oid, subject }) = self.bisect.clone() {
+                            self.modal = crate::input::bisect_found_menu(&oid, &subject);
+                        }
+                    }
                 }
             }
             Msg::Progress(line) => self.progress = Some(line),

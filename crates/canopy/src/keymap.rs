@@ -154,6 +154,7 @@ pub enum Action {
     ResetToEntry,
     FileHistory,
     Blame,
+    Bisect,
     // Conflict panel
     NextConflict,
     PrevConflict,
@@ -258,6 +259,7 @@ impl Action {
             TakeTheirs => "resolve: take theirs",
             ContinueOp => "continue merge/rebase",
             AbortOp => "abort merge/rebase",
+            Bisect => "bisect: find the commit that broke something",
             FileHistory => "history of this file",
             Blame => "blame: who changed each line",
             NextConflict => "next conflict",
@@ -379,6 +381,7 @@ pub static GLOBAL: &[Binding] = &[
     b(&["P"], Action::Push, true),
     b(&["z"], Action::Undo, false),
     b(&["S"], Action::StashPush, false),
+    b(&["b"], Action::Bisect, false),
     b(&["!"], Action::RawGit, false),
     b(&["T"], Action::ToggleTeach, false),
     b(&["ctrl-t"], Action::CycleTheme, false),

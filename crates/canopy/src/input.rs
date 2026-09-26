@@ -12,6 +12,7 @@ use crate::modal::{palette_actions, InputKind, MenuItem, Modal, Pending, RebaseI
 use crate::textarea::TextArea;
 use crate::theme::Theme;
 use crate::views::diff;
+use canopy_git::parse::bisect::BisectStep;
 
 /// The key context for the current screen (and Branches sub-view).
 pub fn screen_ctx(app: &App) -> Ctx {
@@ -660,6 +661,7 @@ fn repo_action(app: &mut App, action: Action) {
             let p = progress_sender(app);
             app.run_op(format!("Fetch {}", r.name), Then::Refresh, async move { git.fetch(Some(&r.name), p).await });
         }
+        Bisect => bisect(app),
         FileHistory => {
             let Some((path, _)) = target_file(app) else { return };
             app.set_log_path(Some(path));
@@ -933,7 +935,7 @@ pub fn open_blame(app: &mut App, path: String, rev: Option<String>) {
 }
 
 /// Select `oid` in History (loaded commits only).
-fn jump_to_commit(app: &mut App, oid: &str) {
+pub fn jump_to_commit(app: &mut App, oid: &str) {
     app.filters.remove(&Screen::Log);
     match app.data.log.iter().position(|c| c.oid == oid) {
         Some(i) => {
@@ -951,6 +953,90 @@ pub fn worktree_path(root: &std::path::Path, branch: &str) -> std::path::PathBuf
     let name = root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| "repo".into());
     let parent = root.parent().unwrap_or(root);
     parent.join(format!("{name}-{}", branch.replace('/', "-")))
+}
+
+fn bisect(app: &mut App) {
+    let bisecting = app.git.as_ref().is_some_and(|g| g.state() == RepoState::Bisecting);
+    if !bisecting {
+        if app.screen != Screen::Log {
+            app.toast(Level::Info, "Bisect starts from History: select a commit where things still worked, then b");
+            return;
+        }
+        let Some(c) = app.selected_commit().cloned() else { return };
+        if app.data.log.first().is_some_and(|h| h.oid == c.oid) {
+            app.toast(Level::Info, "Select an older commit where things still worked, then b");
+            return;
+        }
+        if app.data.status.files.iter().any(|f| f.kind != FileKind::Untracked && f.kind != FileKind::Ignored) {
+            app.toast(Level::Warn, "Commit or stash your changes first: bisect checks out other commits");
+            return;
+        }
+        confirm(
+            app,
+            "Start bisect?",
+            vec![
+                format!("Good (worked): {} {}", c.short, c.subject),
+                "Bad (broken):  HEAD, what you have now".into(),
+                String::new(),
+                "Git checks out a commit halfway between. You test it and press b".into(),
+                "to say good or bad, and it narrows down to the commit that".into(),
+                "introduced the problem in a few steps.".into(),
+            ],
+            Pending::BisectStart { good: c.oid },
+            false,
+        );
+        return;
+    }
+    if let Some(BisectStep::Found { oid, subject }) = app.bisect.clone() {
+        app.modal = bisect_found_menu(&oid, &subject);
+        return;
+    }
+    let item = |key, label: &str, detail: &str, pending| MenuItem {
+        key,
+        label: label.into(),
+        detail: detail.into(),
+        pending,
+        danger: false,
+    };
+    let title = match &app.bisect {
+        Some(BisectStep::Testing { steps_left, oid, subject, .. }) => {
+            format!("Testing {} {subject} · ~{steps_left} steps left", oid.get(..7).unwrap_or(oid))
+        }
+        _ => "Bisecting: is the checked-out commit good or bad?".into(),
+    };
+    app.modal = Modal::Menu {
+        title,
+        items: vec![
+            item('g', "Good", "the problem isn't here", Pending::BisectMark("good")),
+            item('b', "Bad", "the problem is here", Pending::BisectMark("bad")),
+            item('s', "Skip", "can't test this one", Pending::BisectMark("skip")),
+            item('r', "Stop bisecting", "go back to where you started", Pending::BisectReset),
+        ],
+        sel: 0,
+    };
+}
+
+pub fn bisect_found_menu(oid: &str, subject: &str) -> Modal {
+    Modal::Menu {
+        title: format!("Found it: {} {subject} introduced the problem", oid.get(..7).unwrap_or(oid)),
+        items: vec![
+            MenuItem {
+                key: 'f',
+                label: "Finish and show it".into(),
+                detail: "stop bisecting and select it in History".into(),
+                pending: Pending::BisectFinish { oid: oid.to_string() },
+                danger: false,
+            },
+            MenuItem {
+                key: 'r',
+                label: "Stop bisecting".into(),
+                detail: "go back to where you started".into(),
+                pending: Pending::BisectReset,
+                danger: false,
+            },
+        ],
+        sel: 0,
+    }
 }
 
 /// `origin` if it exists, else the first remote.
@@ -1471,6 +1557,21 @@ pub fn execute(app: &mut App, pending: Pending) {
                 }
                 git.delete_tag(&name).await
             });
+        }
+        Pending::BisectStart { good } => {
+            app.run_op("Start bisect", Then::Bisect, async move { git.bisect_start("HEAD", &good).await });
+        }
+        Pending::BisectMark(term) => {
+            app.run_op(format!("Marked {term}"), Then::Bisect, async move { git.bisect_mark(term).await });
+        }
+        Pending::BisectReset => {
+            app.bisect = None;
+            app.run_op("Stop bisecting", Then::Refresh, async move { git.bisect_reset().await });
+        }
+        Pending::BisectFinish { oid } => {
+            app.bisect = None;
+            app.jump_after_load = Some(oid);
+            app.run_op("Stop bisecting", Then::Refresh, async move { git.bisect_reset().await });
         }
         Pending::RemoveWorktree { path, force } => {
             app.run_op(format!("Remove worktree {path}"), Then::Refresh, async move {
