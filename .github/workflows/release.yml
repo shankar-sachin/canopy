@@ -64,8 +64,11 @@ jobs:
             canopy-*.zip*
 
   # Canopy Desktop: a .dmg per Mac architecture, and a .deb and an AppImage
-  # for Linux. Unsigned for now (the app is ad-hoc signed on macOS).
+  # for Linux. Not public yet: releases include it only once the repository
+  # variable DESKTOP_PUBLIC is "true" (after the Mac app is notarized).
+  # Running this workflow by hand always builds it, as a dry run.
   desktop:
+    if: ${{ vars.DESKTOP_PUBLIC == 'true' || github.event_name == 'workflow_dispatch' }}
     strategy:
       fail-fast: false
       matrix:
@@ -149,7 +152,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Nothing to download while the desktop app isn't public.
       - uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           pattern: desktop-*-apple-darwin
           merge-multiple: true
