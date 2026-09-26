@@ -1,11 +1,13 @@
 //! GitHub tabs: state, loading, and turning PRs into the details panel.
 
-use canopy_gh::{Gh, GhStatus, Issue, IssueFilter, Job, Notification, PrFilter, PullRequest, Release, Run};
+use canopy_gh::{
+    Gh, GhStatus, Issue, IssueFilter, Job, Notification, PrFilter, PullRequest, Release, ReviewComment, Run,
+};
 
 use crate::app::{App, Msg};
 use crate::keymap::Screen;
 use crate::ui::util::ago;
-use crate::views::diff::DiffView;
+use crate::views::diff::{DiffView, Note};
 
 #[derive(Default)]
 pub struct GithubState {
@@ -535,12 +537,15 @@ pub fn load_pr_detail(app: &mut App, gen: u64) {
     };
     // Show what we already know right away, then fill in details.
     let width = app.last_diff_width;
-    app.diff = Some(pr_view(&pr, None, width));
+    app.diff = Some(pr_view(&pr, None, &[], width));
     let want_diff = app.github.show_pr_diff;
     app.spawn(async move {
         let detail = gh.pr_view(pr.number).await.map(Box::new).map_err(|e| e.to_string());
         let diff = if want_diff { gh.pr_diff(pr.number).await.ok() } else { None };
-        Msg::PrDetail { gen, detail, diff }
+        // Line comments only matter when the diff is shown under them.
+        let comments =
+            if diff.is_some() { gh.pr_review_comments(pr.number).await.unwrap_or_default() } else { Vec::new() };
+        Msg::PrDetail { gen, detail, diff, comments }
     });
 }
 
@@ -572,8 +577,8 @@ pub fn wrap(text: &str, width: usize) -> Vec<String> {
 }
 
 /// Build the details panel for a PR: header, checks, reviews, body,
-/// comments, and optionally the diff.
-pub fn pr_view(pr: &PullRequest, diff: Option<&str>, width: usize) -> DiffView {
+/// comments, and optionally the diff with review comments under their lines.
+pub fn pr_view(pr: &PullRequest, diff: Option<&str>, comments: &[ReviewComment], width: usize) -> DiffView {
     use canopy_gh::CheckState;
     let mut meta = vec![
         format!("#{} {}", pr.number, pr.title),
@@ -644,7 +649,27 @@ pub fn pr_view(pr: &PullRequest, diff: Option<&str>, width: usize) -> DiffView {
     }
     let files = diff.map(canopy_git::parse::diff::parse).unwrap_or_default();
     let key = format!("pr:{}:{}", pr.number, diff.is_some());
-    DiffView::new(key, format!("#{} {}", pr.number, pr.title), meta, files, None)
+    let notes = line_notes(&files, comments, width);
+    let mut v = DiffView::new(key, format!("#{} {}", pr.number, pr.title), meta, files, None);
+    v.attach_notes(notes);
+    v
+}
+
+/// Turn review comments into notes on diff lines. Comments on lines that
+/// aren't in the diff anymore (outdated) are left out.
+fn line_notes(files: &[canopy_git::FileDiff], comments: &[ReviewComment], width: usize) -> Vec<Note> {
+    comments
+        .iter()
+        .filter_map(|c| {
+            let line = c.line?;
+            let right = c.side != "LEFT";
+            let file = files.iter().position(|f| if right { f.new_path == c.path } else { f.old_path == c.path })?;
+            let mut text = vec![format!("{} · {}", c.user.login, ago(c.created_at))];
+            // Leave room for the line-number gutter and the "│ " bar.
+            text.extend(wrap(c.body.trim(), width.saturating_sub(16)));
+            Some(Note { file, line, right, text })
+        })
+        .collect()
 }
 
 #[cfg(test)]

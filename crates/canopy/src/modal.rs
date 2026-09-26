@@ -177,11 +177,23 @@ pub enum Modal {
 
 #[derive(Debug, Clone)]
 pub enum ComposeFor {
-    NewPullRequest { base: String },
+    NewPullRequest {
+        base: String,
+    },
     NewIssue,
-    NewRelease { tag: String },
+    NewRelease {
+        tag: String,
+    },
     Comment(crate::github::Target),
     Review(u64, canopy_gh::ReviewKind),
+    /// A review comment on one line of a pull request's diff.
+    LineComment {
+        number: u64,
+        commit: String,
+        path: String,
+        line: u32,
+        side: String,
+    },
 }
 
 pub struct Compose {

@@ -740,6 +740,7 @@ fn repo_action(app: &mut App, action: Action) {
             app.set_log_path(Some(path));
             goto(app, Screen::Log);
         }
+        LineComment => line_comment(app),
         Blame => {
             let Some((path, rev)) = target_file(app) else { return };
             open_blame(app, path, rev);
@@ -1282,6 +1283,14 @@ fn submit_compose(app: &mut App, c: &crate::modal::Compose) -> Result<(), String
                 }
             });
         }
+        ComposeFor::LineComment { number, commit, path, line, side } => {
+            if body.is_empty() {
+                return Err("Write a comment first".into());
+            }
+            app.run_op(format!("Comment on {path}:{line}"), Then::GitHub, async move {
+                gh.pr_line_comment(number, &commit, &path, line, &side, &body).await
+            });
+        }
         ComposeFor::Review(n, kind) => {
             if body.is_empty() && kind != ReviewKind::Approve {
                 return Err("Say what needs to change (a review needs a message)".into());
@@ -1290,6 +1299,33 @@ fn submit_compose(app: &mut App, c: &crate::modal::Compose) -> Result<(), String
         }
     }
     Ok(())
+}
+
+/// `C` on a line of a pull request's diff: comment on that line.
+fn line_comment(app: &mut App) {
+    let pr = app.github.pr_detail.as_ref().filter(|_| app.screen == Screen::Pulls);
+    let Some((v, pr)) = app.diff.as_ref().zip(pr).filter(|(v, _)| !v.files.is_empty()) else {
+        app.toast(Level::Info, "Line comments work on a pull request's diff (Pull requests, then D)");
+        return;
+    };
+    let Some((fi, line, right)) = v.line_target() else {
+        app.toast(Level::Info, "Move to a line of the diff to comment on it");
+        return;
+    };
+    if pr.head_ref_oid.is_empty() {
+        app.toast(Level::Warn, "Still loading the pull request, try again in a moment");
+        return;
+    }
+    let f = &v.files[fi];
+    let path = if right { f.new_path.clone() } else { f.old_path.clone() };
+    let purpose = crate::modal::ComposeFor::LineComment {
+        number: pr.number,
+        commit: pr.head_ref_oid.clone(),
+        path: path.clone(),
+        line,
+        side: if right { "RIGHT" } else { "LEFT" }.to_string(),
+    };
+    app.modal = Modal::Compose(crate::modal::Compose::new(format!("Comment on {path}:{line}"), false, purpose));
 }
 
 /// The file `L`/`B` act on, and the revision to look at (`None` = working tree).

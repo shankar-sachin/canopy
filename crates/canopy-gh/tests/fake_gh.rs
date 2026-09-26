@@ -30,7 +30,7 @@ case "$1 $2" in
   "pr merge") echo "merged" ;;
   "release list") cat "{f}/release_list.json" ;;
   "release view") cat "{f}/release_view.json" ;;
-  "api --method") case "$*" in *GET*notifications*) cat "{f}/notifications.json" ;; *) : ;; esac ;;
+  "api --method") case "$*" in *GET*notifications*) cat "{f}/notifications.json" ;; *GET*pulls*comments*) cat "{f}/review_comments.json" ;; *) : ;; esac ;;
   *) : ;;
 esac
 "#,
@@ -173,4 +173,21 @@ async fn releases() {
         log.contains(&"release create v1.4.0 --title Acme v1.4.0 --notes Big release --draft".to_string()),
         "{log:?}"
     );
+}
+
+#[tokio::test]
+async fn review_comments() {
+    let dir = TempDir::new().unwrap();
+    let gh = Gh::new(dir.path(), Some(fake_gh(dir.path(), true)));
+    let c = gh.pr_review_comments(12).await.unwrap();
+    assert_eq!(c.len(), 2);
+    assert_eq!((c[0].path.as_str(), c[0].line, c[0].side.as_str()), ("csv.rs", Some(1), "RIGHT"));
+    assert_eq!(c[1].line, None, "outdated comment");
+    gh.pr_line_comment(12, "abc123", "csv.rs", 1, "RIGHT", "Nice one").await.unwrap();
+    let log = calls(dir.path());
+    assert!(
+        log.contains(&"api --method GET repos/{owner}/{repo}/pulls/12/comments -F per_page=100".to_string()),
+        "{log:?}"
+    );
+    assert!(log.contains(&"api --method POST repos/{owner}/{repo}/pulls/12/comments -f commit_id=abc123 -f path=csv.rs -F line=1 -f side=RIGHT -f body=Nice one".to_string()), "{log:?}");
 }

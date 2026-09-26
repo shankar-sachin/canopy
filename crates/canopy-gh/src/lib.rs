@@ -54,7 +54,7 @@ pub struct Gh {
 const PR_FIELDS: &str = "number,title,author,headRefName,baseRefName,isDraft,state,url,updatedAt,\
 reviewDecision,statusCheckRollup,labels,additions,deletions";
 const PR_DETAIL_FIELDS: &str = "number,title,author,headRefName,baseRefName,isDraft,state,url,updatedAt,\
-reviewDecision,statusCheckRollup,labels,additions,deletions,body,reviews,comments,mergeable";
+reviewDecision,statusCheckRollup,labels,additions,deletions,body,reviews,comments,mergeable,headRefOid";
 const ISSUE_FIELDS: &str = "number,title,author,state,labels,url,updatedAt,comments";
 const ISSUE_DETAIL_FIELDS: &str = "number,title,author,state,labels,url,updatedAt,comments,body";
 const RELEASE_FIELDS: &str = "tagName,name,publishedAt,createdAt,isLatest,isDraft,isPrerelease";
@@ -188,6 +188,35 @@ impl Gh {
     pub async fn pr_comment(&self, number: u64, body: &str) -> Result<Output> {
         let n = number.to_string();
         self.run(&["pr", "comment", &n, "--body", body]).await
+    }
+
+    /// Review comments on a PR's diff lines.
+    pub async fn pr_review_comments(&self, number: u64) -> Result<Vec<ReviewComment>> {
+        let path = format!("repos/{{owner}}/{{repo}}/pulls/{number}/comments");
+        self.json(&["api", "--method", "GET", &path, "-F", "per_page=100"]).await
+    }
+
+    /// Comment on one line of a PR's diff. `side` is "RIGHT" for added or
+    /// unchanged lines (new line numbers) and "LEFT" for removed lines.
+    pub async fn pr_line_comment(
+        &self,
+        number: u64,
+        commit: &str,
+        path: &str,
+        line: u32,
+        side: &str,
+        body: &str,
+    ) -> Result<Output> {
+        let api = format!("repos/{{owner}}/{{repo}}/pulls/{number}/comments");
+        let (commit, path, line, side, body) = (
+            format!("commit_id={commit}"),
+            format!("path={path}"),
+            format!("line={line}"),
+            format!("side={side}"),
+            format!("body={body}"),
+        );
+        self.run(&["api", "--method", "POST", &api, "-f", &commit, "-f", &path, "-F", &line, "-f", &side, "-f", &body])
+            .await
     }
 
     pub async fn pr_merge(&self, number: u64, method: MergeMethod, delete_branch: bool) -> Result<Output> {
