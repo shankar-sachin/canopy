@@ -7,6 +7,7 @@
 // No console window behind the app on Windows release builds.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod actions;
 mod overview;
 mod recent;
 
@@ -18,7 +19,7 @@ use overview::Overview;
 use recent::RecentRepo;
 
 #[derive(Default)]
-struct AppState {
+pub(crate) struct AppState {
     git: Mutex<Option<Git>>,
     /// A repo path given on the command line, opened at startup.
     initial: Option<String>,
@@ -26,9 +27,9 @@ struct AppState {
     smoke: bool,
 }
 
-type Res<T> = Result<T, String>;
+pub(crate) type Res<T> = Result<T, String>;
 
-async fn current(state: &AppState) -> Res<Git> {
+pub(crate) async fn current(state: &AppState) -> Res<Git> {
     state.git.lock().await.clone().ok_or_else(|| "No repository is open".to_string())
 }
 
@@ -129,6 +130,19 @@ fn main() {
             open_repo,
             close_repo,
             overview,
+            actions::file_diff,
+            actions::stage,
+            actions::unstage,
+            actions::stage_all,
+            actions::unstage_all,
+            actions::discard,
+            actions::apply_lines,
+            actions::commit,
+            actions::last_message,
+            actions::take_side,
+            actions::op_continue,
+            actions::op_abort,
+            actions::sync,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Canopy");
