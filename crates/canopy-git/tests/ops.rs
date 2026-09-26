@@ -402,3 +402,38 @@ async fn bisect_finds_the_bad_commit() {
     assert_eq!(git.state(), RepoState::Clean);
     assert_eq!(git.log(&LogQuery::default()).await.unwrap()[0].subject, "c8");
 }
+
+#[tokio::test]
+async fn submodules_status_and_update() {
+    // Local-path submodule clones are blocked by default since git 2.38.1;
+    // allow them for this test (passed down to git's child processes).
+    let lib = repo();
+    write(&lib, "lib.txt", "v1\n");
+    sh(lib.path(), &["add", "-A"]);
+    sh(lib.path(), &["commit", "-qm", "lib v1"]);
+
+    let dir = repo();
+    let allow = ["-c", "protocol.file.allow=always"];
+    let lib_path = lib.path().to_str().unwrap();
+    sh(dir.path(), &[&allow[..], &["submodule", "add", "-q", lib_path, "vendor/lib"]].concat());
+    sh(dir.path(), &["commit", "-qm", "add submodule"]);
+    let git = Git::open(dir.path()).await.unwrap();
+
+    let subs = git.submodules().await.unwrap();
+    assert_eq!(subs.len(), 1);
+    assert_eq!(subs[0].path, "vendor/lib");
+    assert_eq!(subs[0].state, canopy_git::parse::submodule::SubmoduleState::InSync);
+
+    // Move the submodule to a new commit: it shows as modified; update
+    // puts it back to the recorded commit.
+    let sub = dir.path().join("vendor/lib");
+    std::fs::write(sub.join("lib.txt"), "v2\n").unwrap();
+    sh(&sub, &["-c", "user.name=T", "-c", "user.email=t@t.io", "commit", "-qam", "v2"]);
+    assert_eq!(git.submodules().await.unwrap()[0].state, canopy_git::parse::submodule::SubmoduleState::Modified);
+    git.submodule_update(Some("vendor/lib")).await.unwrap();
+    assert_eq!(git.submodules().await.unwrap()[0].state, canopy_git::parse::submodule::SubmoduleState::InSync);
+
+    // A repo without submodules is cheap and empty.
+    let plain = repo();
+    assert!(Git::open(plain.path()).await.unwrap().submodules().await.unwrap().is_empty());
+}

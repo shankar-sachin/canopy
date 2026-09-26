@@ -184,6 +184,33 @@ fn remote_view(app: &App, r: &canopy_git::Remote) -> DiffView {
     DiffView::new(format!("remote:{}", r.name), format!("remote {}", r.name), meta, Vec::new(), None)
 }
 
+fn submodule_view(s: &canopy_git::parse::submodule::Submodule) -> DiffView {
+    use canopy_git::parse::submodule::SubmoduleState::*;
+    // Short lines: this panel doesn't wrap.
+    let state: &[&str] = match s.state {
+        InSync => &["Checked out at the commit this repo records."],
+        Uninitialized => &["Not checked out yet.", "Press u to clone and check it out."],
+        Modified => &[
+            "Checked out at a different commit than this repo records.",
+            "Press u to go back to the recorded commit, or commit",
+            "the new pointer from Changes to keep it.",
+        ],
+        Conflict => &["Has a merge conflict over which commit to use."],
+    };
+    let mut meta = vec![
+        format!("Submodule {}", s.path),
+        String::new(),
+        format!(
+            "Commit:  {}{}",
+            s.oid.get(..10).unwrap_or(&s.oid),
+            s.describe.as_ref().map(|d| format!(" ({d})")).unwrap_or_default()
+        ),
+        String::new(),
+    ];
+    meta.extend(state.iter().map(|l| l.to_string()));
+    DiffView::new(format!("submodule:{}", s.path), format!("submodule {}", s.path), meta, Vec::new(), None)
+}
+
 fn worktree_view(app: &App, w: &canopy_git::parse::worktree::Worktree) -> DiffView {
     let current = app.git.as_ref().is_some_and(|g| g.repo.root == w.path);
     let mut meta = vec![
@@ -243,6 +270,10 @@ pub fn load_for_selection(app: &mut App) {
             }
             RefsView::Worktrees => {
                 app.diff = app.selected_worktree().map(|w| worktree_view(app, w));
+                return;
+            }
+            RefsView::Submodules => {
+                app.diff = app.selected_submodule().map(submodule_view);
                 return;
             }
         },

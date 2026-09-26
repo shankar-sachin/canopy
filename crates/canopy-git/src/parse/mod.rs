@@ -7,6 +7,7 @@ pub mod diff;
 pub mod log;
 pub mod refs;
 pub mod status;
+pub mod submodule;
 pub mod worktree;
 
 /// Field separator used in our custom `--format` strings.

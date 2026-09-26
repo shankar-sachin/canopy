@@ -590,7 +590,56 @@ fn branches(f: &mut Frame, area: Rect, app: &mut App) {
         RefsView::Tags => tags(f, area, app),
         RefsView::Remotes => remotes(f, area, app),
         RefsView::Worktrees => worktrees(f, area, app),
+        RefsView::Submodules => submodules(f, area, app),
     }
+}
+
+fn submodules(f: &mut Frame, area: Rect, app: &mut App) {
+    use canopy_git::parse::submodule::SubmoduleState::*;
+    let theme = app.theme.clone();
+    let (la, da) = split(area, 50);
+    let focused = app.focus == Focus::List;
+    let title = refs_title(app, &theme, format!("{} submodules", app.data.submodules.len()));
+    if app.data.submodules.is_empty() {
+        let lines = vec![
+            Line::styled("No submodules.", theme.muted()),
+            Line::styled("A submodule is another git repository embedded at a", theme.muted()),
+            Line::styled("pinned commit inside this one (added with", theme.muted()),
+            Line::styled("`git submodule add <url> <path>`).", theme.muted()),
+        ];
+        f.render_widget(Paragraph::new(lines).block(panel(&theme, title, focused)), la);
+        diff::draw(f, da, app);
+        return;
+    }
+    let rows: Vec<Row> = app
+        .data
+        .submodules
+        .iter()
+        .map(|s| {
+            let state = match s.state {
+                InSync => Span::styled("✓ in sync", theme.fg(theme.added)),
+                Uninitialized => Span::styled("not checked out", theme.muted()),
+                Modified => Span::styled("● moved", theme.fg(theme.modified)),
+                Conflict => Span::styled("! conflict", theme.fg(theme.conflict)),
+            };
+            Row::new(vec![
+                Cell::from(Span::styled(s.path.clone(), theme.fg(theme.fg).add_modifier(Modifier::BOLD))),
+                Cell::from(Span::styled(s.oid.get(..7).unwrap_or(&s.oid).to_string(), theme.fg(theme.hash))),
+                Cell::from(Span::styled(s.describe.clone().unwrap_or_default(), theme.fg(theme.tag))),
+                Cell::from(state),
+            ])
+        })
+        .collect();
+    let table =
+        Table::new(rows, [Constraint::Fill(1), Constraint::Length(8), Constraint::Length(16), Constraint::Length(16)])
+            .column_spacing(1)
+            .block(panel(&theme, title, focused))
+            .row_highlight_style(if focused { theme.selected() } else { Style::default().bg(theme.selection_bg) });
+    let sel = app.selected(Screen::Branches);
+    let mut st = TableState::default().with_offset(app.list(Screen::Branches).offset()).with_selected(Some(sel));
+    f.render_stateful_widget(table, la, &mut st);
+    *app.list(Screen::Branches).offset_mut() = st.offset();
+    diff::draw(f, da, app);
 }
 
 fn worktrees(f: &mut Frame, area: Rect, app: &mut App) {
