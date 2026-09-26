@@ -581,8 +581,7 @@ async function smoke(path) {
     const github = gh.status?.state === "ready" ? `${gh.prs.list?.length ?? "?"} open pull requests` : `setup card (${gh.status?.state})`;
     const text = [...home, `changes: ${files.join(", ") || "(clean)"}`, `diff lines: ${lines}`,
       `history: ${commits} commits, ${graphs} graph rows, details ${detail ? "loaded" : "missing"}`,
-      `branches: ${branches} rows`, `stash: ${document.querySelectorAll(".srow").length} stashes`, `github: ${github}`].join("
-");
+      `branches: ${branches} rows`, `stash: ${document.querySelectorAll(".srow").length} stashes`, `github: ${github}`].join("\n");
     const ok = !!home.length && changesOk
       && commits > 0 && graphs === commits && detail > 0 && branches > 0 && stash > 0
       && !!gh.status && (gh.status.state !== "ready" || !!gh.prs.list);
