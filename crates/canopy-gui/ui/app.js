@@ -551,6 +551,7 @@ async function smoke(path) {
     for (let i = 0; i < 50 && !document.querySelector(".dl, .diff-body .diff-empty, .clean"); i++) await new Promise((r) => setTimeout(r, 100));
     const files = grab(".frow .fname");
     const lines = document.querySelectorAll(".dl").length;
+    const changesOk = files.length ? lines > 0 : !!document.querySelector(".clean");
     const wait = async (sel) => {
       for (let i = 0; i < 50 && !document.querySelector(sel); i++) await new Promise((r) => setTimeout(r, 100));
       return document.querySelectorAll(sel).length;
@@ -568,7 +569,7 @@ async function smoke(path) {
     const text = [...home, `changes: ${files.join(", ") || "(clean)"}`, `diff lines: ${lines}`,
       `history: ${commits} commits, ${graphs} graph rows, details ${detail ? "loaded" : "missing"}`,
       `branches: ${branches} rows`, `stash: ${document.querySelectorAll(".srow").length} stashes`].join("\n");
-    const ok = !!home.length && (files.length ? lines > 0 : !!document.querySelector(".clean"))
+    const ok = !!home.length && changesOk
       && commits > 0 && graphs === commits && detail > 0 && branches > 0 && stash > 0;
     await invoke("smoke_report", { ok, text });
   } catch (e) {
