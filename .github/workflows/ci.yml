@@ -32,3 +32,14 @@ jobs:
       - run: cargo test --workspace --no-fail-fast
       - name: Run the binary
         run: cargo run --release -- --version
+
+  # Releases ship a Windows on Arm build; make sure it still builds.
+  windows-arm64:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --locked --target aarch64-pc-windows-msvc -p canopy-git-tui

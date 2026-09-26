@@ -34,13 +34,19 @@ cargo install --locked --path crates/canopy
 
 Canopy needs `git` on your `PATH`.
 
-**On Windows**, in PowerShell:
+**On Windows** (x64 and Arm), with winget (installs git too):
+
+```powershell
+winget install SachinShankar.Canopy
+```
+
+or with the install script, in PowerShell:
 
 ```powershell
 irm https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts/install.ps1 | iex
 ```
 
-or download `canopy-<version>-x86_64-pc-windows-msvc.zip` from
+or download `canopy-<version>-x86_64-pc-windows-msvc.zip` (or `aarch64-…` for Arm) from
 [Releases](https://github.com/shankar-sachin/canopy/releases) and put
 `canopy.exe` on your `PATH`.
 Windows Terminal is recommended. Full steps are on the

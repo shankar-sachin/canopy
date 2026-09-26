@@ -76,7 +76,14 @@
 
 <h2 id="windows">Windows</h2>
 <p>Canopy runs in <b>Windows Terminal</b> (recommended) and in PowerShell. Homebrew is for macOS and Linux, so on Windows install it one of these ways.</p>
-<h3>1. Install git (and optionally the GitHub CLI)</h3>
+<h3>With winget</h3>
+<p>winget installs Canopy (x64 or Arm), puts <code>canopy</code> on your <code>PATH</code>, and installs git too if you don't have it:</p>
+<pre class="code"><span class="p">PS&gt; </span>winget install SachinShankar.Canopy<button class="copy" data-copy-text="winget install SachinShankar.Canopy" type="button">Copy</button></pre>
+<p>Update later with <code>winget upgrade SachinShankar.Canopy</code>. For the GitHub tabs, also install and log in to the GitHub CLI:</p>
+<pre class="code"><span class="p">PS&gt; </span>winget install --id GitHub.cli -e
+<span class="p">PS&gt; </span>gh auth login</pre>
+<p>Open a new terminal, then run <code>canopy</code> inside any repository. If winget doesn't find the package yet (new versions take a few days to be approved), use the install script below.</p>
+<h3>1. Or: install git (and optionally the GitHub CLI)</h3>
 <pre class="code"><span class="p">PS&gt; </span>winget install --id Git.Git -e
 <span class="p">PS&gt; </span>winget install --id GitHub.cli -e    <span class="m"># only for the GitHub tabs</span>
 <span class="p">PS&gt; </span>gh auth login</pre>
@@ -85,7 +92,7 @@
 <pre class="code"><span class="p">PS&gt; </span>irm https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts/install.ps1 | iex<button class="copy" data-copy-text="irm https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts/install.ps1 | iex" type="button">Copy</button></pre>
 <p>Open a new terminal, then run <code>canopy</code>. Or do it by hand:</p>
 <h3>2a. Download Canopy</h3>
-<p>From version 1.0.0, every <a href="https://github.com/shankar-sachin/canopy/releases">release</a> includes <code>canopy-&lt;version&gt;-x86_64-pc-windows-msvc.zip</code>. Unzip it and put <code>canopy.exe</code> somewhere on your <code>PATH</code>, for example:</p>
+<p>Every <a href="https://github.com/shankar-sachin/canopy/releases">release</a> includes <code>canopy-&lt;version&gt;-x86_64-pc-windows-msvc.zip</code>, and from 1.0.1 <code>canopy-&lt;version&gt;-aarch64-pc-windows-msvc.zip</code> for Windows on Arm. Unzip it and put <code>canopy.exe</code> somewhere on your <code>PATH</code>, for example:</p>
 <pre class="code"><span class="m"># in PowerShell, from the folder you unzipped</span>
 <span class="p">PS&gt; </span>New-Item -ItemType Directory -Force "$env:USERPROFILE\bin" | Out-Null
 <span class="p">PS&gt; </span>Copy-Item .\canopy.exe "$env:USERPROFILE\bin\"
@@ -94,7 +101,7 @@
 <h3>2b. Or build it with Cargo</h3>
 <pre class="code"><span class="p">PS&gt; </span>winget install --id Rustlang.Rustup -e
 <span class="p">PS&gt; </span>cargo install --locked --git https://github.com/shankar-sachin/canopy canopy-git-tui</pre>
-<div class="note"><b>On Windows:</b> the config file is <code>%USERPROFILE%\.config\canopy\config.toml</code>. "alt" shortcuts use the Alt key. Custom commands run with <code>cmd /C</code>, and <kbd>e</kbd> opens files in the editor set in <code>VISUAL</code> or <code>EDITOR</code> (for example <code>code --wait</code>).</div>
+<div class="note"><b>On Windows:</b> the config file is <code>%USERPROFILE%\.config\canopy\config.toml</code>. "alt" shortcuts use the Alt key. Custom commands run with <code>cmd /C</code>, <kbd>e</kbd> opens files in the editor set in <code>VISUAL</code> or <code>EDITOR</code> (for example <code>code --wait</code>), and teach mode shows commands quoted for PowerShell.</div>
 
 <h2 id="first">First run</h2>
 <p>The first time, Canopy shows a short welcome with the keys that matter and writes a starter config. From then on:</p>
