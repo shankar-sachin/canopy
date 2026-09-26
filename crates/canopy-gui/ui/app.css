@@ -509,3 +509,7 @@ html[data-theme="light"] .dl.add .code, html[data-theme="light"] .dl.add .sign {
 .about h3 { margin: 10px 0 4px; }
 .about p { color: var(--muted); }
 .about .row-btns { justify-content: center; margin: 16px 0; }
+.all-clean { padding: 48px 32px; text-align: center; color: var(--muted); }
+.all-clean b { color: var(--text); font-size: 15px; }
+.all-clean p { margin: 8px 0 16px; }
+.all-clean .oid { font: 12px var(--mono); color: var(--amber); }
