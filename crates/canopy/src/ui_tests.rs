@@ -1110,7 +1110,8 @@ async fn export_preview_frames() {
     let page = |frame: &str| {
         format!(
             "<!doctype html><meta charset=utf-8><link rel=stylesheet href=\"https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap\">\
-             <style>body{{margin:0;background:#101612}}pre{{margin:0;padding:14px;font:14px/1.3 'JetBrains Mono',monospace;color:#d6e2d6}}</style>{frame}"
+             <style>body{{margin:0;background:#101612}}pre{{margin:0;padding:14px;font:14px/1.25 'JetBrains Mono',ui-monospace,Menlo,monospace;color:#d6e2d6;white-space:pre}}\
+             i.g{{font-style:normal;display:inline-block;width:1ch;text-align:center;vertical-align:top}}</style><pre>{frame}</pre>"
         )
     };
     let dir = demo_repo();
