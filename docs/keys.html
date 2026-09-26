@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keys · Canopy</title>
+<meta name="description" content="Every Canopy key, generated from the app itself.">
+<meta property="og:title" content="Keys · Canopy">
+<meta property="og:description" content="Every Canopy key, generated from the app itself.">
+<meta name="theme-color" content="#0b100c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌳</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+
+<nav class="top" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="leaf" aria-hidden="true">🌳</span> canopy</a>
+    <div class="links">
+      <a href="features.html" class="hide-sm">Features</a>
+      <a href="github.html" class="hide-sm">GitHub</a>
+      <a href="keys.html" class="hide-sm">Keys</a>
+      <a href="changelog.html" class="hide-sm">Changelog</a>
+      <a href="get-started.html">Get started</a>
+    </div>
+    <a class="gh-btn" href="https://github.com/shankar-sachin/canopy"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> GitHub</a>
+  </div>
+</nav>
+
+<header class="page-head">
+  <div class="wrap">
+    <div class="eyebrow">Reference</div>
+    <h1>Every key.</h1>
+    <p class="lede">Generated from Canopy's own key tables, so it always matches the app. Screen keys take priority over the global ones. Remap anything with the <code>[keys]</code> table in your config, using the names in the last column.</p>
+  </div>
+</header>
+<main class="wrap doc">
+  <aside class="toc"><b>On this page</b><a href="#k-global">Everywhere</a><a href="#k-status">Changes</a><a href="#k-diff">Diff panel</a><a href="#k-conflict">Conflict panel</a><a href="#k-log">History</a><a href="#k-branches">Branches</a><a href="#k-tags">Tags</a><a href="#k-remotes">Remotes</a><a href="#k-worktrees">Worktrees</a><a href="#k-submodules">Submodules</a><a href="#k-stash">Stash</a><a href="#k-workspace">Workspace</a><a href="#k-reflog">Reflog</a><a href="#k-pulls">Pull requests</a><a href="#k-issues">Issues</a><a href="#k-runs">Actions</a></aside>
+  <article class="prose">
+<!-- KEYS:START -->
+<h2 id="k-global">Everywhere</h2>
+<table class="ref">
+<tr><td><kbd>?</kbd></td><td>help</td><td><code>help</code></td></tr>
+<tr><td><kbd>:</kbd> <kbd>^p</kbd></td><td>command palette</td><td><code>palette</code></td></tr>
+<tr><td><kbd>q</kbd> <kbd>^c</kbd></td><td>quit</td><td><code>quit</code></td></tr>
+<tr><td><kbd>1</kbd></td><td>go to home</td><td><code>goto_home</code></td></tr>
+<tr><td><kbd>2</kbd></td><td>go to changes</td><td><code>goto_changes</code></td></tr>
+<tr><td><kbd>3</kbd></td><td>go to history</td><td><code>goto_history</code></td></tr>
+<tr><td><kbd>4</kbd></td><td>go to branches</td><td><code>goto_branches</code></td></tr>
+<tr><td><kbd>5</kbd></td><td>go to stash</td><td><code>goto_stash</code></td></tr>
+<tr><td><kbd>6</kbd></td><td>go to workspace</td><td><code>goto_workspace</code></td></tr>
+<tr><td><kbd>7</kbd></td><td>go to reflog</td><td><code>goto_reflog</code></td></tr>
+<tr><td><kbd>8</kbd></td><td>go to pull requests</td><td><code>goto_pull requests</code></td></tr>
+<tr><td><kbd>9</kbd></td><td>go to issues</td><td><code>goto_issues</code></td></tr>
+<tr><td><kbd>0</kbd></td><td>go to actions</td><td><code>goto_actions</code></td></tr>
+<tr><td><kbd>tab</kbd></td><td>next tab</td><td><code>next_screen</code></td></tr>
+<tr><td><kbd>shift-tab</kbd></td><td>previous tab</td><td><code>prev_screen</code></td></tr>
+<tr><td><kbd>^r</kbd></td><td>refresh</td><td><code>refresh</code></td></tr>
+<tr><td><kbd>c</kbd></td><td>commit</td><td><code>commit</code></td></tr>
+<tr><td><kbd>f</kbd></td><td>fetch</td><td><code>fetch</code></td></tr>
+<tr><td><kbd>p</kbd></td><td>pull</td><td><code>pull</code></td></tr>
+<tr><td><kbd>P</kbd></td><td>push</td><td><code>push</code></td></tr>
+<tr><td><kbd>z</kbd></td><td>undo last action</td><td><code>undo</code></td></tr>
+<tr><td><kbd>S</kbd></td><td>stash changes</td><td><code>stash_push</code></td></tr>
+<tr><td><kbd>b</kbd></td><td>bisect: find the commit that broke something</td><td><code>bisect</code></td></tr>
+<tr><td><kbd>!</kbd></td><td>run git command</td><td><code>raw_git</code></td></tr>
+<tr><td><kbd>T</kbd></td><td>toggle teach mode</td><td><code>toggle_teach</code></td></tr>
+<tr><td><kbd>^t</kbd></td><td>cycle theme</td><td><code>cycle_theme</code></td></tr>
+<tr><td><kbd>k</kbd> <kbd>↑</kbd></td><td>up</td><td><code>up</code></td></tr>
+<tr><td><kbd>j</kbd> <kbd>↓</kbd></td><td>down</td><td><code>down</code></td></tr>
+<tr><td><kbd>^u</kbd> <kbd>pageup</kbd></td><td>page up</td><td><code>page_up</code></td></tr>
+<tr><td><kbd>^d</kbd> <kbd>pagedown</kbd></td><td>page down</td><td><code>page_down</code></td></tr>
+<tr><td><kbd>g</kbd> <kbd>home</kbd></td><td>top</td><td><code>top</code></td></tr>
+<tr><td><kbd>G</kbd> <kbd>end</kbd></td><td>bottom</td><td><code>bottom</code></td></tr>
+<tr><td><kbd>esc</kbd></td><td>back</td><td><code>back</code></td></tr>
+</table>
+<h2 id="k-status">Changes</h2>
+<table class="ref">
+<tr><td><kbd>space</kbd></td><td>stage/unstage</td><td><code>toggle_stage</code></td></tr>
+<tr><td><kbd>a</kbd></td><td>stage/unstage all</td><td><code>stage_all</code></td></tr>
+<tr><td><kbd>d</kbd></td><td>discard changes</td><td><code>discard</code></td></tr>
+<tr><td><kbd>↵</kbd> <kbd>l</kbd></td><td>open</td><td><code>enter</code></td></tr>
+<tr><td><kbd>A</kbd></td><td>amend last commit</td><td><code>amend</code></td></tr>
+<tr><td><kbd>e</kbd></td><td>open in editor</td><td><code>open_editor</code></td></tr>
+<tr><td><kbd>i</kbd></td><td>add to .gitignore</td><td><code>ignore</code></td></tr>
+<tr><td><kbd>o</kbd></td><td>resolve: keep ours</td><td><code>take_ours</code></td></tr>
+<tr><td><kbd>t</kbd></td><td>resolve: take theirs</td><td><code>take_theirs</code></td></tr>
+<tr><td><kbd>C</kbd></td><td>continue merge/rebase</td><td><code>continue_op</code></td></tr>
+<tr><td><kbd>X</kbd></td><td>abort merge/rebase</td><td><code>abort_op</code></td></tr>
+<tr><td><kbd>L</kbd></td><td>history of this file</td><td><code>file_history</code></td></tr>
+<tr><td><kbd>B</kbd></td><td>blame: who changed each line</td><td><code>blame</code></td></tr>
+</table>
+<h2 id="k-diff">Diff panel (after ↵)</h2>
+<table class="ref">
+<tr><td><kbd>space</kbd></td><td>stage/unstage line(s)</td><td><code>stage_line</code></td></tr>
+<tr><td><kbd>↵</kbd></td><td>stage/unstage hunk</td><td><code>stage_hunk</code></td></tr>
+<tr><td><kbd>v</kbd></td><td>select range</td><td><code>range_select</code></td></tr>
+<tr><td><kbd>n</kbd> <kbd>]</kbd></td><td>next hunk</td><td><code>next_hunk</code></td></tr>
+<tr><td><kbd>N</kbd> <kbd>[</kbd></td><td>previous hunk</td><td><code>prev_hunk</code></td></tr>
+<tr><td><kbd>s</kbd></td><td>toggle split view</td><td><code>toggle_side_by_side</code></td></tr>
+<tr><td><kbd>h</kbd> <kbd>←</kbd></td><td>back</td><td><code>back</code></td></tr>
+<tr><td><kbd>L</kbd></td><td>history of this file</td><td><code>file_history</code></td></tr>
+<tr><td><kbd>B</kbd></td><td>blame: who changed each line</td><td><code>blame</code></td></tr>
+</table>
+<h2 id="k-conflict">Conflict panel</h2>
+<table class="ref">
+<tr><td><kbd>o</kbd></td><td>keep ours for this conflict</td><td><code>keep_ours</code></td></tr>
+<tr><td><kbd>t</kbd></td><td>take theirs for this conflict</td><td><code>keep_theirs</code></td></tr>
+<tr><td><kbd>b</kbd></td><td>keep both (ours, then theirs)</td><td><code>keep_both</code></td></tr>
+<tr><td><kbd>j</kbd> <kbd>↓</kbd> <kbd>n</kbd></td><td>next conflict</td><td><code>next_conflict</code></td></tr>
+<tr><td><kbd>k</kbd> <kbd>↑</kbd> <kbd>N</kbd></td><td>previous conflict</td><td><code>prev_conflict</code></td></tr>
+<tr><td><kbd>u</kbd></td><td>restore conflict markers</td><td><code>restore_conflict</code></td></tr>
+<tr><td><kbd>e</kbd></td><td>open in editor</td><td><code>open_editor</code></td></tr>
+<tr><td><kbd>h</kbd> <kbd>←</kbd></td><td>back</td><td><code>back</code></td></tr>
+</table>
+<h2 id="k-log">History</h2>
+<table class="ref">
+<tr><td><kbd>↵</kbd> <kbd>l</kbd></td><td>open</td><td><code>enter</code></td></tr>
+<tr><td><kbd>space</kbd></td><td>checkout commit</td><td><code>checkout_commit</code></td></tr>
+<tr><td><kbd>C</kbd></td><td>cherry-pick</td><td><code>cherry_pick</code></td></tr>
+<tr><td><kbd>t</kbd></td><td>revert commit</td><td><code>revert</code></td></tr>
+<tr><td><kbd>r</kbd></td><td>reset to commit</td><td><code>reset_menu</code></td></tr>
+<tr><td><kbd>i</kbd></td><td>interactive rebase from here</td><td><code>rebase_interactive</code></td></tr>
+<tr><td><kbd>n</kbd></td><td>new branch here</td><td><code>branch_from_commit</code></td></tr>
+<tr><td><kbd>T</kbd></td><td>tag commit</td><td><code>tag_commit</code></td></tr>
+<tr><td><kbd>F</kbd></td><td>fixup staged into commit</td><td><code>fixup_commit</code></td></tr>
+<tr><td><kbd>y</kbd></td><td>copy hash</td><td><code>copy_hash</code></td></tr>
+<tr><td><kbd>/</kbd></td><td>search</td><td><code>search</code></td></tr>
+</table>
+<h2 id="k-branches">Branches</h2>
+<table class="ref">
+<tr><td><kbd>space</kbd> <kbd>↵</kbd></td><td>checkout</td><td><code>checkout</code></td></tr>
+<tr><td><kbd>n</kbd></td><td>new branch</td><td><code>new_branch</code></td></tr>
+<tr><td><kbd>d</kbd></td><td>delete branch</td><td><code>delete_branch</code></td></tr>
+<tr><td><kbd>M</kbd></td><td>merge into current</td><td><code>merge</code></td></tr>
+<tr><td><kbd>r</kbd></td><td>rebase current onto</td><td><code>rebase</code></td></tr>
+<tr><td><kbd>R</kbd></td><td>rename branch</td><td><code>rename_branch</code></td></tr>
+<tr><td><kbd>u</kbd></td><td>set upstream</td><td><code>set_upstream</code></td></tr>
+<tr><td><kbd>/</kbd></td><td>search</td><td><code>search</code></td></tr>
+<tr><td><kbd>]</kbd></td><td>next view (branches/tags/remotes)</td><td><code>next_refs_view</code></td></tr>
+<tr><td><kbd>[</kbd></td><td>previous view (branches/tags/remotes)</td><td><code>prev_refs_view</code></td></tr>
+</table>
+<h2 id="k-tags">Tags</h2>
+<table class="ref">
+<tr><td><kbd>space</kbd> <kbd>↵</kbd></td><td>checkout tag</td><td><code>checkout_tag</code></td></tr>
+<tr><td><kbd>n</kbd></td><td>new tag at HEAD</td><td><code>new_tag</code></td></tr>
+<tr><td><kbd>d</kbd></td><td>delete tag</td><td><code>delete_tag</code></td></tr>
+<tr><td><kbd>P</kbd></td><td>push tag</td><td><code>push_tag</code></td></tr>
+<tr><td><kbd>]</kbd></td><td>next view (branches/tags/remotes)</td><td><code>next_refs_view</code></td></tr>
+<tr><td><kbd>[</kbd></td><td>previous view (branches/tags/remotes)</td><td><code>prev_refs_view</code></td></tr>
+<tr><td><kbd>/</kbd></td><td>search</td><td><code>search</code></td></tr>
+</table>
+<h2 id="k-remotes">Remotes</h2>
+<table class="ref">
+<tr><td><kbd>f</kbd></td><td>fetch this remote</td><td><code>fetch_remote</code></td></tr>
+<tr><td><kbd>n</kbd></td><td>add remote</td><td><code>add_remote</code></td></tr>
+<tr><td><kbd>d</kbd></td><td>remove remote</td><td><code>remove_remote</code></td></tr>
+<tr><td><kbd>e</kbd></td><td>change remote URL</td><td><code>edit_remote_url</code></td></tr>
+<tr><td><kbd>R</kbd></td><td>rename remote</td><td><code>rename_remote</code></td></tr>
+<tr><td><kbd>]</kbd></td><td>next view (branches/tags/remotes)</td><td><code>next_refs_view</code></td></tr>
+<tr><td><kbd>[</kbd></td><td>previous view (branches/tags/remotes)</td><td><code>prev_refs_view</code></td></tr>
+</table>
+<h2 id="k-worktrees">Worktrees</h2>
+<table class="ref">
+<tr><td><kbd>↵</kbd> <kbd>space</kbd></td><td>open worktree in Canopy</td><td><code>open_worktree</code></td></tr>
+<tr><td><kbd>n</kbd></td><td>new worktree for a branch</td><td><code>new_worktree</code></td></tr>
+<tr><td><kbd>d</kbd></td><td>remove worktree</td><td><code>remove_worktree</code></td></tr>
+<tr><td><kbd>x</kbd></td><td>prune missing worktrees</td><td><code>prune_worktrees</code></td></tr>
+<tr><td><kbd>]</kbd></td><td>next view (branches/tags/remotes)</td><td><code>next_refs_view</code></td></tr>
+<tr><td><kbd>[</kbd></td><td>previous view (branches/tags/remotes)</td><td><code>prev_refs_view</code></td></tr>
+</table>
+<h2 id="k-submodules">Submodules</h2>
+<table class="ref">
+<tr><td><kbd>↵</kbd> <kbd>space</kbd></td><td>open submodule in Canopy</td><td><code>open_submodule</code></td></tr>
+<tr><td><kbd>u</kbd></td><td>update submodule to recorded commit</td><td><code>update_submodule</code></td></tr>
+<tr><td><kbd>U</kbd></td><td>update all submodules</td><td><code>update_all_submodules</code></td></tr>
+<tr><td><kbd>]</kbd></td><td>next view (branches/tags/remotes)</td><td><code>next_refs_view</code></td></tr>
+<tr><td><kbd>[</kbd></td><td>previous view (branches/tags/remotes)</td><td><code>prev_refs_view</code></td></tr>
+</table>
+<h2 id="k-stash">Stash</h2>
+<table class="ref">
+<tr><td><kbd>space</kbd></td><td>apply stash</td><td><code>stash_apply</code></td></tr>
+<tr><td><kbd>g</kbd></td><td>pop stash</td><td><code>stash_pop</code></td></tr>
+<tr><td><kbd>d</kbd></td><td>drop stash</td><td><code>stash_drop</code></td></tr>
+<tr><td><kbd>↵</kbd> <kbd>l</kbd></td><td>open</td><td><code>enter</code></td></tr>
+</table>
+<h2 id="k-workspace">Workspace</h2>
+<table class="ref">
+<tr><td><kbd>↵</kbd> <kbd>space</kbd></td><td>open repository</td><td><code>open_repo</code></td></tr>
+<tr><td><kbd>F</kbd></td><td>fetch all repos</td><td><code>fetch_all</code></td></tr>
+<tr><td><kbd>/</kbd></td><td>search</td><td><code>search</code></td></tr>
+</table>
+<h2 id="k-reflog">Reflog</h2>
+<table class="ref">
+<tr><td><kbd>↵</kbd> <kbd>l</kbd></td><td>open</td><td><code>enter</code></td></tr>
+<tr><td><kbd>r</kbd></td><td>reset to this entry</td><td><code>reset_to_entry</code></td></tr>
+</table>
+<h2 id="k-pulls">Pull requests</h2>
+<table class="ref">
+<tr><td><kbd>↵</kbd> <kbd>l</kbd></td><td>open</td><td><code>enter</code></td></tr>
+<tr><td><kbd>space</kbd></td><td>check out this pull request</td><td><code>pr_checkout</code></td></tr>
+<tr><td><kbd>n</kbd></td><td>create a pull request for this branch</td><td><code>pr_create</code></td></tr>
+<tr><td><kbd>r</kbd></td><td>review: approve / comment / request changes</td><td><code>pr_review</code></td></tr>
+<tr><td><kbd>M</kbd></td><td>merge pull request</td><td><code>pr_merge</code></td></tr>
+<tr><td><kbd>C</kbd></td><td>comment</td><td><code>comment</code></td></tr>
+<tr><td><kbd>X</kbd></td><td>close / reopen</td><td><code>close_item</code></td></tr>
+<tr><td><kbd>D</kbd></td><td>show diff / details</td><td><code>toggle_diff</code></td></tr>
+<tr><td><kbd>o</kbd></td><td>open in browser</td><td><code>open_in_browser</code></td></tr>
+<tr><td><kbd>f</kbd></td><td>cycle filter</td><td><code>cycle_filter</code></td></tr>
+</table>
+<h2 id="k-issues">Issues</h2>
+<table class="ref">
+<tr><td><kbd>↵</kbd> <kbd>l</kbd></td><td>open</td><td><code>enter</code></td></tr>
+<tr><td><kbd>n</kbd></td><td>new issue</td><td><code>issue_create</code></td></tr>
+<tr><td><kbd>C</kbd></td><td>comment</td><td><code>comment</code></td></tr>
+<tr><td><kbd>X</kbd></td><td>close / reopen</td><td><code>close_item</code></td></tr>
+<tr><td><kbd>o</kbd></td><td>open in browser</td><td><code>open_in_browser</code></td></tr>
+<tr><td><kbd>f</kbd></td><td>cycle filter</td><td><code>cycle_filter</code></td></tr>
+</table>
+<h2 id="k-runs">Actions</h2>
+<table class="ref">
+<tr><td><kbd>↵</kbd> <kbd>l</kbd></td><td>open</td><td><code>enter</code></td></tr>
+<tr><td><kbd>R</kbd></td><td>re-run failed jobs</td><td><code>rerun_failed</code></td></tr>
+<tr><td><kbd>o</kbd></td><td>open in browser</td><td><code>open_in_browser</code></td></tr>
+<tr><td><kbd>f</kbd></td><td>cycle filter</td><td><code>cycle_filter</code></td></tr>
+</table>
+<!-- KEYS:END -->
+<div class="next-links"><a href="get-started.html"><small>Previous</small>Get started</a><a href="changelog.html" style="text-align:right"><small>Next</small>Changelog</a></div>
+  </article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>🌳 Canopy · MIT licensed · made by <a href="https://github.com/shankar-sachin">Sachin Shankar</a></span>
+    <span><a href="get-started.html">Get started</a> · <a href="keys.html">Keys</a> · <a href="changelog.html">Changelog</a> · <a href="https://github.com/shankar-sachin/canopy">Source</a> · <a href="https://github.com/shankar-sachin/canopy/issues">Report a bug</a></span>
+  </div>
+</footer>
+<script src="assets/site.js"></script>
+</body>
+</html>

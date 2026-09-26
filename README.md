@@ -7,6 +7,8 @@ where your branch stands against the remote, and what to do next. Beginners get
 guidance and a safety net. Power users get line-level staging, interactive
 rebase, and a command palette, all without leaving the keyboard.
 
+**Website:** [shankar-sachin.github.io/canopy](https://shankar-sachin.github.io/canopy/), with a feature tour, the GitHub guide, and the full key reference.
+
 <!-- Generate with: vhs demo.tape -->
 ![Canopy demo](demo.gif)
 
@@ -123,6 +125,15 @@ crates/canopy       the TUI (Ratatui): app loop, screens, keymap, themes
 - [x] Worktrees
 - [x] Bisect
 - [x] Submodules
+
+## Website
+
+The site lives in `docs/` and is served by GitHub Pages from `main`. Its
+screenshots and key reference are rendered from the real app:
+
+```sh
+cargo test -p canopy-git-tui export_site_screens -- --ignored
+```
 
 ## Develop
 

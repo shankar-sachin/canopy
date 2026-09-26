@@ -161,7 +161,7 @@ pub fn draw(f: &mut Frame, app: &App) {
                 ("e", "edit"),
                 ("d", "drop"),
                 ("J/K", "move"),
-                ("⏎", "start"),
+                ("↵", "start"),
                 ("esc", "cancel"),
             ] {
                 hints.extend(key_hint(t, k, l));
@@ -247,7 +247,7 @@ fn commit(f: &mut Frame, area: Rect, app: &App, subject: &TextArea, body: &TextA
     }
 
     let mut h = Vec::new();
-    for (k, l) in [("⏎", "commit"), ("tab", "switch field"), ("^s", "commit from anywhere"), ("esc", "cancel")] {
+    for (k, l) in [("↵", "commit"), ("tab", "switch field"), ("^s", "commit from anywhere"), ("esc", "cancel")] {
         h.extend(key_hint(t, k, l));
     }
     f.render_widget(Paragraph::new(Line::from(h)), hints);
@@ -266,7 +266,7 @@ fn blame(f: &mut Frame, area: Rect, t: &Theme, v: &crate::modal::BlameView) {
         None => " (working tree)".into(),
     };
     let block = modal_block(t, format!(" Blame · {}{at} ", v.path), false)
-        .title_bottom(Line::styled(" j/k move · ⏎ go to commit · B blame before this change · esc close ", t.muted()));
+        .title_bottom(Line::styled(" j/k move · ↵ go to commit · B blame before this change · esc close ", t.muted()));
     let inner = block.inner(r);
     f.render_widget(block, r);
     let [body, _, footer] =
@@ -362,9 +362,9 @@ fn compose(f: &mut Frame, area: Rect, t: &Theme, c: &crate::modal::Compose) {
     }
     let mut h = Vec::new();
     let keys: &[(&str, &str)] = if c.title.is_some() {
-        &[("⏎", "send (from title)"), ("tab", "switch field"), ("^s", "send"), ("esc", "cancel")]
+        &[("↵", "send (from title)"), ("tab", "switch field"), ("^s", "send"), ("esc", "cancel")]
     } else {
-        &[("^s", "send"), ("⏎", "new line"), ("esc", "cancel")]
+        &[("^s", "send"), ("↵", "new line"), ("esc", "cancel")]
     };
     for (k, l) in keys {
         h.extend(key_hint(t, k, l));
@@ -378,12 +378,12 @@ fn welcome(f: &mut Frame, area: Rect, t: &Theme) {
     let path = crate::config::Config::path().map(|p| p.display().to_string()).unwrap_or_default();
     let k = |s: &str| Span::styled(format!(" {s} "), t.key());
     let lines = vec![
-        Line::styled("Welcome to Canopy 🌳", t.accent()),
+        Line::styled("Welcome to Canopy", t.accent()),
         Line::styled("A git dashboard for your terminal.", t.muted()),
         Line::default(),
         Line::from(vec![k("1-9 0"), Span::raw("  switch tabs: Home, Changes, History, … Pull requests, Actions")]),
         Line::from(vec![k("space"), Span::raw("  stage or unstage the selected file")]),
-        Line::from(vec![k("⏎"), Span::raw("  dive into a diff to stage single lines or hunks")]),
+        Line::from(vec![k("↵"), Span::raw("  dive into a diff to stage single lines or hunks")]),
         Line::from(vec![
             k("c"),
             Span::raw("  commit     "),
@@ -437,10 +437,10 @@ fn help(f: &mut Frame, area: Rect, app: &App, scroll: u16) {
     };
     section(&mut lines, &format!("{screen_name} (this screen)"), crate::input::screen_ctx(app));
     if app.screen == Screen::Status {
-        section(&mut lines, "Conflict panel (⏎ on a conflicted file)", Ctx::Conflict);
+        section(&mut lines, "Conflict panel (↵ on a conflicted file)", Ctx::Conflict);
     }
     if matches!(app.screen, Screen::Status | Screen::Log | Screen::Branches | Screen::Stash | Screen::Reflog) {
-        section(&mut lines, "Diff panel (after ⏎)", Ctx::Diff);
+        section(&mut lines, "Diff panel (after ↵)", Ctx::Diff);
     }
     section(&mut lines, "Everywhere", Ctx::Global);
     if !app.config.custom_commands.is_empty() {

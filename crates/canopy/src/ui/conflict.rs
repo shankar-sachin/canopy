@@ -28,19 +28,19 @@ fn text_lines<'a>(text: &str, theme: &Theme, first: bool, last: bool, out: &mut 
     };
     out.extend(lines[..head].iter().map(|l| plain(l)));
     let hidden = lines.len() - head - tail;
-    out.push(Line::styled(format!("  ⋯ {hidden} unchanged lines ⋯"), theme.muted().add_modifier(Modifier::ITALIC)));
+    out.push(Line::styled(format!("  … {hidden} unchanged lines …"), theme.muted().add_modifier(Modifier::ITALIC)));
     out.extend(lines[lines.len() - tail..].iter().map(|l| plain(l)));
 }
 
 fn side<'a>(label: String, body: &str, color: Color, theme: &Theme, dim: bool, out: &mut Vec<Line<'a>>) {
     let st = |s: Style| if dim { s.add_modifier(Modifier::DIM) } else { s };
-    out.push(Line::styled(format!("  ▍{label}"), st(Style::default().fg(color).add_modifier(Modifier::BOLD))));
+    out.push(Line::styled(format!("  ▌{label}"), st(Style::default().fg(color).add_modifier(Modifier::BOLD))));
     if body.is_empty() {
-        out.push(Line::styled("  ▍  (nothing)", st(theme.muted().add_modifier(Modifier::ITALIC))));
+        out.push(Line::styled("  ▌  (nothing)", st(theme.muted().add_modifier(Modifier::ITALIC))));
     }
     for l in body.lines() {
         out.push(Line::from(vec![
-            Span::styled("  ▍ ", st(Style::default().fg(color))),
+            Span::styled("  ▌ ", st(Style::default().fg(color))),
             Span::styled(l.replace('\t', "    "), st(Style::default().fg(theme.fg))),
         ]));
     }

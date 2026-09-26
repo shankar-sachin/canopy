@@ -136,7 +136,7 @@ fn render_row<'a>(view: &DiffView, row: Row, theme: &Theme, gw: usize) -> Line<'
             } else {
                 f.new_path.clone()
             };
-            let mut spans = vec![Span::styled(format!("▍{name}"), theme.accent())];
+            let mut spans = vec![Span::styled(format!("▌{name}"), theme.accent())];
             if f.binary {
                 spans.push(Span::styled("  (binary)", theme.muted()));
             }

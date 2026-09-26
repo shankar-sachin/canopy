@@ -17,7 +17,8 @@ use crate::input::{contexts, state_word};
 use crate::keymap::{pretty_key, Screen};
 use util::key_hint;
 
-const SPINNER: [&str; 8] = ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"];
+/// Single-width glyphs that every monospace font has (no braille/emoji).
+pub const SPINNER: [&str; 4] = ["·", "•", "●", "•"];
 
 pub fn draw(f: &mut Frame, app: &mut App) {
     let area = f.area();
@@ -45,9 +46,9 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 fn draw_header(f: &mut Frame, area: Rect, app: &App) {
     let t = &app.theme;
     let b = &app.data.status.branch;
-    let branch_glyph = if app.config.nerd_font { "\u{e725} " } else { "⎇ " };
+    let branch_glyph = if app.config.nerd_font { "\u{e725} " } else { "" };
     let mut spans = vec![
-        Span::styled(" 🌳 canopy ", Style::default().fg(t.bg).bg(t.accent).add_modifier(Modifier::BOLD)),
+        Span::styled(" canopy ", Style::default().fg(t.bg).bg(t.accent).add_modifier(Modifier::BOLD)),
         Span::raw("  "),
         Span::styled(app.repo_name(), Style::default().fg(t.fg).add_modifier(Modifier::BOLD)),
     ];
