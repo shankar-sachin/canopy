@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configuration · Canopy wiki</title>
+<meta name="description" content="Every setting in config.toml, with its default.">
+<meta property="og:title" content="Configuration · Canopy wiki">
+<meta property="og:image" content="https://shankar-sachin.github.io/canopy/assets/og.png">
+<meta name="theme-color" content="#0b100c">
+<script>try{const t=localStorage.getItem('canopy-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}</script>
+<link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- Box-drawing and symbol glyphs for the terminal screenshots (not in the default subsets). -->
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap&text=%E2%94%80%E2%94%81%E2%94%82%E2%94%83%E2%94%84%E2%94%85%E2%94%86%E2%94%87%E2%94%88%E2%94%89%E2%94%8A%E2%94%8B%E2%94%8C%E2%94%8D%E2%94%8E%E2%94%8F%E2%94%90%E2%94%91%E2%94%92%E2%94%93%E2%94%94%E2%94%95%E2%94%96%E2%94%97%E2%94%98%E2%94%99%E2%94%9A%E2%94%9B%E2%94%9C%E2%94%9D%E2%94%9E%E2%94%9F%E2%94%A0%E2%94%A1%E2%94%A2%E2%94%A3%E2%94%A4%E2%94%A5%E2%94%A6%E2%94%A7%E2%94%A8%E2%94%A9%E2%94%AA%E2%94%AB%E2%94%AC%E2%94%AD%E2%94%AE%E2%94%AF%E2%94%B0%E2%94%B1%E2%94%B2%E2%94%B3%E2%94%B4%E2%94%B5%E2%94%B6%E2%94%B7%E2%94%B8%E2%94%B9%E2%94%BA%E2%94%BB%E2%94%BC%E2%94%BD%E2%94%BE%E2%94%BF%E2%95%80%E2%95%81%E2%95%82%E2%95%83%E2%95%84%E2%95%85%E2%95%86%E2%95%87%E2%95%88%E2%95%89%E2%95%8A%E2%95%8B%E2%95%8C%E2%95%8D%E2%95%8E%E2%95%8F%E2%95%90%E2%95%91%E2%95%92%E2%95%93%E2%95%94%E2%95%95%E2%95%96%E2%95%97%E2%95%98%E2%95%99%E2%95%9A%E2%95%9B%E2%95%9C%E2%95%9D%E2%95%9E%E2%95%9F%E2%95%A0%E2%95%A1%E2%95%A2%E2%95%A3%E2%95%A4%E2%95%A5%E2%95%A6%E2%95%A7%E2%95%A8%E2%95%A9%E2%95%AA%E2%95%AB%E2%95%AC%E2%95%AD%E2%95%AE%E2%95%AF%E2%95%B0%E2%95%B1%E2%95%B2%E2%95%B3%E2%95%B4%E2%95%B5%E2%95%B6%E2%95%B7%E2%95%B8%E2%95%B9%E2%95%BA%E2%95%BB%E2%95%BC%E2%95%BD%E2%95%BE%E2%95%BF%E2%96%80%E2%96%81%E2%96%82%E2%96%83%E2%96%84%E2%96%85%E2%96%86%E2%96%87%E2%96%88%E2%96%89%E2%96%8A%E2%96%8B%E2%96%8C%E2%96%8D%E2%96%8E%E2%96%8F%E2%96%90%E2%96%91%E2%96%92%E2%96%93%E2%96%94%E2%96%95%E2%96%96%E2%96%97%E2%96%98%E2%96%99%E2%96%9A%E2%96%9B%E2%96%9C%E2%96%9D%E2%96%9E%E2%96%9F%C2%B7%E2%80%A6%E2%9C%93%E2%9C%97%E2%97%8F%E2%97%8B%E2%80%A2%E2%86%91%E2%86%93%E2%86%90%E2%86%92%E2%86%B5%E2%80%B9%E2%80%BA%E2%80%94%E2%8C%83%E2%8C%A5%E2%87%A7" rel="stylesheet">
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/wiki.css">
+</head>
+<body class="wiki">
+<a class="skip" href="#content">Skip to content</a>
+<header class="wtop">
+  <button class="wmenu" type="button" aria-label="Open navigation" aria-controls="wside" aria-expanded="false"><span></span><span></span><span></span></button>
+  <a class="wbrand" href="index.html"><img src="../assets/logo.svg" alt="" width="30" height="30"><span>canopy</span><em>wiki</em></a>
+  <button class="wsearch" type="button" aria-haspopup="dialog" aria-label="Search the wiki">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <span>Search</span><kbd class="kbd-shortcut" data-mac="⌘ K" data-other="Ctrl K">Ctrl K</kbd>
+  </button>
+  <div class="wactions">
+    <a class="wlink" href="../index.html">Home</a>
+    <a class="wlink hide-md" href="../keys.html">Keys</a>
+    <a class="wicon" href="https://github.com/shankar-sachin/canopy" aria-label="Canopy on GitHub"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+    <button class="wtheme" type="button" aria-label="Color theme"><span class="wtheme-icon" aria-hidden="true"></span><span class="wtheme-label">System</span></button>
+  </div>
+</header>
+<div class="wlayout">
+  <aside class="wside" id="wside"><nav class="wside-nav" aria-label="Wiki">
+<details open><summary>Start here<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="index.html">Wiki home</a>
+</div></details>
+<details open><summary>Guides<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="git-basics.html">Git in ten minutes</a>
+<a href="daily-workflow.html">Your daily workflow</a>
+<a href="branches.html">Branches, merging and rebasing</a>
+<a href="github-flow.html">Working with GitHub</a>
+</div></details>
+<details open><summary>Recipes<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="fix-last-commit.html">Fix your last commit</a>
+<a href="undo.html">Undo a mistake</a>
+<a href="conflicts.html">Resolve a merge conflict</a>
+<a href="clean-history.html">Tidy up commits before sharing</a>
+<a href="find-a-bug.html">Find the commit that broke something</a>
+<a href="two-branches.html">Work on two branches at once</a>
+<a href="review-a-pr.html">Review a pull request</a>
+</div></details>
+<details open><summary>Reference<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="config.html" aria-current="page">Configuration</a>
+<a href="cli.html">Command line</a>
+<a href="themes.html">Themes</a>
+<a href="troubleshooting.html">Troubleshooting</a>
+<a href="faq.html">FAQ</a>
+</div></details>
+</nav></aside>
+  <main class="wmain" id="content">
+    <div class="wbanner"><b>New in v0.4.</b> The Canopy wiki is brand new. Spot something wrong or unclear? <a href="https://github.com/shankar-sachin/canopy/edit/main/docs/wiki/config.html">Suggest an edit</a>.</div>
+    <article class="wprose">
+      <div class="crumbs"><a href="index.html">Wiki</a><span>/</span>Reference</div>
+      <h1>Configuration</h1>
+      <p class="wlede">Every setting in config.toml, with its default.</p>
+<p>The config file is <code>~/.config/canopy/config.toml</code> (or <code>$XDG_CONFIG_HOME/canopy/config.toml</code>). <code>canopy --config-path</code> prints where Canopy looks; <code>canopy --example-config</code> prints a starter file. Every setting is optional.</p>
+<table class="ref" id="config-table">
+<tr><td><code>theme</code></td><td><code>"canopy"</code></td><td>Color theme: <code>canopy</code>, <code>catppuccin</code>, <code>gruvbox</code>, <code>nord</code> or <code>light</code>. See <a href="themes.html">Themes</a>.</td></tr>
+<tr><td><code>teach_mode</code></td><td><code>true</code></td><td>Show the git command behind each action in the footer. <kbd>T</kbd> toggles it while running.</td></tr>
+<tr><td><code>confirm_destructive</code></td><td><code>true</code></td><td>Ask before discarding changes, hard resets, force deletes and similar.</td></tr>
+<tr><td><code>compact</code></td><td><code>false</code></td><td>Tighter layout: less padding and no gaps between panels.</td></tr>
+<tr><td><code>splash</code></td><td><code>true</code></td><td>Play the tree animation when Canopy starts (any key skips it).</td></tr>
+<tr><td><code>mac_key_symbols</code></td><td>macOS: <code>true</code>, else <code>false</code></td><td>Show modifier keys as <code>⌃ ⌥ ⇧</code> instead of <code>ctrl-</code> / <code>alt-</code>.</td></tr>
+<tr><td><code>nerd_font</code></td><td><code>false</code></td><td>Use Nerd Font icons (only turn on if your terminal font has them).</td></tr>
+<tr><td><code>workspace_dirs</code></td><td><code>[]</code></td><td>Folders the Workspace tab scans for repositories, e.g. <code>["~/code"]</code>. Empty means the folder above the current repo.</td></tr>
+<tr><td><code>workspace_depth</code></td><td><code>3</code></td><td>How many folders deep to look for repositories.</td></tr>
+<tr><td><code>log_page_size</code></td><td><code>300</code></td><td>Commits History loads at a time (more load as you scroll).</td></tr>
+<tr><td><code>gh_program</code></td><td>unset</td><td>Path to the GitHub CLI if it isn't <code>gh</code> on your <code>PATH</code>.</td></tr>
+<tr><td><code>[keys]</code></td><td>empty</td><td>Remap actions. See below.</td></tr>
+<tr><td><code>[[custom_commands]]</code></td><td>none</td><td>Run your own commands from a key. See below.</td></tr>
+</table>
+
+<h2 id="keys">Remapping keys<a class="hash" href="#keys" aria-label="Link to this section">#</a></h2>
+<p>Map an action's name to a key or a list of keys. Names are in the last column of the <a href="../keys.html">Keys</a> page. A key you assign is taken away from whatever used it before, and Canopy warns you if that leaves an action without a key.</p>
+<pre class="code">[keys]
+toggle_stage = "s"
+commit = ["c", "ctrl-s"]
+push = "alt-p"</pre>
+<p>Key names: a character (<code>x</code>, <code>X</code>, <code>?</code>), <code>space</code>, <code>enter</code>, <code>esc</code>, <code>tab</code>, <code>backtab</code>, arrows (<code>up</code> …), <code>pageup</code>, <code>home</code>, <code>f1</code>–<code>f12</code>, with <code>ctrl-</code> and/or <code>alt-</code> in front.</p>
+
+<h2 id="custom">Custom commands<a class="hash" href="#custom" aria-label="Link to this section">#</a></h2>
+<pre class="code">[[custom_commands]]
+key = "X"
+cmd = "git push --force-with-lease"
+description = "force push (safely)"
+confirm = true</pre>
+<p>The command runs with <code>sh -c</code> in the repository's root. Its output is shown when it finishes. <code>description</code> is what the command palette and help show; <code>confirm</code> asks first.</p>
+
+<nav class="pager" aria-label="Pages"><a href="review-a-pr.html"><small>Previous</small>Review a pull request</a><a href="cli.html" class="next"><small>Next</small>Command line</a></nav>
+    </article>
+  </main>
+  <aside class="wtoc" aria-label="On this page"><b>On this page</b><nav id="toc"></nav></aside>
+</div>
+<div class="wsearch-dialog" role="dialog" aria-modal="true" aria-label="Search the wiki" hidden>
+  <div class="wsearch-box">
+    <div class="wsearch-input"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="wsearch-q" type="search" placeholder="Search guides, recipes and reference" autocomplete="off" spellcheck="false"><kbd>esc</kbd></div>
+    <ul class="wsearch-results" id="wsearch-results" role="listbox"></ul>
+    <div class="wsearch-foot"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>↵</kbd> open</span><span><kbd>esc</kbd> close</span></div>
+  </div>
+</div>
+<script src="search-index.js"></script>
+<script src="../assets/site.js"></script>
+<script src="../assets/wiki.js"></script>
+</body>
+</html>

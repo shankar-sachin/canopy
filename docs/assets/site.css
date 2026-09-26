@@ -269,3 +269,27 @@
     display: block; margin: 0 auto 22px; border-radius: 20px;
     box-shadow: 0 18px 60px -18px color-mix(in srgb, var(--green) 55%, transparent);
   }
+
+  /* ---------- wiki ---------- */
+  .wiki-nav { display: grid; gap: 2px; }
+  .wiki-nav b { margin-top: 18px; }
+  .wiki-nav b:first-child { margin-top: 0; }
+  .wiki-nav a[aria-current="page"] { color: var(--text); border-color: var(--green); background: var(--surface); }
+  .wiki-cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); margin: 12px 0 8px; }
+  .wiki-cards .card { color: var(--text); }
+  .wiki-cards .card h3 { margin: 0 0 6px; }
+  ol.steps { counter-reset: step; list-style: none; padding-left: 0; display: grid; gap: 14px; margin: 18px 0 24px; }
+  ol.steps > li { counter-increment: step; display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start; margin: 0; }
+  ol.steps > li::before {
+    content: counter(step); display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+    font: 700 13px var(--mono); color: #0b100c; background: var(--green);
+  }
+  ol.steps ul { margin: 8px 0 0; }
+  .edit-link { margin-top: 48px; font-size: 14px; }
+  .edit-link a { color: var(--muted); }
+
+  .theme-sample { border: 1px solid; border-radius: 10px; padding: 14px 16px; font: 14px/1.6 var(--mono); margin: 10px 0 12px; overflow-x: auto; white-space: nowrap; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-bottom: 8px; }
+  .swatch { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .swatch i { width: 18px; height: 18px; border-radius: 5px; border: 1px solid var(--border-2); display: block; }
+  .swatch code { font-size: 12px; }

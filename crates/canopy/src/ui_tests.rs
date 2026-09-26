@@ -1065,7 +1065,10 @@ git merge polite >/dev/null 2>&1 || true
     let docs = concat!(env!("CARGO_MANIFEST_DIR"), "/../../docs");
     let keys = keys_html();
     let mut filled = 0;
-    for entry in std::fs::read_dir(docs).unwrap() {
+    let themes = themes_html();
+    let wiki = format!("{docs}/wiki");
+    let pages = std::fs::read_dir(docs).unwrap().chain(std::fs::read_dir(&wiki).unwrap());
+    for entry in pages {
         let path = entry.unwrap().path();
         if path.extension().is_none_or(|e| e != "html") {
             continue;
@@ -1089,6 +1092,10 @@ git merge polite >/dev/null 2>&1 || true
                 .replace(&format!("<!-- SCREEN-DONE:{name} -->"), &open)
                 .replace(&format!("<!-- /SCREEN-DONE:{name} -->"), &close);
         }
+        let (ts, te) = ("<!-- THEMES:START -->", "<!-- THEMES:END -->");
+        if let (Some(a), Some(b)) = (page.find(ts), page.find(te)) {
+            page = format!("{}{ts}{themes}{}", &page[..a], &page[b..]);
+        }
         let (ks, ke) = ("<!-- KEYS:START -->", "<!-- KEYS:END -->");
         if let (Some(a), Some(b)) = (page.find(ks), page.find(ke)) {
             page = format!("{}{ks}{keys}{}", &page[..a], &page[b..]);
@@ -1106,6 +1113,81 @@ git merge polite >/dev/null 2>&1 || true
     }
     let _ = std::fs::remove_dir_all(base);
     println!("filled {filled} screenshots and the key reference");
+}
+
+/// Theme swatches for the wiki, from the real theme definitions.
+fn themes_html() -> String {
+    use crate::theme::Theme;
+    use ratatui::style::Color;
+    let hex = |c: Color| match c {
+        Color::Rgb(r, g, b) => format!("#{r:02x}{g:02x}{b:02x}"),
+        _ => "transparent".into(),
+    };
+    let mut out = String::from("\n");
+    for name in Theme::NAMES {
+        let t = Theme::by_name(name);
+        let chips = [
+            ("background", t.bg),
+            ("text", t.fg),
+            ("accent", t.accent),
+            ("highlight", t.accent_alt),
+            ("added", t.added),
+            ("removed", t.removed),
+            ("modified", t.modified),
+            ("commit", t.hash),
+            ("branch", t.branch),
+            ("remote", t.remote),
+        ];
+        out.push_str(&format!(
+            "<h2 id=\"theme-{name}\">{name}</h2>\n<div class=\"theme-sample\" style=\"background:{bg};color:{fg};border-color:{border}\">\
+             <span style=\"color:{accent};font-weight:700\">● main</span> <span style=\"color:{hash}\">f5be172</span> \
+             <span style=\"color:{added}\">+ added line</span> <span style=\"color:{removed}\">- removed line</span> \
+             <span style=\"color:{muted}\">3h ago</span></div>\n<div class=\"swatches\">",
+            bg = hex(t.bg),
+            fg = hex(t.fg),
+            border = hex(t.border),
+            accent = hex(t.accent),
+            hash = hex(t.hash),
+            added = hex(t.added),
+            removed = hex(t.removed),
+            muted = hex(t.muted),
+        ));
+        for (label, c) in chips {
+            out.push_str(&format!(
+                "<span class=\"swatch\"><i style=\"background:{}\"></i>{label}<code>{}</code></span>",
+                hex(c),
+                hex(c)
+            ));
+        }
+        out.push_str("</div>\n");
+    }
+    out
+}
+
+/// Every config option must be documented on the wiki's Configuration page.
+#[test]
+fn every_config_option_is_documented() {
+    let src = include_str!("config.rs");
+    let start = src.find("pub struct Config {").unwrap();
+    let body = &src[start..start + src[start..].find("\n}").unwrap()];
+    let fields: Vec<&str> = body
+        .lines()
+        .filter_map(|l| l.trim().strip_prefix("pub "))
+        .filter_map(|l| l.split(':').next())
+        .filter(|f| !f.contains(' '))
+        .collect();
+    assert!(fields.len() >= 10, "{fields:?}");
+    let doc = include_str!("../../../docs/wiki/config.html");
+    for f in fields {
+        let shown = if f == "keys" {
+            "[keys]".to_string()
+        } else if f == "custom_commands" {
+            "[[custom_commands]]".to_string()
+        } else {
+            f.to_string()
+        };
+        assert!(doc.contains(&format!("<code>{shown}</code>")), "config option `{f}` isn't on docs/wiki/config.html");
+    }
 }
 
 /// The key reference, one table per context, from the real key tables.

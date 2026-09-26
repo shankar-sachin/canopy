@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Find the commit that broke something · Canopy wiki</title>
+<meta name="description" content="Bisect to the commit that introduced a bug, then use blame and file history to understand it.">
+<meta property="og:title" content="Find the commit that broke something · Canopy wiki">
+<meta property="og:image" content="https://shankar-sachin.github.io/canopy/assets/og.png">
+<meta name="theme-color" content="#0b100c">
+<script>try{const t=localStorage.getItem('canopy-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}</script>
+<link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- Box-drawing and symbol glyphs for the terminal screenshots (not in the default subsets). -->
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap&text=%E2%94%80%E2%94%81%E2%94%82%E2%94%83%E2%94%84%E2%94%85%E2%94%86%E2%94%87%E2%94%88%E2%94%89%E2%94%8A%E2%94%8B%E2%94%8C%E2%94%8D%E2%94%8E%E2%94%8F%E2%94%90%E2%94%91%E2%94%92%E2%94%93%E2%94%94%E2%94%95%E2%94%96%E2%94%97%E2%94%98%E2%94%99%E2%94%9A%E2%94%9B%E2%94%9C%E2%94%9D%E2%94%9E%E2%94%9F%E2%94%A0%E2%94%A1%E2%94%A2%E2%94%A3%E2%94%A4%E2%94%A5%E2%94%A6%E2%94%A7%E2%94%A8%E2%94%A9%E2%94%AA%E2%94%AB%E2%94%AC%E2%94%AD%E2%94%AE%E2%94%AF%E2%94%B0%E2%94%B1%E2%94%B2%E2%94%B3%E2%94%B4%E2%94%B5%E2%94%B6%E2%94%B7%E2%94%B8%E2%94%B9%E2%94%BA%E2%94%BB%E2%94%BC%E2%94%BD%E2%94%BE%E2%94%BF%E2%95%80%E2%95%81%E2%95%82%E2%95%83%E2%95%84%E2%95%85%E2%95%86%E2%95%87%E2%95%88%E2%95%89%E2%95%8A%E2%95%8B%E2%95%8C%E2%95%8D%E2%95%8E%E2%95%8F%E2%95%90%E2%95%91%E2%95%92%E2%95%93%E2%95%94%E2%95%95%E2%95%96%E2%95%97%E2%95%98%E2%95%99%E2%95%9A%E2%95%9B%E2%95%9C%E2%95%9D%E2%95%9E%E2%95%9F%E2%95%A0%E2%95%A1%E2%95%A2%E2%95%A3%E2%95%A4%E2%95%A5%E2%95%A6%E2%95%A7%E2%95%A8%E2%95%A9%E2%95%AA%E2%95%AB%E2%95%AC%E2%95%AD%E2%95%AE%E2%95%AF%E2%95%B0%E2%95%B1%E2%95%B2%E2%95%B3%E2%95%B4%E2%95%B5%E2%95%B6%E2%95%B7%E2%95%B8%E2%95%B9%E2%95%BA%E2%95%BB%E2%95%BC%E2%95%BD%E2%95%BE%E2%95%BF%E2%96%80%E2%96%81%E2%96%82%E2%96%83%E2%96%84%E2%96%85%E2%96%86%E2%96%87%E2%96%88%E2%96%89%E2%96%8A%E2%96%8B%E2%96%8C%E2%96%8D%E2%96%8E%E2%96%8F%E2%96%90%E2%96%91%E2%96%92%E2%96%93%E2%96%94%E2%96%95%E2%96%96%E2%96%97%E2%96%98%E2%96%99%E2%96%9A%E2%96%9B%E2%96%9C%E2%96%9D%E2%96%9E%E2%96%9F%C2%B7%E2%80%A6%E2%9C%93%E2%9C%97%E2%97%8F%E2%97%8B%E2%80%A2%E2%86%91%E2%86%93%E2%86%90%E2%86%92%E2%86%B5%E2%80%B9%E2%80%BA%E2%80%94%E2%8C%83%E2%8C%A5%E2%87%A7" rel="stylesheet">
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/wiki.css">
+</head>
+<body class="wiki">
+<a class="skip" href="#content">Skip to content</a>
+<header class="wtop">
+  <button class="wmenu" type="button" aria-label="Open navigation" aria-controls="wside" aria-expanded="false"><span></span><span></span><span></span></button>
+  <a class="wbrand" href="index.html"><img src="../assets/logo.svg" alt="" width="30" height="30"><span>canopy</span><em>wiki</em></a>
+  <button class="wsearch" type="button" aria-haspopup="dialog" aria-label="Search the wiki">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <span>Search</span><kbd class="kbd-shortcut" data-mac="⌘ K" data-other="Ctrl K">Ctrl K</kbd>
+  </button>
+  <div class="wactions">
+    <a class="wlink" href="../index.html">Home</a>
+    <a class="wlink hide-md" href="../keys.html">Keys</a>
+    <a class="wicon" href="https://github.com/shankar-sachin/canopy" aria-label="Canopy on GitHub"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+    <button class="wtheme" type="button" aria-label="Color theme"><span class="wtheme-icon" aria-hidden="true"></span><span class="wtheme-label">System</span></button>
+  </div>
+</header>
+<div class="wlayout">
+  <aside class="wside" id="wside"><nav class="wside-nav" aria-label="Wiki">
+<details open><summary>Start here<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="index.html">Wiki home</a>
+</div></details>
+<details open><summary>Guides<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="git-basics.html">Git in ten minutes</a>
+<a href="daily-workflow.html">Your daily workflow</a>
+<a href="branches.html">Branches, merging and rebasing</a>
+<a href="github-flow.html">Working with GitHub</a>
+</div></details>
+<details open><summary>Recipes<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="fix-last-commit.html">Fix your last commit</a>
+<a href="undo.html">Undo a mistake</a>
+<a href="conflicts.html">Resolve a merge conflict</a>
+<a href="clean-history.html">Tidy up commits before sharing</a>
+<a href="find-a-bug.html" aria-current="page">Find the commit that broke something</a>
+<a href="two-branches.html">Work on two branches at once</a>
+<a href="review-a-pr.html">Review a pull request</a>
+</div></details>
+<details><summary>Reference<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="config.html">Configuration</a>
+<a href="cli.html">Command line</a>
+<a href="themes.html">Themes</a>
+<a href="troubleshooting.html">Troubleshooting</a>
+<a href="faq.html">FAQ</a>
+</div></details>
+</nav></aside>
+  <main class="wmain" id="content">
+    <div class="wbanner"><b>New in v0.4.</b> The Canopy wiki is brand new. Spot something wrong or unclear? <a href="https://github.com/shankar-sachin/canopy/edit/main/docs/wiki/find-a-bug.html">Suggest an edit</a>.</div>
+    <article class="wprose">
+      <div class="crumbs"><a href="index.html">Wiki</a><span>/</span>Recipes</div>
+      <h1>Find the commit that broke something</h1>
+      <p class="wlede">Bisect to the commit that introduced a bug, then use blame and file history to understand it.</p>
+<h2 id="bisect">Bisect: find the breaking commit<a class="hash" href="#bisect" aria-label="Link to this section">#</a></h2>
+<ol class="steps">
+  <li>Commit or stash your changes (bisect checks out other commits).</li>
+  <li>On History (<kbd>3</kbd>), select a commit where things still worked and press <kbd>b</kbd>. Your current commit counts as broken.</li>
+  <li>Git checks out a commit halfway between. Test it: build it, run it, whatever shows the bug.</li>
+  <li>Press <kbd>b</kbd> and answer <b>good</b> or <b>bad</b> (or <b>skip</b> if you can't test it). The header shows about how many steps are left.</li>
+  <li>When git finds the culprit, choose <b>Finish and show it</b>. Canopy stops bisecting and selects that commit in History.</li>
+</ol>
+
+<h2 id="blame">Blame: who changed this line, and why<a class="hash" href="#blame" aria-label="Link to this section">#</a></h2>
+<p>On Changes, or on a file inside a commit's diff, press <kbd>B</kbd>. Each line shows the commit that last changed it. <kbd>↵</kbd> jumps to that commit; <kbd>B</kbd> again shows the file as it was just before that change, so you can keep digging.</p>
+<div class="window"><div class="chrome"><i></i><i></i><i></i><span>canopy — Blame</span></div><div class="screen"><!-- SCREEN:blame --><pre class="frame" id="shot-blame" data-label="Blame" role="img" aria-label="Canopy: Blame"><span style="color:#101612;background:#7ac878;font-weight:700;"> canopy </span><span style="color:#d6e2d6;background:#101612;">  </span><span style="color:#d6e2d6;background:#101612;font-weight:700;">acme-app</span><span style="color:#6ec8c8;background:#101612;">  main</span><span style="color:#e6be6e;background:#101612;"> ↑1</span><span style="color:#d6e2d6;background:#101612;">                                                                                           </span>
+<span style="color:#d6e2d6;background:#101612;"> </span><span style="color:#7ac878;background:#101612;">╭</span><span style="color:#7ac878;background:#101612;font-weight:700;"> Blame · main.rs (working tree) </span><span style="color:#7ac878;background:#101612;">──────────────────────────────────────────────────────────────────────────────────╮</span><span style="color:#d6e2d6;background:#101612;"> </span>
+<span style="color:#d6e2d6;background:#101612;"> </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#d6e2d6;background:#101612;"> </span>
+<span style="color:#7ac878;background:#101612;">╭│</span><span style="color:#d6e2d6;background:#101612;">   </span><span style="color:#a096e6;background:#243828;font-weight:700;">d630196  Ada Lovelace    now</span><span style="color:#708474;background:#243828;font-weight:700;"> 1 </span><span style="color:#d6e2d6;background:#243828;font-weight:700;">fn main() {</span><span style="color:#d6e2d6;background:#101612;">                                                                     </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">╮</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">   </span><span style="color:#6ec8c8;background:#101612;">·······  not committed      </span><span style="color:#708474;background:#101612;"> 2 </span><span style="color:#d6e2d6;background:#101612;">    println!("hello, world");                                                   </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">   </span><span style="color:#6ec8c8;background:#101612;">│                           </span><span style="color:#708474;background:#101612;"> 3 </span><span style="color:#d6e2d6;background:#101612;">    let x = 42;                                                                 </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">   </span><span style="color:#a096e6;background:#101612;">d630196  Ada Lovelace    now</span><span style="color:#708474;background:#101612;"> 4 </span><span style="color:#d6e2d6;background:#101612;">}                                                                               </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">││</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">│</span>
+<span style="color:#7ac878;background:#101612;">╰│</span><span style="color:#d6e2d6;background:#101612;">   </span><span style="color:#a096e6;background:#101612;">d630196 </span><span style="color:#d6e2d6;background:#101612;font-weight:700;">Initial commit</span><span style="color:#708474;background:#101612;">  Ada Lovelace · now</span><span style="color:#d6e2d6;background:#101612;">                                                                     </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#43604a;background:#101612;">╯</span>
+<span style="color:#d6e2d6;background:#101612;"> </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#d6e2d6;background:#101612;">                                                                                                                  </span><span style="color:#7ac878;background:#101612;">│</span><span style="color:#d6e2d6;background:#101612;"> </span>
+<span style="color:#7ac878;background:#101612;font-weight:700;"> </span><span style="color:#7ac878;background:#101612;">╰</span><span style="color:#708474;background:#101612;"> j/k move · ↵ go to commit · B blame before this change · esc close </span><span style="color:#7ac878;background:#101612;">──────────────────────────────────────────────╯</span><span style="color:#d6e2d6;background:#101612;"> </span>
+<span style="color:#d6e2d6;background:#101612;"> </span><span style="color:#101612;background:#7ac878;font-weight:700;"> space </span><span style="color:#708474;background:#101612;"> stage  </span><span style="color:#101612;background:#7ac878;font-weight:700;"> a </span><span style="color:#708474;background:#101612;"> all  </span><span style="color:#101612;background:#7ac878;font-weight:700;"> d </span><span style="color:#708474;background:#101612;"> discard  </span><span style="color:#101612;background:#7ac878;font-weight:700;"> ↵ </span><span style="color:#708474;background:#101612;"> open  </span><span style="color:#101612;background:#7ac878;font-weight:700;"> : </span><span style="color:#708474;background:#101612;"> palette  </span><span style="color:#101612;background:#7ac878;font-weight:700;"> q </span><span style="color:#708474;background:#101612;"> quit  </span><span style="color:#101612;background:#7ac878;font-weight:700;"> c </span><span style="color:#708474;background:#101612;"> commit  </span><span style="color:#101612;background:#7ac878;font-weight:700;"> p </span><span style="color:#708474;background:#101612;"> pull  </span><span style="color:#101612;background:#7ac878;font-weight:700;"> P </span><span style="color:#708474;background:#101612;"> push  </span><span style="color:#d6e2d6;background:#101612;">     </span><span style="color:#101612;background:#7ac878;font-weight:700;"> ? </span><span style="color:#708474;background:#101612;"> help  </span>
+</pre><!-- /SCREEN:blame --></div></div>
+
+<h2 id="history">File history<a class="hash" href="#history" aria-label="Link to this section">#</a></h2>
+<p>Press <kbd>L</kbd> on a file to see only the commits that touched it, following renames. <kbd>esc</kbd> goes back to the full history.</p>
+
+<nav class="pager" aria-label="Pages"><a href="clean-history.html"><small>Previous</small>Tidy up commits before sharing</a><a href="two-branches.html" class="next"><small>Next</small>Work on two branches at once</a></nav>
+    </article>
+  </main>
+  <aside class="wtoc" aria-label="On this page"><b>On this page</b><nav id="toc"></nav></aside>
+</div>
+<div class="wsearch-dialog" role="dialog" aria-modal="true" aria-label="Search the wiki" hidden>
+  <div class="wsearch-box">
+    <div class="wsearch-input"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="wsearch-q" type="search" placeholder="Search guides, recipes and reference" autocomplete="off" spellcheck="false"><kbd>esc</kbd></div>
+    <ul class="wsearch-results" id="wsearch-results" role="listbox"></ul>
+    <div class="wsearch-foot"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>↵</kbd> open</span><span><kbd>esc</kbd> close</span></div>
+  </div>
+</div>
+<script src="search-index.js"></script>
+<script src="../assets/site.js"></script>
+<script src="../assets/wiki.js"></script>
+</body>
+</html>
