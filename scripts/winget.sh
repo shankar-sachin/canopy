@@ -4,6 +4,7 @@
 #   scripts/winget.sh             # render for the version in Cargo.toml
 #   scripts/winget.sh 1.0.1       # render for a given version
 #   scripts/winget.sh --submit    # render, then open a PR on microsoft/winget-pkgs
+#   scripts/winget.sh --desktop   # the same for Canopy Desktop (shankars.canopy-desktop)
 #
 # Rendering reads the Windows zips' checksums from the GitHub release, so run
 # it after the Release workflow has attached the builds. Output goes to
@@ -15,10 +16,12 @@ cd "$(dirname "$0")/.."
 die() { echo "winget: $*" >&2; exit 1; }
 
 submit=no
+desktop=no
 version=""
 for arg in "$@"; do
   case "$arg" in
     --submit) submit=yes ;;
+    --desktop) desktop=yes ;;
     -h|--help) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) version="${arg#v}" ;;
   esac
@@ -27,20 +30,30 @@ command -v gh >/dev/null 2>&1 || die "needs the GitHub CLI (gh), logged in"
 [ -n "$version" ] || version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
 [ -n "$version" ] || die "couldn't read the version from Cargo.toml"
 tag="v$version"
-id=shankars.canopy
+if [ "$desktop" = yes ]; then
+  id=shankars.canopy-desktop
+  templates=packaging/winget-desktop
+  asset() { echo "canopy-desktop-$tag-$1-setup.exe"; }
+  archs="x86_64 aarch64"
+else
+  id=shankars.canopy
+  templates=packaging/winget
+  asset() { echo "canopy-$tag-$1-pc-windows-msvc.zip"; }
+  archs="x86_64 aarch64"
+fi
 
 sha() {
-  gh release download "$tag" --repo shankar-sachin/canopy -p "canopy-$tag-$1.zip.sha256" -O - 2>/dev/null |
+  gh release download "$tag" --repo shankar-sachin/canopy -p "$(asset "$1").sha256" -O - 2>/dev/null |
     cut -d' ' -f1 | tr '[:lower:]' '[:upper:]'
 }
-sha_x64=$(sha x86_64-pc-windows-msvc)
-sha_arm64=$(sha aarch64-pc-windows-msvc)
+sha_x64=$(sha x86_64)
+sha_arm64=$(sha aarch64)
 [ -n "$sha_x64" ] && [ -n "$sha_arm64" ] || die "$tag has no Windows builds yet (x64: ${sha_x64:-missing}, arm64: ${sha_arm64:-missing})"
 date=$(gh release view "$tag" --repo shankar-sachin/canopy --json publishedAt -q '.publishedAt[0:10]')
 
-out="target/winget/$version"
+out="target/winget/$id/$version"
 rm -rf "$out" && mkdir -p "$out"
-for tpl in packaging/winget/*.yaml.in; do
+for tpl in "$templates"/*.yaml.in; do
   f=$(basename "$tpl" .in)
   sed -e "s|@VERSION@|$version|g" -e "s|@DATE@|$date|g" \
       -e "s|@SHA_X64@|$sha_x64|g" -e "s|@SHA_ARM64@|$sha_arm64|g" \
@@ -53,9 +66,10 @@ echo "winget: manifests for $tag in $out"
 
 me=$(gh api user -q .login)
 fork="$me/winget-pkgs"
-dir="manifests/s/shankars/canopy/$version"
-branch="canopy-$version"
-if gh api "repos/microsoft/winget-pkgs/contents/manifests/s/shankars/canopy" >/dev/null 2>&1; then
+pkgdir="manifests/s/shankars/${id#shankars.}"
+dir="$pkgdir/$version"
+branch="${id#shankars.}-$version"
+if gh api "repos/microsoft/winget-pkgs/contents/$pkgdir" >/dev/null 2>&1; then
   title="New version: $id version $version"
 else
   title="New package: $id version $version"
@@ -76,4 +90,4 @@ for f in "$out"/*.yaml; do
     -f "message=$title" -f "branch=$branch" -f "content=$(base64 < "$f" | tr -d '\n')" >/dev/null
 done
 gh pr create --repo microsoft/winget-pkgs --head "$me:$branch" --title "$title" \
-  --body "Canopy $tag: a git dashboard for the terminal (portable zip, x64 and arm64). Manifests generated from https://github.com/shankar-sachin/canopy/tree/main/packaging/winget."
+  --body "Canopy $tag ($id): a git dashboard, x64 and arm64. Manifests generated from https://github.com/shankar-sachin/canopy/tree/main/$templates."

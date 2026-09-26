@@ -98,7 +98,7 @@ pub fn detect_install() -> Install {
             return Install::Homebrew;
         }
     } else if cfg!(windows) {
-        if exe.contains("WinGet") || exe.contains("Program Files") {
+        if exe.contains("WinGet") {
             return Install::Winget;
         }
     } else if std::env::var_os("APPIMAGE").is_some() {
@@ -107,6 +107,25 @@ pub fn detect_install() -> Install {
         return Install::Deb;
     }
     Install::Manual
+}
+
+/// On Windows the per-user installer puts the app in the same place whether
+/// you ran it or winget did, so ask winget.
+async fn refine_install(install: Install) -> Install {
+    if !cfg!(windows) || install != Install::Manual {
+        return install;
+    }
+    let out = tokio::process::Command::new("winget")
+        .args(["list", "--id", "shankars.canopy-desktop", "--exact", "--accept-source-agreements"])
+        .stdin(std::process::Stdio::null())
+        .output()
+        .await;
+    match out {
+        Ok(o) if o.status.success() && String::from_utf8_lossy(&o.stdout).contains("shankars.canopy-desktop") => {
+            Install::Winget
+        }
+        _ => install,
+    }
 }
 
 /// The command that updates this install, if there is one.
@@ -145,7 +164,7 @@ const RELEASES: &str = "https://github.com/shankar-sachin/canopy/releases";
 #[tauri::command]
 pub async fn check_update() -> UpdateInfo {
     let current = env!("CARGO_PKG_VERSION").to_string();
-    let install = detect_install();
+    let install = refine_install(detect_install()).await;
     let mut info = UpdateInfo {
         current: current.clone(),
         latest: None,
@@ -229,7 +248,7 @@ pub async fn environment() -> Environment {
         git,
         gh,
         gh_user,
-        install: detect_install(),
+        install: refine_install(detect_install()).await,
         config_file: recent::store_path().map(|p| p.display().to_string()),
     }
 }

@@ -7,7 +7,7 @@
 # 2. Runs scripts/check.sh.
 # 3. Pushes an annotated tag and creates the GitHub release with your gh login.
 # 4. Waits for the Release workflow (builds + Homebrew tap) and verifies the
-#    tap's checksum.
+#    tap's checksums.
 # 5. Submits the new version to winget (scripts/winget.sh --submit; asks first).
 #
 # Bump `version` in Cargo.toml (and add a changelog entry) in a PR first.
@@ -43,9 +43,13 @@ run=$(gh run list --workflow release.yml --branch "$tag" -L 1 --json databaseId 
 gh run watch "$run" --exit-status >/dev/null || { gh run view "$run"; die "the Release workflow failed"; }
 
 repo=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-want=$(curl -sL "https://github.com/$repo/archive/refs/tags/$tag.tar.gz" | shasum -a 256 | cut -d' ' -f1)
-got=$(gh api repos/shankar-sachin/homebrew-canopy/contents/Formula/canopy.rb -q .content | base64 -d | sed -n 's/.*sha256 "\(.*\)"/\1/p')
-[ "$want" = "$got" ] || die "the tap's checksum ($got) doesn't match the source tarball ($want)"
+# The formula installs the prebuilt binaries: each checksum in it must match
+# the release's .sha256 files.
+formula=$(gh api repos/shankar-sachin/homebrew-canopy/contents/Formula/canopy.rb -q .content | base64 -d)
+for t in aarch64-apple-darwin x86_64-apple-darwin aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu; do
+  want=$(gh release download "$tag" -p "canopy-$tag-$t.tar.gz.sha256" -O - | cut -d' ' -f1)
+  printf '%s\n' "$formula" | grep -q "sha256 \"$want\"" || die "the tap's formula doesn't have the $t checksum ($want)"
+done
 echo "release: $tag is out: https://github.com/$repo/releases/tag/$tag"
 gh release view "$tag" --json assets -q '.assets[].name' | sed 's/^/  /'
 

@@ -44,6 +44,10 @@ jobs:
       - name: Desktop app smoke test (Linux)
         if: runner.os == 'Linux'
         run: xvfb-run -a cargo run -p canopy-desktop -- --smoke .
+      # Windows 11 has WebView2 built in; the runner image has it too.
+      - name: Desktop app smoke test (Windows)
+        if: runner.os == 'Windows'
+        run: cargo run -p canopy-desktop -- --smoke .
 
   # Releases ship a Windows on Arm build; make sure it still builds.
   windows-arm64:

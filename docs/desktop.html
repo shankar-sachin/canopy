@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Desktop app · Canopy</title>
-<meta name="description" content="Canopy Desktop: the Canopy git dashboard as a Mac and Linux app. Release preview.">
+<meta name="description" content="Canopy Desktop: the Canopy git dashboard as a Mac, Windows and Linux app. Release preview.">
 <meta property="og:title" content="Desktop app · Canopy">
 <meta property="og:description" content="Canopy Desktop: the Canopy git dashboard as a Mac and Linux app. Release preview.">
 <meta property="og:image" content="https://shankar-sachin.github.io/canopy/assets/og.png">
@@ -41,7 +41,7 @@
   <div class="wrap">
     <div class="eyebrow">Desktop · release preview</div>
     <h1>canopy, as an app.</h1>
-    <p class="lede">Everything the terminal app does, in a window: stage single lines with a click, browse the commit graph, and work with pull requests, issues and Actions. Same git, same <code>gh</code>, same safety net.</p>
+    <p class="lede">Everything the terminal app does, in a window on macOS, Windows or Linux: stage single lines with a click, browse the commit graph, and work with pull requests, issues and Actions. Same git, same <code>gh</code>, same safety net.</p>
   </div>
 </header>
 <main class="wrap doc">
@@ -91,7 +91,9 @@
 <img class="appshot" src="assets/desktop/home-light.png" alt="Canopy Desktop Home in the light theme" width="1280" height="800" loading="lazy">
 
 <h2 id="windows">Windows</h2>
-<p>Canopy Desktop for Windows 11 is next (v1.0.3), installable with <code>winget</code>. Until then, the <a href="get-started.html#windows">terminal app</a> runs great in Windows Terminal.</p>
+<p>Canopy Desktop runs on Windows 11 (x64 and Arm). Install it with winget:</p>
+<pre class="code"><span class="p">PS&gt; </span>winget install shankars.canopy-desktop<button class="copy" data-copy-text="winget install shankars.canopy-desktop" type="button" aria-label="Copy" title="Copy"><svg class="i-copy" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 5.5V3.6A1.1 1.1 0 0 0 9.4 2.5H3.6a1.1 1.1 0 0 0-1.1 1.1v5.8a1.1 1.1 0 0 0 1.1 1.1h1.9"/></svg><svg class="i-done" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 8.5 3 3 6-7"/></svg></button></pre>
+<p>Or download <code>canopy-desktop-v1.0.3-x86_64-setup.exe</code> (or <code>aarch64</code> for Arm) from <a href="https://github.com/shankar-sachin/canopy/releases/latest">the latest release</a>. It installs for your user only, with no admin rights. The installer isn't code-signed yet, so Windows SmartScreen may say it doesn't recognize the app: click <b>More info</b>, then <b>Run anyway</b>. Update later with <code>winget upgrade shankars.canopy-desktop</code>.</p>
 
 <h2 id="keys">Keys</h2>
 <table>
@@ -108,7 +110,7 @@
 <tr><td><kbd>⌘,</kbd></td><td>Settings</td></tr>
 </tbody>
 </table>
-<p>On Linux, use <kbd>Ctrl</kbd> instead of <kbd>⌘</kbd>.</p>
+<p>On Windows and Linux, use <kbd>Ctrl</kbd> instead of <kbd>⌘</kbd>.</p>
 
 <div class="next-links"><a href="github.html"><small>Previous</small>GitHub</a><a href="get-started.html"><small>Next</small>Get started</a></div>
   </article>
