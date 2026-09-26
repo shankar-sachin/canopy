@@ -21,6 +21,8 @@ pub struct Config {
     pub workspace_depth: usize,
     /// User-defined commands bound to keys.
     pub custom_commands: Vec<CustomCommand>,
+    /// Play the short tree animation when Canopy starts.
+    pub splash: bool,
     /// Tighter layout: less padding and no gaps between panels.
     pub compact: bool,
     /// Show modifier keys as ⌃ ⌥ ⇧ (default on macOS) instead of ctrl-/alt-.
@@ -67,6 +69,7 @@ impl Default for Config {
             gh_program: None,
             mac_key_symbols: None,
             compact: false,
+            splash: true,
             log_page_size: 300,
         }
     }
@@ -118,6 +121,7 @@ nerd_font = false           # true if your terminal font has Nerd Font glyphs
 teach_mode = true           # show the git command behind every action
 confirm_destructive = true
 compact = false             # true: tighter layout, no gaps between panels
+splash = true               # the tree animation when Canopy starts
 workspace_dirs = ["~/code"] # scanned by the Workspace view (tab 6)
 workspace_depth = 3
 

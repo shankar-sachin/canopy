@@ -176,6 +176,8 @@ pub struct App {
     pub log_loading: bool,
     /// When set, History shows only commits touching this path (following renames).
     pub log_path: Option<String>,
+    /// While set, the startup animation is showing (since this instant).
+    pub splash_start: Option<Instant>,
     pub github: crate::github::GithubState,
     /// Inner width of the diff panel at the last draw (for wrapping text).
     pub last_diff_width: usize,
@@ -241,6 +243,7 @@ impl App {
             last_runs_poll: Instant::now(),
             log_loading: false,
             log_path: None,
+            splash_start: None,
             github: Default::default(),
             last_diff_width: 72,
             bisect: None,
@@ -861,7 +864,14 @@ impl App {
         }
         self.scan_workspace();
 
-        let mut ticker = tokio::time::interval(Duration::from_millis(100));
+        if self.config.splash {
+            self.splash_start = Some(Instant::now());
+        }
+        // Tick fast while the splash animates, then settle to 10 per second.
+        let normal = Duration::from_millis(100);
+        let mut ticker =
+            tokio::time::interval(if self.splash_start.is_some() { Duration::from_millis(40) } else { normal });
+        let mut fast = self.splash_start.is_some();
         loop {
             if self.needs_redraw_full {
                 terminal.clear()?;
@@ -878,6 +888,13 @@ impl App {
                 }
                 _ = ticker.tick() => {
                     self.tick = self.tick.wrapping_add(1);
+                    if self.splash_start.is_some_and(|s| s.elapsed() >= crate::ui::splash::TOTAL) {
+                        self.splash_start = None;
+                    }
+                    if fast && self.splash_start.is_none() {
+                        fast = false;
+                        ticker = tokio::time::interval(normal);
+                    }
                     if let Some(t) = &self.toast {
                         let ttl = if t.level == Level::Error { 8 } else { 4 };
                         if t.at.elapsed() > Duration::from_secs(ttl) {

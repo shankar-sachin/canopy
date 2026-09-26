@@ -23,7 +23,15 @@ fn color(c: char) -> Option<Color> {
 
 /// The tree as lines of text. `scale` 1 is 9x4 cells; 2 is 18x8.
 pub fn lines(scale: usize) -> Vec<Line<'static>> {
+    grown(scale, 1.0)
+}
+
+/// The tree part-way through growing: `progress` 0.0 shows nothing, 1.0 the
+/// whole tree. Pixel rows appear from the ground up (trunk, then canopy).
+pub fn grown(scale: usize, progress: f32) -> Vec<Line<'static>> {
     let scale = scale.max(1);
+    let total = PIXELS.len() * scale;
+    let visible = (progress.clamp(0.0, 1.0) * total as f32).ceil() as usize;
     // Scale the pixel grid, then fold pairs of pixel rows into one text row.
     let rows: Vec<Vec<char>> = PIXELS
         .iter()
@@ -31,6 +39,9 @@ pub fn lines(scale: usize) -> Vec<Line<'static>> {
             let row: Vec<char> = r.chars().flat_map(|c| std::iter::repeat_n(c, scale)).collect();
             std::iter::repeat_n(row, scale)
         })
+        .enumerate()
+        // Rows above the growth line are still empty.
+        .map(|(y, row)| if y + visible >= total { row } else { vec!['.'; row.len()] })
         .collect();
     rows.chunks(2)
         .map(|pair| {
@@ -56,6 +67,17 @@ pub fn lines(scale: usize) -> Vec<Line<'static>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn grows_from_the_ground_up() {
+        let text = |ls: Vec<Line>| ls.iter().map(|l| l.to_string()).collect::<Vec<_>>();
+        let none = text(grown(1, 0.0));
+        assert!(none.iter().all(|l| l.trim().is_empty()));
+        // A quarter grown: only the bottom row (trunk) has anything.
+        let quarter = text(grown(1, 0.25));
+        assert!(quarter[..3].iter().all(|l| l.trim().is_empty()) && !quarter[3].trim().is_empty());
+        assert_eq!(text(grown(1, 1.0)), text(lines(1)));
+    }
 
     #[test]
     fn sizes_and_glyphs() {

@@ -37,6 +37,10 @@ pub fn contexts(app: &App) -> Vec<Ctx> {
 }
 
 pub fn handle_key(app: &mut App, key: KeyEvent) {
+    // Any key skips the startup animation (and does nothing else).
+    if app.splash_start.take().is_some() {
+        return;
+    }
     // Quitting always works, even with a dialog open or while typing.
     // Only real modifier presses count here (not Option-typed characters,
     // which could be text someone is writing).
