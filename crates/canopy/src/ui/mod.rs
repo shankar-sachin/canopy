@@ -68,6 +68,9 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
                 format!(" {} IN PROGRESS ", state_word(state).to_uppercase()),
                 Style::default().fg(t.bg).bg(t.conflict).add_modifier(Modifier::BOLD),
             ));
+            if let Some(canopy_git::parse::bisect::BisectStep::Testing { steps_left, .. }) = &app.bisect {
+                spans.push(Span::styled(format!(" ~{steps_left} steps left"), t.fg(t.conflict)));
+            }
         }
     }
     f.render_widget(Paragraph::new(Line::from(spans)), area);

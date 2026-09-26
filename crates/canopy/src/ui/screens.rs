@@ -92,6 +92,7 @@ fn suggestions(app: &App) -> Vec<Suggestion> {
     let (cont, abort) = (key(Action::ContinueOp, Screen::Status), key(Action::AbortOp, Screen::Status));
     let stage = key(Action::ToggleStage, Screen::Status);
     let new_branch = key(Action::BranchFromCommit, Screen::Log);
+    let bisect = key(Action::Bisect, Screen::Home);
 
     let s = &app.data.status;
     let b = &s.branch;
@@ -114,6 +115,24 @@ fn suggestions(app: &App) -> Vec<Suggestion> {
         }
     } else if conflicts > 0 {
         add(&changes, format!("{conflicts} file(s) have conflicts. Open Changes to resolve them."), 2);
+    }
+    if app.data.state == Some(RepoState::Bisecting) {
+        use canopy_git::parse::bisect::BisectStep;
+        let text = match &app.bisect {
+            Some(BisectStep::Testing { steps_left, oid, subject, .. }) => format!(
+                "Bisecting: test {} {subject} (build it, run it), then press {bisect} to mark it good or bad. About {steps_left} step(s) left.",
+                oid.get(..7).unwrap_or(oid)
+            ),
+            Some(BisectStep::Found { oid, subject }) => format!(
+                "Bisect found it: {} {subject} introduced the problem. Press {bisect} to finish.",
+                oid.get(..7).unwrap_or(oid)
+            ),
+            Some(BisectStep::Inconclusive) => {
+                format!("Bisect can't decide: only skipped commits are left. Press {bisect} to stop.")
+            }
+            None => format!("A bisect is in progress. Test the checked-out commit, then press {bisect}."),
+        };
+        add(&bisect, text, 2);
     }
     if b.head.is_none() && b.oid.is_some() {
         add(&branches, format!("You're on a detached HEAD (not on a branch). Check out a branch in Branches, or create one with {new_branch} in History."), 2);

@@ -56,6 +56,7 @@ Press `?` on any screen for its keys, or `:` to search every action by name.
 | `d` | discard (asks first) | | `!` | run any git command |
 | `/` | filter the list | | `T` | toggle teach mode |
 | `L` | history of a file (follows renames) | | `B` | blame: who changed each line |
+| `b` | bisect: find the commit that broke something | | | |
 | `:` or `ctrl-p` | command palette | | `ctrl-t` | cycle theme |
 
 ### Made for learning git
@@ -116,7 +117,8 @@ crates/canopy       the TUI (Ratatui): app loop, screens, keymap, themes
 - [x] Conflict editor with per-conflict ours/theirs
 - [x] File history and blame
 - [x] Worktrees
-- [ ] Bisect, submodules
+- [x] Bisect
+- [ ] Submodules
 
 ## Develop
 

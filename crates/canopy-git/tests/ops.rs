@@ -364,3 +364,41 @@ async fn worktrees_add_list_remove_prune() {
     git.prune_worktrees().await.unwrap();
     assert_eq!(git.worktrees().await.unwrap().len(), 1);
 }
+
+#[tokio::test]
+async fn bisect_finds_the_bad_commit() {
+    use canopy_git::parse::bisect::{self, BisectStep};
+    let dir = repo();
+    let git = Git::open(dir.path()).await.unwrap();
+    // c1..c8; the "bug" (BROKEN in f.txt) arrives in c5.
+    for i in 1..=8 {
+        let content = if i >= 5 { format!("{i} BROKEN\n") } else { format!("{i}\n") };
+        write(&dir, "f.txt", &content);
+        commit_all(&git, &format!("c{i}")).await;
+    }
+    let log = git.log(&LogQuery::default()).await.unwrap();
+    let good = log.iter().find(|c| c.subject == "c1").unwrap().oid.clone();
+
+    let text = |o: &canopy_git::Output| format!("{}{}", o.stdout, o.stderr);
+    let out = git.bisect_start("HEAD", &good).await.unwrap();
+    assert_eq!(git.state(), RepoState::Bisecting);
+    let mut step = bisect::parse(&text(&out)).unwrap_or_else(|| panic!("first step: {out:?}"));
+    for _ in 0..10 {
+        match step {
+            BisectStep::Testing { .. } => {
+                let broken = std::fs::read_to_string(dir.path().join("f.txt")).unwrap().contains("BROKEN");
+                let out = git.bisect_mark(if broken { "bad" } else { "good" }).await.unwrap();
+                step = bisect::parse(&text(&out)).unwrap_or_else(|| panic!("next step: {out:?}"));
+            }
+            BisectStep::Found { ref subject, .. } => {
+                assert_eq!(subject, "c5");
+                break;
+            }
+            BisectStep::Inconclusive => panic!("inconclusive"),
+        }
+    }
+    assert!(matches!(step, BisectStep::Found { .. }));
+    git.bisect_reset().await.unwrap();
+    assert_eq!(git.state(), RepoState::Clean);
+    assert_eq!(git.log(&LogQuery::default()).await.unwrap()[0].subject, "c8");
+}

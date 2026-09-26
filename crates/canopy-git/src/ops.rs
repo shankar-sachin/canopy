@@ -457,6 +457,21 @@ impl Git {
         self.stage(&[path]).await
     }
 
+    /// Start bisecting between a known-bad and a known-good revision.
+    pub async fn bisect_start(&self, bad: &str, good: &str) -> Result<Output> {
+        self.run(&["bisect", "start", bad, good]).await
+    }
+
+    /// Mark the checked-out commit: `good`, `bad`, or `skip`.
+    pub async fn bisect_mark(&self, term: &str) -> Result<Output> {
+        self.run(&["bisect", term]).await
+    }
+
+    /// End the bisect and go back to where it started.
+    pub async fn bisect_reset(&self) -> Result<Output> {
+        self.run(&["bisect", "reset"]).await
+    }
+
     pub async fn worktrees(&self) -> Result<Vec<crate::parse::worktree::Worktree>> {
         let out = self.run(&["worktree", "list", "--porcelain"]).await?;
         Ok(crate::parse::worktree::parse(&out.stdout))

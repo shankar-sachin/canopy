@@ -542,3 +542,41 @@ fn worktree_folder_names() {
     use std::path::Path;
     assert_eq!(crate::input::worktree_path(Path::new("/code/app"), "fix/login"), Path::new("/code/app-fix-login"));
 }
+
+#[tokio::test]
+async fn bisect_flow_finds_culprit() {
+    let dir = TempDir::new().unwrap();
+    sh(
+        dir.path(),
+        r#"git init -q -b main && git config user.name T && git config user.email t@t.io &&
+           for i in 1 2 3 4 5 6 7 8; do
+             if [ $i -ge 5 ]; then echo "$i BROKEN" > f.txt; else echo $i > f.txt; fi
+             git add f.txt && git commit -qm "c$i"
+           done"#,
+    );
+    let mut app = app_for(dir.path()).await;
+    press(&mut app, KeyCode::Char('3')).await;
+    press(&mut app, KeyCode::Char('G')).await; // oldest commit: c1 (known good)
+    press(&mut app, KeyCode::Char('b')).await;
+    let s = render(&mut app, 120, 30);
+    assert!(s.contains("Start bisect?") && s.contains("c1"), "{s}");
+    press(&mut app, KeyCode::Char('y')).await;
+    let s = render(&mut app, 120, 30);
+    assert!(s.contains("BISECT IN PROGRESS") && s.contains("steps left"), "{s}");
+
+    for _ in 0..6 {
+        if matches!(app.bisect, Some(canopy_git::parse::bisect::BisectStep::Found { .. })) {
+            break;
+        }
+        let broken = std::fs::read_to_string(dir.path().join("f.txt")).unwrap().contains("BROKEN");
+        press(&mut app, KeyCode::Char('b')).await; // open the menu
+        press(&mut app, KeyCode::Char(if broken { 'b' } else { 'g' })).await;
+    }
+    let s = render(&mut app, 120, 30);
+    assert!(s.contains("Found it:") && s.contains("c5"), "{s}");
+    press(&mut app, KeyCode::Char('f')).await;
+    assert!(!dir.path().join(".git/BISECT_LOG").exists());
+    assert_eq!(app.screen, Screen::Log);
+    assert_eq!(app.selected_commit().unwrap().subject, "c5");
+    assert_eq!(app.current_branch(), Some("main"));
+}
