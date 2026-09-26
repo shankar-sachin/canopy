@@ -601,3 +601,4 @@ html[data-theme="light"] .dl.add .code, html[data-theme="light"] .dl.add .sign {
 .details-text { flex: 1; margin: 0; padding: 14px 20px; overflow: auto; font: 12.5px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); }
 .details-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 20px; border-top: 1px solid var(--border); }
 .details-foot .mono { font-size: 12px; }
+.btn .brand { flex: none; }

@@ -32,8 +32,8 @@ async function showDetails(id) {
     <div class="details-foot"><span class="faint mono" id="det-file"></span><span class="grow"></span>
       <button class="btn small" data-d="copy" type="button">Copy</button>
       <button class="btn small" data-d="editor" type="button">Open in editor</button>
-      <button class="btn small" data-d="github" type="button">View in GitHub</button>
-      <button class="btn small primary" data-d="fix" type="button">✦ Fix with ${esc(gh.ai?.chosen || "AI")}</button></div>
+      <button class="btn small" data-d="github" type="button">${brand("github")}View in GitHub</button>
+      <button class="btn small primary" data-d="fix" type="button">${assistantMark(gh.ai?.chosen)} Fix with ${esc(gh.ai?.chosen || "AI")}</button></div>
   </div>`;
   let details = null;
   const close = () => {
@@ -63,7 +63,7 @@ async function showDetails(id) {
   });
   document.addEventListener("keydown", onKey, true);
   document.body.append(wrap);
-  aiStatus().then((ai) => { const f = wrap.querySelector('[data-d="fix"]'); if (f) f.textContent = `✦ Fix with ${ai.chosen || "AI"}`; });
+  aiStatus().then((ai) => { const f = wrap.querySelector('[data-d="fix"]'); if (f) f.innerHTML = `${assistantMark(ai.chosen)} Fix with ${esc(ai.chosen || "AI")}`; });
   try {
     details = await invoke("failure_details", { id });
     $("#det-headline").textContent = details.headline;
@@ -195,7 +195,7 @@ function prDetailHtml() {
     <div class="gmeta">${stateBadge(pr)} <span><b>${esc(pr.author.login)}</b> wants to merge <code>${esc(pr.headRefName)}</code> into <code>${esc(pr.baseRefName)}</code></span>
       <span class="adds">+${pr.additions}</span><span class="dels">−${pr.deletions}</span>${REVIEW[pr.reviewDecision] || ""}${labelChips(pr.labels)}</div>
     <div class="cactions">
-      <button class="btn small" data-g="open" data-url="${esc(pr.url)}">View in GitHub</button>
+      <button class="btn small" data-g="open" data-url="${esc(pr.url)}">${brand("github")}View in GitHub</button>
       <button class="btn small" data-g="pr-checkout">Check out</button>
       <button class="btn small" data-g="pr-comment">Comment…</button>
       ${open ? `<button class="btn small" data-g="pr-review">Review…</button><button class="btn small" data-g="pr-close">Close…</button>
@@ -256,7 +256,7 @@ function issueDetailHtml() {
     <h2 class="selectable">${esc(i.title)} <span class="num">#${i.number}</span></h2>
     <div class="gmeta">${stateBadge(i)}<span>opened by <b>${esc(i.author.login)}</b></span>${labelChips(i.labels)}</div>
     <div class="cactions">
-      <button class="btn small" data-g="open" data-url="${esc(i.url)}">View in GitHub</button>
+      <button class="btn small" data-g="open" data-url="${esc(i.url)}">${brand("github")}View in GitHub</button>
       <button class="btn small" data-g="issue-comment">Comment…</button>
       ${open ? `<button class="btn small" data-g="issue-close">Close</button>` : `<button class="btn small" data-g="issue-reopen">Reopen</button>`}
     </div>
@@ -325,10 +325,10 @@ function runDetailHtml() {
     <h2 class="selectable">${esc(run.displayTitle)}</h2>
     <div class="gmeta">${checkIcon(RUN_ICON[run.state])}<span>${esc(run.workflowName)} #${run.number}</span><code>${esc(run.headBranch)}</code><span class="faint">${esc(run.event)} · ${ago(run.createdAt)}</span></div>
     <div class="cactions">
-      <button class="btn small" data-g="open" data-url="${esc(run.url)}">View in GitHub</button>
+      <button class="btn small" data-g="open" data-url="${esc(run.url)}">${brand("github")}View in GitHub</button>
       ${run.state === "failed" ? `<button class="btn small" data-g="details">Details</button>
         <button class="btn small" data-g="run-rerun">Re-run failed jobs</button>
-        <button class="btn small primary" data-g="fix-ai" title="Write a prompt from this failure and open your AI assistant with it">✦ Fix with ${esc(gh.ai?.chosen || "AI")}</button>` : ""}
+        <button class="btn small primary" data-g="fix-ai" title="Write a prompt from this failure and open your AI assistant with it">${assistantMark(gh.ai?.chosen)} Fix with ${esc(gh.ai?.chosen || "AI")}</button>` : ""}
     </div>
     ${jobs}${log}
   </div>`;
@@ -554,8 +554,8 @@ function ghFailureBanner() {
     <div class="fail-text"><b>Canopy found an error in your latest commit.</b><p>${esc(f.headline)} <span class="faint">(${esc(f.workflow)})</span></p></div>
     <div class="fail-actions">
       <button class="btn small" data-fail="details">Details</button>
-      <button class="btn small" data-fail="open" data-url="${esc(f.url)}">View in GitHub</button>
-      ${who ? `<button class="btn small primary" data-fail="fix" title="Write a prompt from this failure and open ${esc(who)} with it">✦ Fix with ${esc(who)}</button>`
+      <button class="btn small" data-fail="open" data-url="${esc(f.url)}">${brand("github")}View in GitHub</button>
+      ${who ? `<button class="btn small primary" data-fail="fix" title="Write a prompt from this failure and open ${esc(who)} with it">${assistantMark(who)} Fix with ${esc(who)}</button>`
             : `<button class="btn small" data-fail="setup">Set up an AI assistant</button>`}
     </div></div>`;
 }
