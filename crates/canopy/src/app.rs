@@ -77,6 +77,7 @@ pub enum Msg {
     Prs(Result<Vec<canopy_gh::PullRequest>, String>),
     Issues(Result<Vec<canopy_gh::Issue>, String>),
     Runs(Result<Vec<canopy_gh::Run>, String>),
+    Notifications(Result<Vec<canopy_gh::Notification>, String>),
     GhHome {
         /// The branch this was fetched for (ignored if we've switched since).
         branch: Option<String>,
@@ -361,7 +362,10 @@ impl App {
             Screen::Workspace => self.visible_workspace().len(),
             Screen::Reflog => self.data.reflog.len(),
             Screen::Pulls => self.github.prs.len(),
-            Screen::Issues => self.github.issues.len(),
+            Screen::Issues => match self.github.issues_view {
+                crate::github::IssuesView::Issues => self.github.issues.len(),
+                crate::github::IssuesView::Notifications => self.github.notifications.len(),
+            },
             Screen::Runs => self.github.runs.len(),
         }
     }
@@ -749,6 +753,20 @@ impl App {
                     Ok(issues) => {
                         self.github.issues = issues;
                         self.github.issues_loaded = true;
+                        self.clamp_selections();
+                        if self.screen == Screen::Issues {
+                            crate::views::diff::load_for_selection(self);
+                        }
+                    }
+                    Err(e) => self.toast(Level::Error, e),
+                }
+            }
+            Msg::Notifications(result) => {
+                self.github.notif_loading = false;
+                match result {
+                    Ok(list) => {
+                        self.github.notifications = list;
+                        self.github.notif_loaded = true;
                         self.clamp_selections();
                         if self.screen == Screen::Issues {
                             crate::views::diff::load_for_selection(self);

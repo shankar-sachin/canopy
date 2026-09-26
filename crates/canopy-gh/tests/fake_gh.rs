@@ -25,6 +25,7 @@ case "$1 $2" in
   "run list") cat "{f}/run_list.json" ;;
   "run view") case "$*" in *--log-failed*) printf 'test\tRun cargo test\tpanicked at x\n' ;; *) cat "{f}/run_jobs.json" ;; esac ;;
   "pr merge") echo "merged" ;;
+  "api --method") case "$*" in *GET*notifications*) cat "{f}/notifications.json" ;; *) : ;; esac ;;
   *) : ;;
 esac
 "#,
@@ -123,4 +124,27 @@ async fn failures_are_reported() {
     let gh = Gh::new(dir.path(), Some(path));
     let err = gh.pr_list(PrFilter::Open, 10).await.unwrap_err().to_string();
     assert!(err.contains("Could not resolve"), "{err}");
+}
+
+#[tokio::test]
+async fn notifications() {
+    let dir = TempDir::new().unwrap();
+    let gh = Gh::new(dir.path(), Some(fake_gh(dir.path(), true)));
+    let n = gh.notifications(true, false).await.unwrap();
+    assert_eq!(n.len(), 3);
+    assert!(n[0].unread && n[0].subject.kind == "PullRequest");
+    assert_eq!(n[0].web_url(), "https://github.com/o/r/pull/12");
+    assert_eq!(n[1].web_url(), "https://github.com/o/r/issues/7");
+    // No subject URL (a release): falls back to the repository page.
+    assert_eq!(n[2].web_url(), "https://github.com/o/other");
+    assert_eq!(n[0].reason_text(), "your review was requested");
+    gh.notification_read("101").await.unwrap();
+    gh.notifications_read_all(false).await.unwrap();
+    let log = calls(dir.path());
+    assert!(
+        log.contains(&"api --method GET repos/{owner}/{repo}/notifications -f all=false -F per_page=50".to_string()),
+        "{log:?}"
+    );
+    assert!(log.contains(&"api --method PATCH notifications/threads/101".to_string()), "{log:?}");
+    assert!(log.contains(&"api --method PUT notifications -F read=true".to_string()), "{log:?}");
 }

@@ -278,6 +278,74 @@ pub struct Step {
     pub number: u64,
 }
 
+/// A GitHub notification thread (REST API shape, snake_case).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct Notification {
+    pub id: String,
+    #[serde(default)]
+    pub unread: bool,
+    /// review_requested, mention, assign, author, comment, ...
+    #[serde(default)]
+    pub reason: String,
+    #[serde(default, deserialize_with = "ts")]
+    pub updated_at: i64,
+    pub subject: NotificationSubject,
+    pub repository: NotificationRepo,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct NotificationSubject {
+    pub title: String,
+    /// API URL of the thing (PR, issue, release...), may be null.
+    #[serde(default, deserialize_with = "null_default")]
+    pub url: String,
+    /// PullRequest, Issue, Release, Commit, Discussion, CheckSuite, ...
+    #[serde(rename = "type", default)]
+    pub kind: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct NotificationRepo {
+    pub full_name: String,
+    pub html_url: String,
+}
+
+impl Notification {
+    /// The page to open in a browser: the PR or issue itself when possible.
+    pub fn web_url(&self) -> String {
+        let api = &self.subject.url;
+        if let Some(rest) = api.strip_prefix("https://api.github.com/repos/") {
+            let web = format!("https://github.com/{rest}");
+            if self.subject.kind == "PullRequest" {
+                return web.replacen("/pulls/", "/pull/", 1);
+            }
+            if self.subject.kind == "Issue" {
+                return web;
+            }
+        }
+        self.repository.html_url.clone()
+    }
+
+    /// Why you got it, in plain words.
+    pub fn reason_text(&self) -> &'static str {
+        match self.reason.as_str() {
+            "review_requested" => "your review was requested",
+            "mention" => "you were mentioned",
+            "team_mention" => "your team was mentioned",
+            "assign" => "you were assigned",
+            "author" => "you opened it",
+            "comment" => "you commented",
+            "state_change" => "you changed its state",
+            "subscribed" => "you watch this repository",
+            "manual" => "you subscribed",
+            "ci_activity" => "a workflow run finished",
+            "security_alert" => "a security alert",
+            "invitation" => "you were invited",
+            _ => "activity",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PrFilter {
     Open,

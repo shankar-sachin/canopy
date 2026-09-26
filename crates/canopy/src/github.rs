@@ -1,6 +1,6 @@
 //! GitHub tabs: state, loading, and turning PRs into the details panel.
 
-use canopy_gh::{Gh, GhStatus, Issue, IssueFilter, Job, PrFilter, PullRequest, Run};
+use canopy_gh::{Gh, GhStatus, Issue, IssueFilter, Job, Notification, PrFilter, PullRequest, Run};
 
 use crate::app::{App, Msg};
 use crate::keymap::Screen;
@@ -35,6 +35,33 @@ pub struct GithubState {
     pub branch_pr: Option<Option<PullRequest>>,
     /// Home card: PRs waiting for the viewer's review.
     pub review_requests: Option<usize>,
+    /// Issues tab: showing issues or notifications.
+    pub issues_view: IssuesView,
+    pub notifications: Vec<Notification>,
+    /// Notifications from every repo instead of just this one.
+    pub notif_everywhere: bool,
+    /// Include notifications already read.
+    pub notif_include_read: bool,
+    pub notif_loading: bool,
+    pub notif_loaded: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum IssuesView {
+    #[default]
+    Issues,
+    Notifications,
+}
+
+impl IssuesView {
+    pub const ALL: [IssuesView; 2] = [IssuesView::Issues, IssuesView::Notifications];
+
+    pub fn title(self) -> &'static str {
+        match self {
+            IssuesView::Issues => "Issues",
+            IssuesView::Notifications => "Notifications",
+        }
+    }
 }
 
 /// A GitHub item that can be commented on or closed.
@@ -266,6 +293,42 @@ pub fn load_home(app: &mut App) {
     });
 }
 
+pub fn load_notifications(app: &mut App) {
+    if !app.github.ready() {
+        return;
+    }
+    let Some(gh) = app.github.gh.clone() else { return };
+    let (here, all) = (!app.github.notif_everywhere, app.github.notif_include_read);
+    app.github.notif_loading = true;
+    app.spawn(async move { Msg::Notifications(gh.notifications(here, all).await.map_err(|e| e.to_string())) });
+}
+
+pub fn selected_notification(app: &App) -> Option<&Notification> {
+    if app.github.issues_view != IssuesView::Notifications {
+        return None;
+    }
+    app.github.notifications.get(app.selected(Screen::Issues))
+}
+
+pub fn notification_view(n: &Notification) -> DiffView {
+    let kind = match n.subject.kind.as_str() {
+        "PullRequest" => "Pull request",
+        "CheckSuite" => "CI run",
+        other => other,
+    };
+    let meta = vec![
+        n.subject.title.clone(),
+        format!("{kind} in {}", n.repository.full_name),
+        String::new(),
+        format!("Why you got this: {}.", n.reason_text()),
+        format!("Updated {} · {}", ago(n.updated_at), if n.unread { "unread" } else { "read" }),
+        String::new(),
+        "↵ or o opens it in your browser; m marks it read.".to_string(),
+        n.web_url(),
+    ];
+    DiffView::new(format!("notification:{}", n.id), n.subject.title.clone(), meta, Vec::new(), None)
+}
+
 /// Reload whichever GitHub lists have been opened (after an action).
 pub fn reload_loaded(app: &mut App) {
     if app.github.prs_loaded {
@@ -276,6 +339,9 @@ pub fn reload_loaded(app: &mut App) {
     }
     if app.github.runs_loaded {
         load_runs(app);
+    }
+    if app.github.notif_loaded {
+        load_notifications(app);
     }
     load_home(app);
 }
@@ -288,6 +354,11 @@ pub fn on_enter(app: &mut App, screen: Screen) {
     let gh = &app.github;
     match screen {
         Screen::Pulls if !gh.prs_loaded && !gh.prs_loading => load_prs(app),
+        Screen::Issues if gh.issues_view == IssuesView::Notifications => {
+            if !gh.notif_loaded && !gh.notif_loading {
+                load_notifications(app)
+            }
+        }
         Screen::Issues if !gh.issues_loaded && !gh.issues_loading => load_issues(app),
         Screen::Runs if !gh.runs_loaded && !gh.runs_loading => load_runs(app),
         _ => {}
@@ -295,6 +366,9 @@ pub fn on_enter(app: &mut App, screen: Screen) {
 }
 
 pub fn selected_issue(app: &App) -> Option<&Issue> {
+    if app.github.issues_view != IssuesView::Issues {
+        return None;
+    }
     app.github.issues.get(app.selected(Screen::Issues))
 }
 

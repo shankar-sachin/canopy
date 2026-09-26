@@ -132,6 +132,10 @@ fn draw_tabs(f: &mut Frame, area: Rect, app: &App) {
             (n > 0).then(|| n.to_string())
         }
         Screen::Stash => (!app.data.stashes.is_empty()).then(|| app.data.stashes.len().to_string()),
+        Screen::Issues if app.github.notif_loaded => {
+            let n = app.github.notifications.iter().filter(|n| n.unread).count();
+            (n > 0).then(|| n.to_string())
+        }
         Screen::Pulls if app.github.prs_loaded => {
             (!app.github.prs.is_empty()).then(|| app.github.prs.len().to_string())
         }

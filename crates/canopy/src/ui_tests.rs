@@ -641,6 +641,7 @@ case "$1 $2" in
   "issue list") case "$*" in *"--state all"*) sed 's/"OPEN"/"CLOSED"/' "{f}/issue_list.json" ;; *) cat "{f}/issue_list.json" ;; esac ;;
   "issue view") cat "{f}/issue_view.json" ;;
   "run list") cat "{f}/run_list.json" ;;
+  "api --method") case "$*" in *GET*notifications*) cat "{f}/notifications.json" ;; *) : ;; esac ;;
   "run view") case "$*" in *--log-failed*) printf 'check (ubuntu)\tRun cargo test\t2026-09-26T00:32:32.4188517Z thread main panicked at src/lib.rs:10\n' ;; *) cat "{f}/run_jobs.json" ;; esac ;;
   "pr diff") printf 'diff --git a/csv.rs b/csv.rs\n--- a/csv.rs\n+++ b/csv.rs\n@@ -0,0 +1 @@\n+fn parse() {{}}\n' ;;
   *) : ;;
@@ -785,7 +786,10 @@ async fn issues_tab() {
     let mut app = github_app(dir.path(), &gh).await;
     press(&mut app, KeyCode::Char('9')).await;
     let s = render(&mut app, 140, 30);
-    assert!(s.contains("Issues · o/r · open · 1") && s.contains("#7") && s.contains("Crash on empty repo"), "{s}");
+    assert!(
+        s.contains("Issues · Notifications  o/r · open · 1") && s.contains("#7") && s.contains("Crash on empty repo"),
+        "{s}"
+    );
     assert!(s.contains("bug") && s.contains("crashes when you") && s.contains("ada commented"), "{s}");
 
     // New issue: title required.
@@ -1415,4 +1419,37 @@ async fn screenshot_frame() {
     );
     std::fs::write(&out, page).unwrap();
     let _ = std::fs::remove_dir_all(base);
+}
+
+#[tokio::test]
+async fn notifications_view() {
+    let dir = demo_repo();
+    let bin = TempDir::new().unwrap();
+    let gh = fake_gh(bin.path(), true);
+    let mut app = github_app(dir.path(), &gh).await;
+    press(&mut app, KeyCode::Char('9')).await;
+    press(&mut app, KeyCode::Char(']')).await;
+    let s = render(&mut app, 150, 30);
+    assert!(s.contains("Notifications") && s.contains("2 unread"), "{s}");
+    assert!(s.contains("Add CSV parser") && s.contains("review requested"), "{s}");
+    assert!(s.contains("Why you got this: your review was requested."), "{s}");
+    // The Issues tab shows the unread count.
+    assert!(s.contains("9 Issues 2"), "{s}");
+
+    press(&mut app, KeyCode::Char('m')).await;
+    press(&mut app, KeyCode::Char('M')).await;
+    press(&mut app, KeyCode::Char('f')).await; // all repos
+    press(&mut app, KeyCode::Char('u')).await; // include read
+    let calls = gh_calls(bin.path());
+    assert!(calls.contains(&"api --method PATCH notifications/threads/101".to_string()), "{calls:?}");
+    assert!(
+        calls.contains(&"api --method PUT repos/{owner}/{repo}/notifications -F read=true".to_string()),
+        "{calls:?}"
+    );
+    assert!(calls.iter().any(|c| c.starts_with("api --method GET notifications -f all=true")), "{calls:?}");
+
+    // [ goes back to issues.
+    press(&mut app, KeyCode::Char('[')).await;
+    let s = render(&mut app, 150, 30);
+    assert!(s.contains("Crash on empty repo") && s.contains("Issues · Notifications"), "{s}");
 }

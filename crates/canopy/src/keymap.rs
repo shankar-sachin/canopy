@@ -89,6 +89,7 @@ pub enum Ctx {
     Remotes,
     Worktrees,
     Submodules,
+    Notifications,
     /// The conflict panel on the Changes tab.
     Conflict,
 }
@@ -201,6 +202,9 @@ pub enum Action {
     CloseItem,
     IssueCreate,
     RerunFailed,
+    MarkRead,
+    MarkAllRead,
+    ToggleUnread,
     OpenInBrowser,
     CycleFilter,
     ToggleDiff,
@@ -324,6 +328,9 @@ impl Action {
             Comment => "comment",
             IssueCreate => "new issue",
             RerunFailed => "re-run failed jobs",
+            MarkRead => "mark notification read",
+            MarkAllRead => "mark all notifications read",
+            ToggleUnread => "show read notifications too",
             PrMerge => "merge pull request",
             CloseItem => "close / reopen",
             OpenInBrowser => "open in browser",
@@ -404,6 +411,9 @@ impl Action {
             PrMerge => "merge",
             IssueCreate => "new",
             RerunFailed => "re-run",
+            MarkRead => "read",
+            MarkAllRead => "all read",
+            ToggleUnread => "unread/all",
             Comment => "comment",
             CloseItem => "close",
             OpenInBrowser => "browser",
@@ -564,7 +574,19 @@ pub static RUNS: &[Binding] = &[
     b(&["f"], Action::CycleFilter, true),
 ];
 
+pub static NOTIFICATIONS: &[Binding] = &[
+    b(&["enter", "o"], Action::OpenInBrowser, true),
+    b(&["m"], Action::MarkRead, true),
+    b(&["M"], Action::MarkAllRead, true),
+    b(&["f"], Action::CycleFilter, true),
+    b(&["u"], Action::ToggleUnread, false),
+    b(&["]"], Action::NextRefsView, true),
+    b(&["["], Action::PrevRefsView, false),
+];
+
 pub static ISSUES: &[Binding] = &[
+    b(&["]"], Action::NextRefsView, true),
+    b(&["["], Action::PrevRefsView, false),
     b(&["enter", "l"], Action::Enter, false),
     b(&["n"], Action::IssueCreate, true),
     b(&["C"], Action::Comment, true),
@@ -653,6 +675,7 @@ pub fn defaults(ctx: Ctx) -> &'static [Binding] {
         Ctx::Remotes => REMOTES,
         Ctx::Worktrees => WORKTREES,
         Ctx::Submodules => SUBMODULES,
+        Ctx::Notifications => NOTIFICATIONS,
     }
 }
 
@@ -741,7 +764,7 @@ pub fn key_name(ev: &KeyEvent) -> String {
     }
 }
 
-pub const ALL_CTX: [Ctx; 17] = [
+pub const ALL_CTX: [Ctx; 18] = [
     Ctx::Global,
     Ctx::Diff,
     Ctx::Screen(Screen::Home),
@@ -758,6 +781,7 @@ pub const ALL_CTX: [Ctx; 17] = [
     Ctx::Remotes,
     Ctx::Worktrees,
     Ctx::Submodules,
+    Ctx::Notifications,
     Ctx::Conflict,
 ];
 
