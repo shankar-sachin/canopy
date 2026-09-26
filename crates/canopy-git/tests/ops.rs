@@ -379,15 +379,16 @@ async fn bisect_finds_the_bad_commit() {
     let log = git.log(&LogQuery::default()).await.unwrap();
     let good = log.iter().find(|c| c.subject == "c1").unwrap().oid.clone();
 
+    let text = |o: &canopy_git::Output| format!("{}{}", o.stdout, o.stderr);
     let out = git.bisect_start("HEAD", &good).await.unwrap();
     assert_eq!(git.state(), RepoState::Bisecting);
-    let mut step = bisect::parse(&out.stdout).expect("first step");
+    let mut step = bisect::parse(&text(&out)).unwrap_or_else(|| panic!("first step: {out:?}"));
     for _ in 0..10 {
         match step {
             BisectStep::Testing { .. } => {
                 let broken = std::fs::read_to_string(dir.path().join("f.txt")).unwrap().contains("BROKEN");
                 let out = git.bisect_mark(if broken { "bad" } else { "good" }).await.unwrap();
-                step = bisect::parse(&out.stdout).expect("next step");
+                step = bisect::parse(&text(&out)).unwrap_or_else(|| panic!("next step: {out:?}"));
             }
             BisectStep::Found { ref subject, .. } => {
                 assert_eq!(subject, "c5");

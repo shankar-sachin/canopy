@@ -10,6 +10,8 @@ pub enum BisectStep {
     Inconclusive,
 }
 
+/// Parse a bisect command's output. Pass stdout and stderr together: which
+/// stream git uses for these messages varies between versions.
 pub fn parse(out: &str) -> Option<BisectStep> {
     let lines: Vec<&str> = out.lines().collect();
     for (i, line) in lines.iter().enumerate() {

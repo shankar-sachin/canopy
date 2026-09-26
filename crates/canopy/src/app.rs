@@ -571,7 +571,7 @@ impl App {
                 if then == Then::Bisect {
                     self.bisect = match &result {
                         Ok(out) if self.git.as_ref().is_some_and(|g| g.state() == RepoState::Bisecting) => {
-                            canopy_git::parse::bisect::parse(&out.stdout)
+                            canopy_git::parse::bisect::parse(&format!("{}{}", out.stdout, out.stderr))
                         }
                         _ => None,
                     };
