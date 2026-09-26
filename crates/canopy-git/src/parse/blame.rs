@@ -12,6 +12,8 @@ pub struct BlameCommit {
     pub summary: String,
     /// Not yet committed (`0000…`).
     pub uncommitted: bool,
+    /// The file's path in this commit (differs from today's after a rename).
+    pub filename: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,6 +55,7 @@ pub fn parse(out: &str) -> Result<Blame, GitError> {
                     time: 0,
                     summary: String::new(),
                     uncommitted: oid.bytes().all(|b| b == b'0'),
+                    filename: String::new(),
                 });
                 cur = Some((oid.to_string(), n));
             }
@@ -63,6 +66,7 @@ pub fn parse(out: &str) -> Result<Blame, GitError> {
                     "author" => c.author = val.to_string(),
                     "author-time" => c.time = val.parse().unwrap_or(0),
                     "summary" => c.summary = val.to_string(),
+                    "filename" => c.filename = val.to_string(),
                     _ => {}
                 }
             }
@@ -90,6 +94,7 @@ mod tests {
         assert_eq!(b.lines[1].line, 2);
         assert_eq!(b.commits[&a].author, "Ada");
         assert_eq!(b.commits[&a].summary, "First");
+        assert_eq!(b.commits[&a].filename, "f.rs");
         assert!(b.commits[&z].uncommitted);
         assert!(!b.commits[&a].uncommitted);
     }

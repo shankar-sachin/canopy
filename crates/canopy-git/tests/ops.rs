@@ -319,6 +319,8 @@ async fn blame_and_file_history_follow_renames() {
     assert_eq!(b.lines.len(), 4);
     let who = |i: usize| b.commits[&b.lines[i].oid].summary.clone();
     assert_eq!(who(0), "create");
+    // The line from "create" lived in old.txt back then.
+    assert_eq!(b.commits[&b.lines[0].oid].filename, "old.txt");
     assert_eq!(who(1), "edit");
     assert!(b.commits[&b.lines[3].oid].uncommitted);
 

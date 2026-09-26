@@ -471,8 +471,17 @@ fn log(f: &mut Frame, area: Rect, app: &mut App) {
     let vis = app.visible_log();
     if vis.is_empty() {
         let filtered = app.filters.contains_key(&Screen::Log);
+        let file_msg;
         let msg: &[&str] = if filtered {
             &["No matching commits", "esc clears the filter"]
+        } else if let Some(p) = &app.log_path {
+            // log_limit is 0 until the first page for this path arrives.
+            file_msg = if app.data.log_limit == 0 {
+                format!("Loading history of {p}…")
+            } else {
+                format!("No commits touch {p} yet")
+            };
+            &[file_msg.as_str(), "esc shows all history"]
         } else {
             &["No commits yet", "Make your first commit with c"]
         };
@@ -482,7 +491,7 @@ fn log(f: &mut Frame, area: Rect, app: &mut App) {
     let (la, da) = split(area, 55);
     let filtered = app.filters.contains_key(&Screen::Log);
     // The graph only makes sense for the unfiltered, contiguous history.
-    let graph = if filtered { Vec::new() } else { graph::build(&app.data.log) };
+    let graph = if filtered || app.log_path.is_some() { Vec::new() } else { graph::build(&app.data.log) };
     let gw = graph.iter().map(Vec::len).max().unwrap_or(0).min(24) as u16;
     let rows: Vec<Row> = vis
         .iter()
@@ -511,7 +520,10 @@ fn log(f: &mut Frame, area: Rect, app: &mut App) {
     } else {
         ""
     };
-    let mut title = format!(" History · {}{more} commits ", vis.len());
+    let mut title = match &app.log_path {
+        Some(p) => format!(" History of {p} · {}{more} commits · esc for all ", vis.len()),
+        None => format!(" History · {}{more} commits ", vis.len()),
+    };
     if let Some(flt) = app.filters.get(&Screen::Log) {
         // Filtering only covers what's loaded so far.
         let scope = if app.log_has_more() { format!(" of {} loaded", app.data.log.len()) } else { String::new() };

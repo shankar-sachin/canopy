@@ -149,6 +149,8 @@ pub enum Action {
     FetchAll,
     // Reflog
     ResetToEntry,
+    FileHistory,
+    Blame,
     // Conflict panel
     NextConflict,
     PrevConflict,
@@ -249,6 +251,8 @@ impl Action {
             TakeTheirs => "resolve: take theirs",
             ContinueOp => "continue merge/rebase",
             AbortOp => "abort merge/rebase",
+            FileHistory => "history of this file",
+            Blame => "blame: who changed each line",
             NextConflict => "next conflict",
             PrevConflict => "previous conflict",
             KeepOurs => "keep ours for this conflict",
@@ -384,6 +388,8 @@ pub static STATUS: &[Binding] = &[
     b(&["t"], Action::TakeTheirs, false),
     b(&["C"], Action::ContinueOp, false),
     b(&["X"], Action::AbortOp, false),
+    b(&["L"], Action::FileHistory, false),
+    b(&["B"], Action::Blame, false),
 ];
 
 pub static DIFF: &[Binding] = &[
@@ -394,6 +400,8 @@ pub static DIFF: &[Binding] = &[
     b(&["N", "["], Action::PrevHunk, false),
     b(&["s"], Action::ToggleSideBySide, false),
     b(&["h", "left"], Action::Back, true),
+    b(&["L"], Action::FileHistory, false),
+    b(&["B"], Action::Blame, false),
 ];
 
 pub static LOG: &[Binding] = &[

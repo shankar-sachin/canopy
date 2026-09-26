@@ -121,6 +121,7 @@ pub fn draw(f: &mut Frame, app: &App) {
                 .title_bottom(Line::styled(" j/k scroll · esc close ", t.muted()));
             f.render_widget(Paragraph::new(text).scroll((*scroll, 0)).block(block), r);
         }
+        Modal::Blame(v) => blame(f, area, t, v),
         Modal::Rebase { items, sel, .. } => {
             let r = centered(area, 90, items.len() as u16 + 9);
             f.render_widget(Clear, r);
@@ -249,6 +250,84 @@ fn commit(f: &mut Frame, area: Rect, app: &App, subject: &TextArea, body: &TextA
         h.extend(key_hint(t, k, l));
     }
     f.render_widget(Paragraph::new(Line::from(h)), hints);
+}
+
+fn blame(f: &mut Frame, area: Rect, t: &Theme, v: &crate::modal::BlameView) {
+    let r = Rect {
+        x: area.x + 1,
+        y: area.y + 1,
+        width: area.width.saturating_sub(2),
+        height: area.height.saturating_sub(2),
+    };
+    f.render_widget(Clear, r);
+    let at = match &v.rev {
+        Some(rev) => format!(" @ {}", rev.get(..7).unwrap_or(rev)),
+        None => " (working tree)".into(),
+    };
+    let block = modal_block(t, format!(" Blame · {}{at} ", v.path), false)
+        .title_bottom(Line::styled(" j/k move · ⏎ go to commit · B blame before this change · esc close ", t.muted()));
+    let inner = block.inner(r);
+    f.render_widget(block, r);
+    let [body, _, footer] =
+        Layout::vertical([Constraint::Fill(1), Constraint::Length(1), Constraint::Length(1)]).areas(inner);
+
+    let h = body.height as usize;
+    let n = v.blame.lines.len();
+    let start = v.cursor.saturating_sub(h / 2).min(n.saturating_sub(h));
+    let palette = [t.hash, t.branch, t.accent_alt, t.remote, t.accent, t.conflict];
+    // Colour each commit consistently by the order it first appears.
+    let mut order: Vec<&str> = Vec::new();
+    for l in &v.blame.lines {
+        if !order.contains(&l.oid.as_str()) {
+            order.push(&l.oid);
+        }
+    }
+    let width = n.to_string().len();
+    let lines: Vec<Line> = v
+        .blame
+        .lines
+        .iter()
+        .enumerate()
+        .skip(start)
+        .take(h)
+        .map(|(i, l)| {
+            let c = &v.blame.commits[&l.oid];
+            let color = palette[order.iter().position(|o| *o == l.oid).unwrap_or(0) % palette.len()];
+            // Only label the first line of each run of lines from the same commit.
+            let first = i == 0 || v.blame.lines[i - 1].oid != l.oid;
+            let who = if !first {
+                format!("{:<8} {:<14} {:>4}", "│", "", "")
+            } else if c.uncommitted {
+                format!("{:<8} {:<14} {:>4}", "·······", "not committed", "")
+            } else {
+                format!("{:<8} {:<14} {:>4}", &c.oid[..7], trunc(&c.author, 14), ago(c.time))
+            };
+            let mut line = Line::from(vec![
+                Span::styled(who, Style::default().fg(color)),
+                Span::styled(format!(" {:>width$} ", l.line), t.muted()),
+                Span::raw(l.content.replace('\t', "    ")),
+            ]);
+            if i == v.cursor {
+                line = line.style(t.selected());
+            }
+            line
+        })
+        .collect();
+    f.render_widget(Paragraph::new(lines), body);
+
+    if let Some(l) = v.blame.lines.get(v.cursor) {
+        let c = &v.blame.commits[&l.oid];
+        let text = if c.uncommitted {
+            Line::styled("Not committed yet", t.muted())
+        } else {
+            Line::from(vec![
+                Span::styled(format!("{} ", &c.oid[..7]), t.fg(t.hash)),
+                Span::styled(c.summary.clone(), Style::default().fg(t.fg).add_modifier(Modifier::BOLD)),
+                Span::styled(format!("  {} · {}", c.author, ago(c.time)), t.muted()),
+            ])
+        };
+        f.render_widget(Paragraph::new(text), footer);
+    }
 }
 
 fn welcome(f: &mut Frame, area: Rect, t: &Theme) {

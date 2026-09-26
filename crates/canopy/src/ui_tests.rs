@@ -445,3 +445,52 @@ git merge other >/dev/null 2>&1 || true
     press(&mut app, KeyCode::Char('C')).await;
     assert!(!dir.path().join(".git/MERGE_HEAD").exists());
 }
+
+#[tokio::test]
+async fn file_history_and_blame() {
+    let dir = demo_repo();
+    let mut app = app_for(dir.path()).await;
+    // lib.rs is staged; `L` from Changes shows only its commits.
+    press(&mut app, KeyCode::Char('2')).await;
+    let i = app.status_rows().iter().position(|r| app.data.status.files[r.file].path == "lib.rs").unwrap();
+    app.set_selected(Screen::Status, i);
+    press(&mut app, KeyCode::Char('L')).await;
+    assert_eq!(app.screen, Screen::Log);
+    let subjects: Vec<_> = app.data.log.iter().map(|c| c.subject.as_str()).collect();
+    assert_eq!(subjects, vec!["Add subtraction", "Add math library"], "{subjects:?}");
+    let s = render(&mut app, 130, 30);
+    assert!(s.contains("History of lib.rs · 2 commits"), "{s}");
+    // esc returns to all history.
+    press(&mut app, KeyCode::Esc).await;
+    assert!(app.log_path.is_none());
+    assert_eq!(app.data.log.len(), 5);
+
+    // Blame main.rs from the Changes tab (working tree, with uncommitted lines).
+    press(&mut app, KeyCode::Char('2')).await;
+    let i = app.status_rows().iter().position(|r| app.data.status.files[r.file].path == "main.rs").unwrap();
+    app.set_selected(Screen::Status, i);
+    press(&mut app, KeyCode::Char('B')).await;
+    let s = render(&mut app, 130, 30);
+    assert!(s.contains("Blame · main.rs (working tree)") && s.contains("not committed"), "{s}");
+    // First line comes from "Initial commit"; enter jumps there in History.
+    let Modal::Blame(v) = &app.modal else { panic!("blame not open") };
+    let first = v.blame.lines[0].oid.clone();
+    assert_eq!(v.blame.commits[&first].summary, "Initial commit");
+    press(&mut app, KeyCode::Enter).await;
+    assert!(!app.modal.is_open());
+    assert_eq!(app.screen, Screen::Log);
+    assert_eq!(app.selected_commit().unwrap().oid, first);
+
+    // From a commit's diff: blame lib.rs as of "Add math library".
+    let i = app.data.log.iter().position(|c| c.subject == "Add math library").unwrap();
+    app.set_selected(Screen::Log, i);
+    crate::views::diff::load_for_selection(&mut app);
+    app.settle().await;
+    press(&mut app, KeyCode::Enter).await;
+    press(&mut app, KeyCode::Char('G')).await; // bottom of the diff = inside lib.rs
+    press(&mut app, KeyCode::Char('B')).await;
+    let Modal::Blame(v) = &app.modal else { panic!("blame not open") };
+    assert_eq!(v.path, "lib.rs");
+    assert_eq!(v.blame.lines.len(), 3);
+    render(&mut app, 130, 30);
+}

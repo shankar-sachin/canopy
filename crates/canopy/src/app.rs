@@ -67,6 +67,7 @@ pub enum Msg {
     /// Full message of HEAD, fetched to prefill the amend dialog.
     OpenAmend(String),
     ShowOutput(String, String),
+    Blame(Result<crate::modal::BlameView, String>),
 }
 
 /// What to do after an operation finishes.
@@ -129,6 +130,8 @@ pub struct App {
     pub workspace_scanning: bool,
     /// True while a History page is being fetched.
     pub log_loading: bool,
+    /// When set, History shows only commits touching this path (following renames).
+    pub log_path: Option<String>,
     /// Branches, Tags, or Remotes in the Branches tab.
     pub refs_view: RefsView,
     pub workspace_root: PathBuf,
@@ -177,6 +180,7 @@ impl App {
             needs_redraw_full: false,
             last_status_poll: Instant::now(),
             log_loading: false,
+            log_path: None,
             refs_view: RefsView::Branches,
         };
         if !key_warnings.is_empty() {
@@ -358,8 +362,9 @@ impl App {
         let Some(git) = self.git.clone() else { return };
         // Reload as many commits as are already loaded so History keeps its place.
         let limit = self.config.log_page_size.max(self.data.log.len());
+        let path = self.log_path.clone();
         self.spawn(async move {
-            let q = LogQuery { limit, ..Default::default() };
+            let q = LogQuery { limit, follow: path.is_some(), path, ..Default::default() };
             let (status, log, branches, stashes, remotes, tags, reflog) = tokio::join!(
                 git.status(),
                 git.log(&q),
@@ -401,10 +406,22 @@ impl App {
         self.log_loading = true;
         let skip = self.data.log.len();
         let limit = self.config.log_page_size;
+        let path = self.log_path.clone();
         self.spawn(async move {
-            let q = LogQuery { limit, skip, ..Default::default() };
+            let q = LogQuery { limit, skip, follow: path.is_some(), path, ..Default::default() };
             Msg::MoreLog { skip, result: git.log(&q).await.map_err(|e| e.to_string()) }
         });
+    }
+
+    /// Show History for one file (or all history with `None`), reloading it.
+    pub fn set_log_path(&mut self, path: Option<String>) {
+        self.log_path = path;
+        self.data.log.clear();
+        self.data.log_limit = 0;
+        self.filters.remove(&Screen::Log);
+        self.set_selected(Screen::Log, 0);
+        *self.list(Screen::Log).offset_mut() = 0;
+        self.refresh();
     }
 
     fn poll_status(&mut self) {
@@ -558,6 +575,18 @@ impl App {
                 self.refresh();
             }
             Msg::RepoOpened(Err(e)) => self.toast(Level::Error, e),
+            Msg::Blame(Ok(view)) => {
+                self.busy = None;
+                if view.blame.lines.is_empty() {
+                    self.toast(Level::Info, format!("{} is empty", view.path));
+                } else if !self.modal.is_open() || matches!(self.modal, Modal::Blame(_)) {
+                    self.modal = Modal::Blame(view);
+                }
+            }
+            Msg::Blame(Err(e)) => {
+                self.busy = None;
+                self.toast(Level::Error, e);
+            }
             Msg::ShowOutput(title, text) => {
                 self.progress = None;
                 if !self.modal.is_open() {

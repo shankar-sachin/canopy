@@ -163,6 +163,8 @@ pub fn do_action(app: &mut App, action: Action) {
             } else if app.filters.remove(&app.screen).is_some() {
                 app.clamp_selections();
                 diff::load_for_selection(app);
+            } else if app.screen == Screen::Log && app.log_path.is_some() {
+                app.set_log_path(None);
             }
         }
         Enter => match app.screen {
@@ -657,6 +659,15 @@ fn repo_action(app: &mut App, action: Action) {
             let p = progress_sender(app);
             app.run_op(format!("Fetch {}", r.name), Then::Refresh, async move { git.fetch(Some(&r.name), p).await });
         }
+        FileHistory => {
+            let Some((path, _)) = target_file(app) else { return };
+            app.set_log_path(Some(path));
+            goto(app, Screen::Log);
+        }
+        Blame => {
+            let Some((path, rev)) = target_file(app) else { return };
+            open_blame(app, path, rev);
+        }
         NextConflict | PrevConflict => {
             if let Some(c) = app.conflict.as_mut() {
                 c.step(if action == NextConflict { 1 } else { -1 });
@@ -839,6 +850,47 @@ fn push(app: &mut App) {
                 sel: 0,
             };
         }
+    }
+}
+
+/// The file `L`/`B` act on, and the revision to look at (`None` = working tree).
+fn target_file(app: &mut App) -> Option<(String, Option<String>)> {
+    if app.focus == Focus::Diff {
+        if let Some(v) = &app.diff {
+            if let Some(p) = v.current_file() {
+                return Some((p.to_string(), v.rev.clone()));
+            }
+        }
+    }
+    if app.screen == Screen::Status {
+        if let Some(row) = app.selected_status_row() {
+            return Some((app.data.status.files[row.file].path.clone(), None));
+        }
+    }
+    app.toast(Level::Info, "Pick a file first: in Changes, or open a commit (⏎) and move to a file");
+    None
+}
+
+pub fn open_blame(app: &mut App, path: String, rev: Option<String>) {
+    let Some(git) = app.git.clone() else { return };
+    app.busy = Some(format!("Blame {path}"));
+    app.spawn(async move {
+        let res = git.blame(&path, rev.as_deref()).await;
+        let view = res.map(|blame| crate::modal::BlameView { path, rev, blame, cursor: 0 });
+        Msg::Blame(view.map_err(|e| e.to_string()))
+    });
+}
+
+/// Select `oid` in History (loaded commits only).
+fn jump_to_commit(app: &mut App, oid: &str) {
+    app.filters.remove(&Screen::Log);
+    match app.data.log.iter().position(|c| c.oid == oid) {
+        Some(i) => {
+            goto(app, Screen::Log);
+            app.set_selected(Screen::Log, i);
+            diff::load_for_selection(app);
+        }
+        None => app.toast(Level::Info, "That commit isn't in the loaded History yet (scroll down to load more)"),
     }
 }
 
@@ -1054,6 +1106,44 @@ fn modal_key(app: &mut App, key: KeyEvent) {
                     Modal::Palette { input, sel: 0 }
                 }
             }
+        }
+        Modal::Blame(mut v) => {
+            let n = v.blame.lines.len();
+            let mv = |v: &mut crate::modal::BlameView, d: isize| {
+                v.cursor = (v.cursor as isize + d).clamp(0, n.saturating_sub(1) as isize) as usize;
+            };
+            let line = v.blame.lines.get(v.cursor).cloned();
+            match (key.code, ctrl) {
+                (KeyCode::Esc | KeyCode::Char('q'), _) => return,
+                (KeyCode::Char('j') | KeyCode::Down, false) => mv(&mut v, 1),
+                (KeyCode::Char('k') | KeyCode::Up, false) => mv(&mut v, -1),
+                (KeyCode::Char('d'), true) | (KeyCode::PageDown, _) => mv(&mut v, 20),
+                (KeyCode::Char('u'), true) | (KeyCode::PageUp, _) => mv(&mut v, -20),
+                (KeyCode::Char('g') | KeyCode::Home, _) => v.cursor = 0,
+                (KeyCode::Char('G') | KeyCode::End, _) => v.cursor = n.saturating_sub(1),
+                (KeyCode::Enter, _) => {
+                    let Some(l) = line else { return };
+                    if v.blame.commits[&l.oid].uncommitted {
+                        app.toast(Level::Info, "That line isn't committed yet");
+                    } else {
+                        jump_to_commit(app, &l.oid);
+                        return;
+                    }
+                }
+                (KeyCode::Char('B'), _) => {
+                    // Blame the version just before this line's commit.
+                    let Some(l) = line else { return };
+                    let c = &v.blame.commits[&l.oid];
+                    if c.uncommitted {
+                        app.toast(Level::Info, "That line isn't committed yet");
+                    } else {
+                        let path = if c.filename.is_empty() { v.path.clone() } else { c.filename.clone() };
+                        open_blame(app, path, Some(format!("{}^", c.oid)));
+                    }
+                }
+                _ => {}
+            }
+            Modal::Blame(v)
         }
         Modal::Rebase { base, mut items, mut sel } => {
             let set = |items: &mut Vec<RebaseItem>, sel: usize, a| items[sel].action = a;

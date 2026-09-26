@@ -144,6 +144,15 @@ pub enum Modal {
         sel: usize,
     },
     Welcome,
+    Blame(BlameView),
+}
+
+pub struct BlameView {
+    pub path: String,
+    /// `None` = working tree.
+    pub rev: Option<String>,
+    pub blame: canopy_git::parse::blame::Blame,
+    pub cursor: usize,
 }
 
 impl Modal {
