@@ -35,6 +35,19 @@
       "icons/icon.icns",
       "icons/icon.png",
       "icons/icon.ico"
-    ]
+    ],
+    "macOS": {
+      "signingIdentity": "-",
+      "minimumSystemVersion": "10.15"
+    },
+    "linux": {
+      "deb": {
+        "section": "devel"
+      }
+    },
+    "copyright": "\u00a9 Sachin Shankar. MIT licensed.",
+    "longDescription": "Canopy puts your whole repository on one screen: what changed, what's staged, where your branch stands, and what to do next. Stage lines, browse the commit graph, and work with GitHub pull requests, issues and Actions.",
+    "homepage": "https://shankar-sachin.github.io/canopy/",
+    "publisher": "Sachin Shankar"
   }
 }

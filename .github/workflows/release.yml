@@ -10,6 +10,8 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  # Run by hand to build everything without releasing (a dry run).
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -61,8 +63,62 @@ jobs:
             canopy-*.tar.gz*
             canopy-*.zip*
 
+  # Canopy Desktop: a .dmg per Mac architecture, and a .deb and an AppImage
+  # for Linux. Unsigned for now (the app is ad-hoc signed on macOS).
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            bundles: dmg
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            bundles: dmg
+          - target: x86_64-unknown-linux-gnu
+            # The oldest supported Ubuntu, so the builds run on older glibc.
+            os: ubuntu-22.04
+            bundles: deb,appimage
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: desktop-${{ matrix.target }}
+      - name: Linux build libraries (WebKitGTK)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev file
+      - name: Install the Tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
+      - name: Build
+        working-directory: crates/canopy-gui
+        run: cargo tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+      - name: Collect
+        shell: bash
+        run: |
+          v=${{ github.ref_name }}
+          b=target/${{ matrix.target }}/release/bundle
+          shopt -s nullglob
+          for f in $b/dmg/*.dmg; do cp "$f" "canopy-desktop-$v-${{ matrix.target }}.dmg"; done
+          for f in $b/deb/*.deb; do cp "$f" "canopy-desktop-$v-amd64.deb"; done
+          for f in $b/appimage/*.AppImage; do cp "$f" "canopy-desktop-$v-x86_64.AppImage"; done
+          for f in canopy-desktop-*; do shasum -a 256 "$f" > "$f.sha256"; done
+          ls -la canopy-desktop-*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.target }}
+          path: canopy-desktop-*
+
   release:
-    needs: build
+    needs: [build, desktop]
+    # The terminal app ships even if a desktop build fails.
+    if: ${{ !cancelled() && needs.build.result == 'success' && startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -78,7 +134,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           shopt -s nullglob
-          files=(canopy-*.tar.gz* canopy-*.zip*)
+          files=(canopy-*.tar.gz* canopy-*.zip* canopy-desktop-*)
           repo="${{ github.repository }}"
           tag="${{ github.ref_name }}"
           if gh release view "$tag" --repo "$repo" >/dev/null 2>&1; then
@@ -88,10 +144,16 @@ jobs:
           fi
 
   homebrew:
-    needs: release
+    needs: [release, desktop]
+    if: ${{ !cancelled() && needs.release.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*-apple-darwin
+          merge-multiple: true
+          path: desktop
       - name: Compute source tarball checksum
         id: src
         run: |
@@ -114,5 +176,17 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Formula/canopy.rb
+          # The desktop app's cask, when both Mac builds made it.
+          v=${{ github.ref_name }}
+          arm=../desktop/canopy-desktop-$v-aarch64-apple-darwin.dmg.sha256
+          intel=../desktop/canopy-desktop-$v-x86_64-apple-darwin.dmg.sha256
+          if [ -f "$arm" ] && [ -f "$intel" ]; then
+            mkdir -p Casks
+            sed -e "s|@VERSION@|${v#v}|" \
+                -e "s|@SHA_ARM@|$(cut -d' ' -f1 "$arm")|" \
+                -e "s|@SHA_INTEL@|$(cut -d' ' -f1 "$intel")|" \
+                ../packaging/homebrew/canopy-desktop.rb.in > Casks/canopy-desktop.rb
+            git add Casks/canopy-desktop.rb
+          fi
           git commit -m "canopy ${{ github.ref_name }}"
           git push
