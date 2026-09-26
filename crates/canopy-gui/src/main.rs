@@ -8,6 +8,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod actions;
+mod github;
 mod graph;
 mod history;
 mod overview;
@@ -152,6 +153,17 @@ fn main() {
             history::git_op,
             history::undo_info,
             history::undo,
+            github::gh_status,
+            github::gh_prs,
+            github::gh_pr,
+            github::gh_home,
+            github::gh_issues,
+            github::gh_issue,
+            github::gh_runs,
+            github::gh_run_jobs,
+            github::gh_failed_log,
+            github::gh_op,
+            github::open_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Canopy");

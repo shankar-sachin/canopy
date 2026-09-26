@@ -44,6 +44,9 @@ const ICONS = {
   changes: '<path d="M4 2.5h5.5L12 5v8.5H4z"/><path d="M8 6.5v4M6 8.5h4"/>',
   history: '<circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/>',
   branches: '<circle cx="5" cy="3.5" r="1.5"/><circle cx="5" cy="12.5" r="1.5"/><circle cx="11" cy="5.5" r="1.5"/><path d="M5 5v6M11 7c0 2.5-6 1.5-6 4"/>',
+  pr: '<circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="12.5" r="1.5"/><path d="M4.5 5v6M11.5 11V6.5A2 2 0 0 0 9.5 4.5H7M8.5 3 7 4.5 8.5 6"/>',
+  issue: '<circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="1" fill="currentColor"/>',
+  actions: '<circle cx="8" cy="8" r="5.5"/><path d="M6.8 5.8v4.4L10.2 8z"/>',
   stash: '<path d="M2.5 9.5 4 4h8l1.5 5.5v3a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z"/><path d="M2.5 9.5h3.5l.5 1.5h3l.5-1.5h3.5"/>',
 };
 
@@ -70,7 +73,7 @@ function savedTheme() {
 const PAGES = {
   home: { title: "Home", icon: "home", render: renderHome },
 };
-const NAV = [{ items: ["home"] }];
+const NAV = [{ items: ["home"] }, { title: "GitHub", items: [] }];
 
 /// Pages in other files add themselves here.
 function addPage(id, page, group = 0) {
@@ -82,6 +85,7 @@ function renderNav() {
   const o = state.overview;
   let html = "";
   for (const group of NAV) {
+    if (!group.items.length) continue;
     if (group.title) html += `<div class="nav-group">${esc(group.title)}</div>`;
     for (const id of group.items) {
       const p = PAGES[id];
@@ -148,6 +152,7 @@ function renderHome(o) {
       <div class="card-h"><h3>Next steps</h3></div>
       <ul class="steps">${steps}</ul>
     </div>
+    ${typeof ghHomeCard === "function" ? ghHomeCard() : ""}
     <div class="card span-7">
       <div class="card-h"><h3>Recent commits</h3><span class="sub">${o.log.length ? esc(o.log[0].author) + " · " + ago(o.log[0].time) : ""}</span></div>
       ${commits}
@@ -224,12 +229,16 @@ function render() {
     page.update(o, view);
     return;
   }
-  const top = view.dataset.page === state.page ? view.scrollTop : 0;
-  view.className = "view" + (page.full ? " full" : "");
-  view.innerHTML = page.render(o);
-  view.dataset.page = state.page;
-  view.scrollTop = top;
-  page.mounted?.(o, view);
+  const same = view.dataset.page === state.page;
+  const top = same ? view.scrollTop : 0;
+  // A new page gets a fresh element, so listeners from the last one go away.
+  const fresh = same ? view : view.cloneNode(false);
+  fresh.className = "view" + (page.full ? " full" : "");
+  fresh.innerHTML = page.render(o);
+  fresh.dataset.page = state.page;
+  if (fresh !== view) view.replaceWith(fresh);
+  fresh.scrollTop = top;
+  if (!same) page.mounted?.(o, fresh);
 }
 
 function go(page) {
@@ -566,11 +575,17 @@ async function smoke(path) {
     const branches = await wait(".brow, .blist .diff-empty");
     go("stash");
     const stash = await wait(".srow, .clean");
+    // GitHub: either the pull request list or the setup card (no gh login).
+    go("prs");
+    for (let i = 0; i < 150 && !(gh.status && (gh.status.state !== "ready" || gh.prs.list)); i++) await new Promise((r) => setTimeout(r, 100));
+    const github = gh.status?.state === "ready" ? `${gh.prs.list?.length ?? "?"} open pull requests` : `setup card (${gh.status?.state})`;
     const text = [...home, `changes: ${files.join(", ") || "(clean)"}`, `diff lines: ${lines}`,
       `history: ${commits} commits, ${graphs} graph rows, details ${detail ? "loaded" : "missing"}`,
-      `branches: ${branches} rows`, `stash: ${document.querySelectorAll(".srow").length} stashes`].join("\n");
+      `branches: ${branches} rows`, `stash: ${document.querySelectorAll(".srow").length} stashes`, `github: ${github}`].join("
+");
     const ok = !!home.length && changesOk
-      && commits > 0 && graphs === commits && detail > 0 && branches > 0 && stash > 0;
+      && commits > 0 && graphs === commits && detail > 0 && branches > 0 && stash > 0
+      && !!gh.status && (gh.status.state !== "ready" || !!gh.prs.list);
     await invoke("smoke_report", { ok, text });
   } catch (e) {
     await invoke("smoke_report", { ok: false, text: String(e) });

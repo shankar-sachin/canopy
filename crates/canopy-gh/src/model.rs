@@ -1,6 +1,6 @@
 //! Types deserialized from `gh ... --json`.
 
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::time::parse_rfc3339;
 
@@ -13,7 +13,7 @@ fn null_default<'de, D: Deserializer<'de>, T: Default + Deserialize<'de>>(d: D) 
     Ok(Option::<T>::deserialize(d)?.unwrap_or_default())
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RepoInfo {
     pub name_with_owner: String,
@@ -22,12 +22,12 @@ pub struct RepoInfo {
     pub default_branch_ref: Option<BranchRef>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct BranchRef {
     pub name: String,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Author {
     #[serde(default)]
     pub login: String,
@@ -35,7 +35,7 @@ pub struct Author {
     pub name: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Label {
     pub name: String,
     #[serde(default)]
@@ -44,7 +44,7 @@ pub struct Label {
 
 /// One entry of `statusCheckRollup`: either a check run (Actions etc.) or a
 /// legacy commit status. Both shapes are folded into this struct.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Check {
     /// Check runs have `name`; statuses have `context`.
@@ -65,7 +65,8 @@ pub struct Check {
     pub details_url: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum CheckState {
     Passed,
     Failed,
@@ -88,7 +89,7 @@ impl Check {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
 pub struct ChecksSummary {
     pub passed: usize,
     pub failed: usize,
@@ -124,7 +125,7 @@ impl ChecksSummary {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Review {
     #[serde(default)]
@@ -137,7 +138,7 @@ pub struct Review {
     pub submitted_at: i64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Comment {
     #[serde(default)]
@@ -148,7 +149,7 @@ pub struct Comment {
     pub created_at: i64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PullRequest {
     pub number: u64,
@@ -193,7 +194,7 @@ pub struct PullRequest {
 }
 
 /// A comment on a line of a pull request's diff (REST shape).
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct ReviewComment {
     pub id: u64,
     pub path: String,
@@ -219,7 +220,7 @@ impl PullRequest {
 
 /// `comments` is a list in `issue view` but only needed as a count in lists;
 /// gh returns the full list either way.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Issue {
     pub number: u64,
@@ -239,7 +240,7 @@ pub struct Issue {
     pub body: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Run {
     pub database_id: u64,
@@ -275,7 +276,7 @@ impl Run {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Job {
     #[serde(default)]
@@ -289,7 +290,7 @@ pub struct Job {
     pub steps: Vec<Step>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Step {
     pub name: String,
     #[serde(default)]
@@ -300,7 +301,7 @@ pub struct Step {
     pub number: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Release {
     pub tag_name: String,
@@ -327,7 +328,7 @@ pub struct Release {
     pub assets: Vec<ReleaseAsset>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReleaseAsset {
     pub name: String,
@@ -338,7 +339,7 @@ pub struct ReleaseAsset {
 }
 
 /// A GitHub notification thread (REST API shape, snake_case).
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Notification {
     pub id: String,
     #[serde(default)]
@@ -352,7 +353,7 @@ pub struct Notification {
     pub repository: NotificationRepo,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct NotificationSubject {
     pub title: String,
     /// API URL of the thing (PR, issue, release...), may be null.
@@ -363,7 +364,7 @@ pub struct NotificationSubject {
     pub kind: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct NotificationRepo {
     pub full_name: String,
     pub html_url: String,

@@ -339,6 +339,7 @@ name = "canopy-desktop"
 version = "1.0.1"
 dependencies = [
  "anyhow",
+ "canopy-gh",
  "canopy-git",
  "serde",
  "serde_json",
