@@ -33,6 +33,8 @@ pub struct LogQuery {
     pub author: Option<String>,
     pub grep: Option<String>,
     pub path: Option<String>,
+    /// Follow renames (only meaningful with `path`).
+    pub follow: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -68,6 +70,9 @@ impl Git {
             args.push(r.clone());
         }
         if let Some(p) = &q.path {
+            if q.follow {
+                args.push("--follow".into());
+            }
             args.push("--".into());
             args.push(p.clone());
         }
@@ -450,6 +455,17 @@ impl Git {
         let side = if ours { "--ours" } else { "--theirs" };
         self.run(&["checkout", side, "--", path]).await?;
         self.stage(&[path]).await
+    }
+
+    /// Who last changed each line of `path` at `rev` (working tree if `None`).
+    pub async fn blame(&self, path: &str, rev: Option<&str>) -> Result<crate::parse::blame::Blame> {
+        let mut args = vec!["blame", "--porcelain"];
+        if let Some(r) = rev {
+            args.push(r);
+        }
+        args.extend(["--", path]);
+        let out = self.run(&args).await?;
+        crate::parse::blame::parse(&out.stdout)
     }
 
     /// Put the conflict markers back into a file (undoes a manual resolution).

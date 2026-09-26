@@ -296,3 +296,35 @@ async fn real_conflicts_parse_resolve_and_restore() {
         assert_eq!(conflict::count(&conflict::parse(&again).unwrap()), 2);
     }
 }
+
+#[tokio::test]
+async fn blame_and_file_history_follow_renames() {
+    let dir = repo();
+    let git = Git::open(dir.path()).await.unwrap();
+    write(&dir, "old.txt", "one\ntwo\n");
+    commit_all(&git, "create").await;
+    sh(dir.path(), &["mv", "old.txt", "new.txt"]);
+    commit_all(&git, "rename").await;
+    write(&dir, "new.txt", "one\nTWO\nthree\n");
+    commit_all(&git, "edit").await;
+    write(&dir, "other.txt", "x\n");
+    commit_all(&git, "unrelated").await;
+    write(&dir, "new.txt", "one\nTWO\nthree\nwip\n");
+
+    let q = LogQuery { path: Some("new.txt".into()), follow: true, ..Default::default() };
+    let subjects: Vec<_> = git.log(&q).await.unwrap().into_iter().map(|c| c.subject).collect();
+    assert_eq!(subjects, vec!["edit", "rename", "create"]);
+
+    let b = git.blame("new.txt", None).await.unwrap();
+    assert_eq!(b.lines.len(), 4);
+    let who = |i: usize| b.commits[&b.lines[i].oid].summary.clone();
+    assert_eq!(who(0), "create");
+    assert_eq!(who(1), "edit");
+    assert!(b.commits[&b.lines[3].oid].uncommitted);
+
+    // Blame at an older revision.
+    let log = git.log(&LogQuery::default()).await.unwrap();
+    let rename = log.iter().find(|c| c.subject == "rename").unwrap();
+    let b = git.blame("new.txt", Some(&rename.oid)).await.unwrap();
+    assert_eq!(b.lines.iter().map(|l| l.content.as_str()).collect::<Vec<_>>(), vec!["one", "two"]);
+}
