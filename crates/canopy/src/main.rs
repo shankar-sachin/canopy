@@ -14,7 +14,8 @@ mod ui;
 mod views;
 mod workspace;
 
-#[cfg(test)]
+// The UI tests script git and a fake `gh` with shell scripts: Unix only.
+#[cfg(all(test, unix))]
 mod ui_tests;
 
 use std::path::PathBuf;

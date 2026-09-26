@@ -308,7 +308,9 @@ impl Git {
     pub async fn rebase_interactive(&self, base: &str, todo: &str) -> Result<Output> {
         let dir = std::env::temp_dir().join(format!("canopy-todo-{}", std::process::id()));
         std::fs::write(&dir, todo)?;
-        let editor = format!("cp {}", dir.display());
+        // Git runs the sequence editor through a shell (Git for Windows
+        // bundles one), so use forward slashes and quote the path.
+        let editor = format!("cp '{}'", dir.display().to_string().replace('\\', "/"));
         let seq = format!("sequence.editor={editor}");
         let res = self
             // core.editor=true keeps squash/fixup messages without prompting.

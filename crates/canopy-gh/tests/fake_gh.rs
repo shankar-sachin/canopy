@@ -1,3 +1,6 @@
+// These tests use a shell script as a fake `gh`: Unix only.
+#![cfg(unix)]
+
 //! Runs `canopy-gh` against a fake `gh` script that returns fixture JSON and
 //! records its arguments, so these tests need no network or GitHub login.
 

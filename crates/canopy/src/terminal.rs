@@ -30,11 +30,33 @@ pub fn enter() {
     let _ = execute!(stdout(), ratatui::crossterm::terminal::EnterAlternateScreen, EnableMouseCapture);
 }
 
+/// A shell command for the platform: `sh -c` on macOS/Linux, `cmd /C` on
+/// Windows. Used for custom commands.
+pub fn shell_command(cmd: &str) -> tokio::process::Command {
+    if cfg!(windows) {
+        let mut c = tokio::process::Command::new("cmd");
+        c.arg("/C").arg(cmd);
+        c
+    } else {
+        let mut c = tokio::process::Command::new("sh");
+        c.arg("-c").arg(cmd);
+        c
+    }
+}
+
 /// Open a URL in the default browser (never blocks the UI).
 pub fn open_url(url: &str) -> bool {
-    let opener = if cfg!(target_os = "macos") { "open" } else { "xdg-open" };
-    std::process::Command::new(opener)
-        .arg(url)
+    let mut cmd = if cfg!(target_os = "macos") {
+        std::process::Command::new("open")
+    } else if cfg!(windows) {
+        // `start` is a cmd built-in; the empty string is the window title.
+        let mut c = std::process::Command::new("cmd");
+        c.args(["/C", "start", ""]);
+        c
+    } else {
+        std::process::Command::new("xdg-open")
+    };
+    cmd.arg(url)
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
@@ -42,11 +64,14 @@ pub fn open_url(url: &str) -> bool {
         .is_ok()
 }
 
-/// Copy text to the clipboard: `pbcopy`/`wl-copy`/`xclip` if present,
+/// Copy text to the clipboard: `pbcopy`/`clip`/`wl-copy`/`xclip` if present,
 /// otherwise the OSC 52 escape sequence (works over SSH in most terminals).
 pub fn copy_to_clipboard(text: &str) -> bool {
     use std::process::{Command, Stdio};
-    for (cmd, args) in [("pbcopy", &[][..]), ("wl-copy", &[][..]), ("xclip", &["-selection", "clipboard"][..])] {
+    // macOS, Windows, Wayland, X11; OSC 52 below covers everything else.
+    for (cmd, args) in
+        [("pbcopy", &[][..]), ("clip", &[][..]), ("wl-copy", &[][..]), ("xclip", &["-selection", "clipboard"][..])]
+    {
         if let Ok(mut child) = Command::new(cmd).args(args).stdin(Stdio::piped()).spawn() {
             if let Some(mut stdin) = child.stdin.take() {
                 let _ = stdin.write_all(text.as_bytes());

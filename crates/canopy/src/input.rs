@@ -367,7 +367,11 @@ fn repo_action(app: &mut App, action: Action) {
             let full = git.repo.root.join(path);
             let editor = std::env::var("VISUAL").or_else(|_| std::env::var("EDITOR")).unwrap_or_else(|_| "vi".into());
             let status = app.suspend(|| {
-                std::process::Command::new("sh").arg("-c").arg(format!("{editor} \"$1\"")).arg("sh").arg(&full).status()
+                // Run the editor directly (no shell), so it works on Windows too:
+                // "code --wait" becomes program "code", args ["--wait", file].
+                let mut parts = split_args(&editor);
+                let program = if parts.is_empty() { "vi".to_string() } else { parts.remove(0) };
+                std::process::Command::new(program).args(parts).arg(&full).status()
             });
             if let Err(e) = status {
                 app.toast(Level::Error, format!("Could not run {editor}: {e}"));
@@ -2085,9 +2089,7 @@ pub fn execute(app: &mut App, pending: Pending) {
             let guard = app.in_flight();
             tokio::spawn(async move {
                 let _guard = guard;
-                let res = tokio::process::Command::new("sh")
-                    .arg("-c")
-                    .arg(&c.cmd)
+                let res = crate::terminal::shell_command(&c.cmd)
                     .current_dir(root)
                     .stdin(std::process::Stdio::null())
                     .output()
