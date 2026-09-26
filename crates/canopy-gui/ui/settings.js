@@ -86,19 +86,6 @@ function updateHtml() {
     ${status}`;
 }
 
-function envHtml() {
-  const e = setts.env;
-  if (!e) return `<h3>Git &amp; GitHub</h3><p class="faint">Looking…</p>`;
-  const line = (label, value, missing) =>
-    `<div class="kv"><span>${label}</span>${value ? `<code class="selectable">${esc(value)}</code>` : `<span class="warn-text">${missing}</span>`}</div>`;
-  return `<h3>Git &amp; GitHub</h3>
-    <p class="faint">Canopy runs your own git and GitHub CLI, so your config, hooks, signing and logins all apply.</p>
-    ${line("git", e.git, "not found: install git")}
-    ${line("GitHub CLI", e.gh, "not found (only needed for the GitHub pages)")}
-    ${e.gh ? line("GitHub account", e.gh_user, "not logged in: run gh auth login") : ""}
-    ${line("Settings file", e.config_file, "none")}`;
-}
-
 function settingsBody() {
   const s = state.settings;
   switch (setts.section) {
@@ -109,8 +96,6 @@ function settingsBody() {
         ${row("Refresh", "How often Canopy looks for changes made outside it. It also refreshes when you switch back to the window.", seg("refresh_secs", s.refresh_secs, [[2, "2s"], [5, "5s"], [15, "15s"], [60, "1m"], [0, "Off"]]))}
         ${row("Pull", "What Pull does when your branch and the remote both have new commits. Default follows your git config (pull.rebase).", seg("pull_mode", s.pull_mode, [["default", "Default"], ["merge", "Merge"], ["rebase", "Rebase"]]))}
         ${row("Recent repositories", "The list on the welcome screen.", `<button class="btn small" data-s2="clear-recent">Clear list</button>`)}`;
-    case "git":
-      return envHtml();
     case "updates":
       return updateHtml();
     case "about":
@@ -138,7 +123,7 @@ async function openSettings(section) {
   if (section) setts.section = section;
   const wrap = document.createElement("div");
   wrap.className = "modal-wrap";
-  const secs = [["general", "General"], ["git", "Git & GitHub"], ["updates", "Updates"], ["about", "About"]];
+  const secs = [["general", "General"], ["updates", "Updates"], ["about", "About"]];
   wrap.innerHTML = `<div class="modal settings" id="settings-panel" role="dialog" aria-modal="true" aria-label="Settings">
     <nav class="snav"><h2>Settings</h2>${secs.map(([id, l]) => `<button type="button" data-section="${id}">${l}${id === "updates" ? `<span class="update-dot"${setts.update?.newer ? "" : " hidden"}></span>` : ""}</button>`).join("")}</nav>
     <div class="sbody"></div>
@@ -204,7 +189,92 @@ async function openSettings(section) {
 }
 
 $("#settings-btn").addEventListener("click", () => openSettings());
-$("#me").addEventListener("click", () => openSettings("git"));
+$("#me").addEventListener("click", () => openAccount());
+
+// ---------------------------------------------------------------- account
+
+function copyCmd(cmd) {
+  return `<div class="cmd"><code class="selectable">${esc(cmd)}</code><button class="btn small" data-a="copy" data-text="${esc(cmd)}">Copy</button></div>`;
+}
+
+function accountHtml(a) {
+  if (!a) return `<div class="acct-loading">Checking your GitHub connection…</div>`;
+  const p = a;
+  const connected = !!a.auth.account;
+  const avatar = p.avatar_url
+    ? `<img src="${esc(p.avatar_url)}${p.avatar_url.includes("?") ? "&" : "?"}s=160" alt="" width="72" height="72">`
+    : `<span class="ini">${esc(initials(p.name || p.git_name || p.login)) || "?"}</span>`;
+  const head = `<div class="acct-head"><span class="avatar big${p.avatar_url ? "" : " placeholder"}">${avatar}</span>
+    <div><h3>${esc(p.name || p.login || p.git_name || "Not signed in")}</h3>
+    ${p.login ? `<p class="mono">@${esc(p.login)}</p>` : `<p class="faint">Not signed in to GitHub</p>`}
+    ${a.html_url ? `<button class="btn small" data-a="open" data-url="${esc(a.html_url)}">View profile on GitHub</button>` : ""}</div></div>`;
+  const kv = (k, v) => (v ? `<div class="kv"><span>${k}</span><code class="selectable">${esc(v)}</code></div>` : "");
+  const github = connected
+    ? `<div class="acct-status ok"><span class="ck green">✓</span><span>Connected to <b>${esc(a.auth.host || "github.com")}</b> as <b>@${esc(a.auth.account)}</b> through the GitHub CLI</span></div>
+       ${kv("Token stored in", a.auth.storage)}
+       ${kv("Git protocol", a.auth.protocol)}
+       ${a.auth.scopes.length ? `<div class="kv"><span>Permissions</span><span class="scopes">${a.auth.scopes.map((sc) => `<span class="scope">${esc(sc)}</span>`).join("")}</span></div>` : ""}
+       <p class="faint small">Canopy never sees your token: gh talks to GitHub for it. To use another account, or sign out, run in a terminal:</p>
+       ${copyCmd("gh auth login")}${copyCmd("gh auth logout")}`
+    : `<div class="acct-status"><span class="ck amber">●</span><span>${a.gh ? "The GitHub CLI isn't signed in." : "The GitHub CLI isn't installed."}</span></div>
+       <p class="faint small">Canopy uses the GitHub CLI with your own login for pull requests, issues and Actions. ${a.gh ? "Sign in" : "Install it, then sign in"} from a terminal:</p>
+       ${a.gh ? "" : copyCmd(navigator.platform.includes("Mac") ? "brew install gh" : "https://cli.github.com")}${copyCmd("gh auth login")}`;
+  const gitName = p.git_name, gitEmail = a.git_email;
+  const identity = gitName || gitEmail
+    ? `${kv("Name", gitName)}${kv("Email", gitEmail)}<p class="faint small">Your commits are made with this name and email.</p>`
+    : `<p class="warn-text small">git doesn't know who you are yet, so it can't commit. Set your name and email:</p>
+       ${copyCmd('git config --global user.name "Your Name"')}${copyCmd('git config --global user.email "you@example.com"')}`;
+  return `${head}
+    <h4>GitHub</h4>${github}
+    <h4>Git identity</h4>${identity}
+    <h4>Tools</h4>${kv("git", a.git) || `<p class="warn-text small">git wasn't found. Install git to use Canopy.</p>`}${kv("GitHub CLI", a.gh)}
+    <div class="row-btns"><button class="btn small" data-a="refresh">Check again</button></div>`;
+}
+
+async function openAccount() {
+  if ($("#account-panel")) return;
+  const wrap = document.createElement("div");
+  wrap.className = "modal-wrap";
+  wrap.innerHTML = `<div class="modal account" id="account-panel" role="dialog" aria-modal="true" aria-label="Your GitHub account">
+    <button class="btn icon ghost sclose" type="button" data-a="close" title="Close (Esc)">${icon("x", 14)}</button>
+    <div class="abody">${accountHtml(null)}</div></div>`;
+  const body = wrap.querySelector(".abody");
+  const load = async () => {
+    body.innerHTML = accountHtml(null);
+    const a = await invoke("account").catch(() => null);
+    body.innerHTML = accountHtml(a || { auth: { scopes: [] } });
+  };
+  const close = () => {
+    wrap.remove();
+    document.removeEventListener("keydown", onKey, true);
+  };
+  const onKey = (e) => {
+    if (e.key === "Escape") { e.stopPropagation(); close(); }
+  };
+  wrap.addEventListener("click", async (e) => {
+    if (e.target === wrap) return close();
+    const act = e.target.closest("[data-a]");
+    if (!act) return;
+    switch (act.dataset.a) {
+      case "close": return close();
+      case "open": return openUrl(act.dataset.url);
+      case "refresh":
+        await load();
+        loadProfile();
+        return;
+      case "copy":
+        try {
+          await navigator.clipboard.writeText(act.dataset.text);
+          act.textContent = "Copied";
+        } catch {
+          toast("Select the command and copy it.");
+        }
+    }
+  });
+  document.addEventListener("keydown", onKey, true);
+  document.body.append(wrap);
+  load();
+}
 
 // ---------------------------------------------------------------- profile
 
@@ -233,6 +303,6 @@ async function loadProfile() {
     av.classList.remove("placeholder");
   } else fallback();
   $("#me-name").textContent = p.name || p.login || p.git_name || "Not signed in";
-  $("#me-sub").textContent = p.login ? `@${p.login}` : "not signed in to GitHub";
+  $("#me-sub").textContent = p.login ? `@${p.login}` : "not on GitHub";
 }
 $("#welcome-settings").addEventListener("click", () => openSettings());

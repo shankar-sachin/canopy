@@ -211,6 +211,7 @@ fn main() {
             settings::check_update,
             settings::environment,
             settings::profile,
+            settings::account,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Canopy");

@@ -527,3 +527,20 @@ html[data-theme="light"] .dl.add .code, html[data-theme="light"] .dl.add .sign {
 .me-names small { display: block; font-size: 11.5px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gear { position: relative; }
 .gear .update-dot { position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; margin: 0; }
+
+/* ---------- account panel ---------- */
+.modal.account { width: min(520px, 100% - 40px); max-height: min(640px, 100% - 60px); padding: 0; position: relative; overflow: hidden; display: flex; }
+.abody { padding: 24px; overflow: auto; flex: 1; }
+.abody h4 { margin: 20px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--faint); }
+.acct-head { display: flex; align-items: center; gap: 16px; padding-right: 28px; }
+.acct-head h3 { margin: 0; font-size: 18px; }
+.acct-head p { margin: 2px 0 8px; color: var(--muted); font-size: 13px; }
+.avatar.big { width: 72px; height: 72px; }
+.avatar.big .ini { font-size: 24px; }
+.acct-status { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 9px; background: var(--surface-2); font-size: 13px; margin-bottom: 6px; }
+.acct-status.ok { background: color-mix(in srgb, var(--green) 10%, transparent); }
+.acct-loading { color: var(--faint); padding: 40px; text-align: center; }
+.scopes { display: flex; flex-wrap: wrap; gap: 4px; }
+.scope { font: 11.5px var(--mono); padding: 1px 7px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--border); }
+.abody .cmd { margin: 6px 0; }
+.abody .small { margin: 8px 0 4px; }

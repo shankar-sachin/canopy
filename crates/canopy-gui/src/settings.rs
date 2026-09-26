@@ -263,9 +263,107 @@ pub async fn profile() -> Profile {
     p
 }
 
+// ------------------------------------------------------------------ account
+
+/// The GitHub connection, from `gh auth status` (the token itself is never
+/// read or shown).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+pub struct GhAuth {
+    pub host: Option<String>,
+    pub account: Option<String>,
+    /// Where gh keeps the token: keyring, file, GH_TOKEN, ...
+    pub storage: Option<String>,
+    /// ssh or https: how git talks to GitHub.
+    pub protocol: Option<String>,
+    pub scopes: Vec<String>,
+}
+
+pub fn parse_auth_status(text: &str) -> GhAuth {
+    let mut a = GhAuth::default();
+    for line in text.lines() {
+        let l = line.trim();
+        if !line.starts_with(' ') && !l.is_empty() && a.host.is_none() {
+            a.host = Some(l.to_string());
+        } else if let Some(rest) = l.split_once("Logged in to ").map(|x| x.1) {
+            // "github.com account shankar-sachin (keyring)"
+            if let Some((_, acct)) = rest.split_once(" account ") {
+                let mut it = acct.splitn(2, ' ');
+                a.account = it.next().map(String::from);
+                a.storage = it.next().map(|s| s.trim_matches(|c| c == '(' || c == ')').to_string());
+            }
+        } else if let Some(p) = l.strip_prefix("- Git operations protocol: ") {
+            a.protocol = Some(p.to_string());
+        } else if let Some(sc) = l.strip_prefix("- Token scopes: ") {
+            a.scopes =
+                sc.split(',').map(|s| s.trim().trim_matches('\'').to_string()).filter(|s| !s.is_empty()).collect();
+        }
+    }
+    a
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct Account {
+    #[serde(flatten)]
+    pub profile: Profile,
+    pub auth: GhAuth,
+    pub html_url: Option<String>,
+    pub git_email: Option<String>,
+    pub git: Option<String>,
+    pub gh: Option<String>,
+}
+
+#[tauri::command]
+pub async fn account() -> Account {
+    let status = async {
+        let o = tokio::process::Command::new("gh")
+            .args(["auth", "status", "--active"])
+            .stdin(std::process::Stdio::null())
+            .output()
+            .await
+            .ok()?;
+        // gh prints the status on stderr in older versions, stdout in newer.
+        let mut text = String::from_utf8_lossy(&o.stdout).into_owned();
+        text.push_str(&String::from_utf8_lossy(&o.stderr));
+        Some(parse_auth_status(&text))
+    };
+    let (profile, auth, url, email, git, gh) = tokio::join!(
+        profile(),
+        status,
+        first_line("gh", &["api", "user", "--jq", ".html_url"]),
+        first_line("git", &["config", "--global", "user.email"]),
+        first_line("git", &["--version"]),
+        first_line("gh", &["--version"]),
+    );
+    Account {
+        profile,
+        auth: auth.unwrap_or_default(),
+        html_url: url.filter(|u| u.starts_with("https://github.com/")),
+        git_email: email.filter(|e| !e.is_empty()),
+        git,
+        gh,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn auth_status() {
+        let text = "github.com\n  ✓ Logged in to github.com account ada (keyring)\n  - Active account: true\n  \
+                    - Git operations protocol: ssh\n  - Token: gho_************************************\n  \
+                    - Token scopes: 'gist', 'read:org', 'repo', 'workflow'\n";
+        let a = parse_auth_status(text);
+        assert_eq!(a.host.as_deref(), Some("github.com"));
+        assert_eq!(a.account.as_deref(), Some("ada"));
+        assert_eq!(a.storage.as_deref(), Some("keyring"));
+        assert_eq!(a.protocol.as_deref(), Some("ssh"));
+        assert_eq!(a.scopes, ["gist", "read:org", "repo", "workflow"]);
+        assert_eq!(
+            parse_auth_status("You are not logged into any GitHub hosts."),
+            GhAuth { host: Some("You are not logged into any GitHub hosts.".into()), ..Default::default() }
+        );
+    }
 
     #[test]
     fn versions() {
