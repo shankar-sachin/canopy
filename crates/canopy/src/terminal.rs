@@ -68,10 +68,14 @@ pub fn open_url(url: &str) -> bool {
 /// otherwise the OSC 52 escape sequence (works over SSH in most terminals).
 pub fn copy_to_clipboard(text: &str) -> bool {
     use std::process::{Command, Stdio};
-    // macOS, Windows, Wayland, X11; OSC 52 below covers everything else.
-    for (cmd, args) in
-        [("pbcopy", &[][..]), ("clip", &[][..]), ("wl-copy", &[][..]), ("xclip", &["-selection", "clipboard"][..])]
-    {
+    // Windows: clip. macOS, Wayland, X11: pbcopy, wl-copy, xclip.
+    // OSC 52 below covers everything else.
+    let tools: &[(&str, &[&str])] = if cfg!(windows) {
+        &[("clip", &[])]
+    } else {
+        &[("pbcopy", &[]), ("wl-copy", &[]), ("xclip", &["-selection", "clipboard"])]
+    };
+    for &(cmd, args) in tools {
         if let Ok(mut child) = Command::new(cmd).args(args).stdin(Stdio::piped()).spawn() {
             if let Some(mut stdin) = child.stdin.take() {
                 let _ = stdin.write_all(text.as_bytes());

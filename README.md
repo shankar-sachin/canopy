@@ -28,6 +28,12 @@ cargo install --locked --path crates/canopy
 
 Canopy needs `git` on your `PATH`.
 
+**On Windows**, download `canopy-<version>-x86_64-pc-windows-msvc.zip` from
+[Releases](https://github.com/shankar-sachin/canopy/releases) (from 1.0.0) and
+put `canopy.exe` on your `PATH`, or use the `cargo install` command above.
+Windows Terminal is recommended. Full steps are on the
+[website](https://shankar-sachin.github.io/canopy/get-started.html#windows).
+
 ## Use
 
 ```sh

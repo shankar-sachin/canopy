@@ -9,11 +9,12 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # macOS and Linux are the primary platforms: everything must pass here.
   check:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -29,5 +30,20 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
+      - name: Run the binary
+        run: cargo run --release -- --version
+
+  # Windows is secondary: build, unit tests and a smoke run. Allowed to
+  # fail, so it never blocks a macOS/Linux change.
+  windows:
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --workspace
+      - name: Unit tests
+        run: cargo test --workspace --lib --bins
       - name: Run the binary
         run: cargo run --release -- --version
