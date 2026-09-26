@@ -13,6 +13,7 @@ mod graph;
 mod history;
 mod overview;
 mod recent;
+mod settings;
 
 use canopy_git::Git;
 use tauri::State;
@@ -104,7 +105,47 @@ async fn overview(state: State<'_, AppState>) -> Res<Overview> {
     overview::load(&git).await.map_err(|e| e.to_string())
 }
 
+/// Apps started from Finder or a desktop launcher get a minimal PATH
+/// (`/usr/bin:/bin:...`), so Homebrew's git and gh would be invisible. Take
+/// the PATH your login shell sets up, and fall back to the usual folders.
+#[cfg(unix)]
+fn fix_path() {
+    use std::time::{Duration, Instant};
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
+    let from_shell = std::process::Command::new(&shell)
+        .args(["-lc", "printf '%s' \"$PATH\""])
+        .stdin(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .ok()
+        .and_then(|mut child| {
+            // Don't let a slow shell profile hold up the window.
+            let start = Instant::now();
+            while start.elapsed() < Duration::from_secs(3) {
+                if let Ok(Some(_)) = child.try_wait() {
+                    let mut out = String::new();
+                    std::io::Read::read_to_string(child.stdout.as_mut()?, &mut out).ok()?;
+                    return Some(out);
+                }
+                std::thread::sleep(Duration::from_millis(20));
+            }
+            let _ = child.kill();
+            None
+        })
+        .filter(|p| !p.trim().is_empty());
+    let current = std::env::var("PATH").unwrap_or_default();
+    let mut dirs: Vec<String> = from_shell.as_deref().unwrap_or("").split(':').map(String::from).collect();
+    dirs.extend(current.split(':').map(String::from));
+    dirs.extend(["/opt/homebrew/bin", "/usr/local/bin", "/home/linuxbrew/.linuxbrew/bin"].map(String::from));
+    let mut seen = std::collections::HashSet::new();
+    dirs.retain(|d| !d.is_empty() && seen.insert(d.clone()));
+    std::env::set_var("PATH", dirs.join(":"));
+}
+
 fn main() {
+    #[cfg(unix)]
+    fix_path();
     let mut smoke = false;
     let mut path = None;
     for arg in std::env::args().skip(1) {
@@ -164,6 +205,13 @@ fn main() {
             github::gh_failed_log,
             github::gh_op,
             github::open_url,
+            settings::get_settings,
+            settings::set_settings,
+            settings::clear_recent,
+            settings::check_update,
+            settings::environment,
+            settings::profile,
+            settings::account,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Canopy");

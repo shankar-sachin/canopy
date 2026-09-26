@@ -101,7 +101,13 @@ function updateCommitButton(o) {
 // ---------------------------------------------------------------- diff
 
 function diffHtml() {
-  if (!ch.sel) return `<div class="diff-empty">Select a file to see its changes.</div>`;
+  if (!ch.sel) {
+    const last = state.overview?.log[0];
+    if (!last) return `<div class="diff-empty">Nothing here yet. Create some files and they'll show up on the left.</div>`;
+    return `<div class="all-clean"><b>Nothing to review: everything is committed.</b>
+      <p>Your last commit: <span class="oid">${esc(last.short)}</span> ${esc(last.subject)} <span class="faint">· ${ago(last.time)}</span></p>
+      <button class="btn small" data-ch="history">Open History</button></div>`;
+  }
   const { path, section } = ch.sel;
   if (section === "conflicts") {
     return `<div class="diff-head"><b class="mono">${esc(path)}</b><span class="pill red">conflict</span></div>
@@ -294,6 +300,8 @@ async function onAction(what, el) {
       ch.diffKey = "";
       return refresh({ quiet: true });
     }
+    case "history":
+      return go("history");
     case "clear-lines":
       ch.lines.clear();
       return drawDiff();

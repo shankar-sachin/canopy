@@ -232,6 +232,10 @@
   .release h2 { margin: 0 0 4px !important; font-size: 26px; }
   .release .date { color: var(--faint); font: 13px var(--mono); }
   .tag-new { display: inline-block; margin-left: 10px; font: 700 11px var(--mono); color: var(--on-accent); background: var(--amber); border-radius: 999px; padding: 2px 8px; vertical-align: middle; }
+  .prose .appshot {
+    display: block; width: 100%; height: auto; margin: 18px 0 10px; border-radius: 12px;
+    border: 1px solid var(--border-2); box-shadow: 0 24px 60px -30px #000;
+  }
   .next-links { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 64px; }
   .next-links a { border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; color: var(--text); background: var(--surface); }
   .next-links a:hover { border-color: var(--green); }

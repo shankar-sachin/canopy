@@ -198,6 +198,20 @@ async fn stash_roundtrip_and_reflog_reset() {
 }
 
 #[tokio::test]
+async fn all_branches_log_leaves_out_stashes() {
+    let dir = repo();
+    let git = Git::open(dir.path()).await.unwrap();
+    write(&dir, "f.txt", "1\n");
+    commit_all(&git, "one").await;
+    sh(dir.path(), &["branch", "side"]);
+    write(&dir, "f.txt", "wip\n");
+    git.stash_push(Some("wip"), true).await.unwrap();
+    let q = LogQuery { all: true, ..Default::default() };
+    let log = git.log(&q).await.unwrap();
+    assert_eq!(log.iter().map(|c| c.subject.as_str()).collect::<Vec<_>>(), ["one"]);
+}
+
+#[tokio::test]
 async fn interactive_rebase_squash() {
     let dir = repo();
     let git = Git::open(dir.path()).await.unwrap();

@@ -52,7 +52,15 @@ pub fn build(commits: &[Commit]) -> Vec<Row> {
         let mut down = Vec::new();
         for (pi, p) in c.parents.iter().enumerate() {
             if let Some(j) = lanes.iter().position(|l| l.as_deref() == Some(p)) {
-                down.push((col, j));
+                if pi == 0 && j > col {
+                    // Keep the first-parent line in the leftmost lane: the
+                    // lane to the right bends over and joins it.
+                    lanes[col] = lanes[j].take();
+                    down.push((col, col));
+                    down.push((j, col));
+                } else {
+                    down.push((col, j));
+                }
                 continue;
             }
             let slot = if pi == 0 {
@@ -120,12 +128,12 @@ mod tests {
         assert_eq!(rows[1].up, vec![(0, 0), (1, 1)]);
         // f's parent a goes down lane 1.
         assert_eq!(rows[1].down, vec![(1, 1), (0, 0)]);
-        // b's parent a is already awaited in lane 1: b joins it.
+        // b's parent a is already awaited in lane 1: that lane bends into
+        // lane 0, so the main line stays on the left.
         assert_eq!(rows[2].col, 0);
-        assert_eq!(rows[2].down, vec![(0, 1)]);
-        // a: the dot is in lane 1, which the branch ran down.
-        assert_eq!(rows[3].col, 1);
-        assert_eq!(rows[3].up, vec![(1, 1)]);
+        assert_eq!(rows[2].down, vec![(0, 0), (1, 0)]);
+        assert_eq!(rows[3].col, 0);
+        assert_eq!(rows[3].up, vec![(0, 0)]);
     }
 
     #[test]

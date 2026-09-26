@@ -9,6 +9,8 @@ const state = {
   overview: null,
   page: "home",
   busy: false,
+  // Replaced by the saved settings at start (see settings.js).
+  settings: { theme: "system", show_commands: true, refresh_secs: 5, pull_mode: "default", check_updates: true },
 };
 
 // ---------------------------------------------------------------- helpers
@@ -60,6 +62,7 @@ function applyTheme(choice) {
   if (choice === "light" || choice === "dark") document.documentElement.dataset.theme = choice;
   else delete document.documentElement.dataset.theme;
   for (const b of document.querySelectorAll("[data-theme-choice]")) b.classList.toggle("on", b.dataset.themeChoice === choice);
+  // Also kept here so the first paint already has the right colors.
   try { localStorage.setItem("canopy-theme", choice); } catch {}
 }
 
@@ -219,23 +222,23 @@ function render() {
   $("#repo-branch").textContent = b.head || "detached HEAD";
   $("#page-title").textContent = PAGES[state.page].title;
   $("#sync").innerHTML = syncPills(b);
-  document.title = `${o.name} · Canopy`;
+  document.title = `${o.name} · canopy`;
   renderNav();
   const view = $("#view");
   const page = PAGES[state.page];
   // Pages with their own state (like a half-written commit message) update
   // in place instead of being redrawn.
-  if (page.update && view.dataset.page === state.page) {
+  if (page.update && view.dataset.shown === state.page) {
     page.update(o, view);
     return;
   }
-  const same = view.dataset.page === state.page;
+  const same = view.dataset.shown === state.page;
   const top = same ? view.scrollTop : 0;
   // A new page gets a fresh element, so listeners from the last one go away.
   const fresh = same ? view : view.cloneNode(false);
   fresh.className = "view" + (page.full ? " full" : "");
   fresh.innerHTML = page.render(o);
-  fresh.dataset.page = state.page;
+  fresh.dataset.shown = state.page;
   if (fresh !== view) view.replaceWith(fresh);
   fresh.scrollTop = top;
   if (!same) page.mounted?.(o, fresh);
@@ -244,7 +247,7 @@ function render() {
 function go(page) {
   if (!PAGES[page]) return;
   state.page = page;
-  delete $("#view").dataset.page;
+  delete $("#view").dataset.shown;
   render();
 }
 
@@ -257,7 +260,7 @@ async function run(label, cmd, args) {
   document.body.classList.add("busy");
   try {
     const res = await invoke(cmd, args);
-    toast(label, { detail: res?.cmd });
+    toast(label, { detail: state.settings.show_commands ? res?.cmd : "" });
     return res;
   } catch (e) {
     toast(label + " failed", { error: true, detail: String(e) });
@@ -419,6 +422,7 @@ async function sync(kind) {
     toast("This branch isn't on the remote yet, so there's nothing to pull. Push it first.");
     return;
   }
+  if (kind === "pull" && state.settings.pull_mode !== "default") kind = `pull-${state.settings.pull_mode}`;
   const bar = $("#progress");
   bar.hidden = false;
   bar.querySelector("b").textContent = SYNC_LABELS[kind] + "…";
@@ -437,7 +441,7 @@ function onProgress(line) {
 
 async function showWelcome() {
   state.overview = null;
-  document.title = "Canopy";
+  document.title = "canopy";
   $("#shell").hidden = true;
   $("#welcome").hidden = false;
   const repos = await invoke("recent_repos");
@@ -484,7 +488,9 @@ async function refresh({ quiet = false } = {}) {
 // ---------------------------------------------------------------- events
 
 document.addEventListener("click", (e) => {
-  const t = e.target.closest("[data-page],[data-action],[data-forget],[data-path],[data-theme-choice]");
+  // Only the sidebar links, "next steps" buttons and the recent-repo list;
+  // page content handles its own clicks.
+  const t = e.target.closest(".nav-item[data-page],.step [data-action],[data-forget],.recent-item[data-path],[data-theme-choice]");
   if (!t) return;
   if (t.dataset.forget) {
     e.stopPropagation();
@@ -492,7 +498,7 @@ document.addEventListener("click", (e) => {
   } else if (t.dataset.path) openRepo(t.dataset.path);
   else if (t.dataset.page) go(t.dataset.page);
   else if (t.dataset.action) ACTIONS[t.dataset.action]?.run();
-  else if (t.dataset.themeChoice) applyTheme(t.dataset.themeChoice);
+  else if (t.dataset.themeChoice) setTheme(t.dataset.themeChoice);
 });
 
 $("#open-btn").addEventListener("click", chooseRepo);
@@ -516,6 +522,7 @@ document.addEventListener("keydown", (e) => {
   if (mod && e.key === "o") { e.preventDefault(); chooseRepo(); }
   else if (mod && e.key === "r") { e.preventDefault(); refresh(); }
   else if (mod && e.key === "z" && !typing && state.overview) { e.preventDefault(); undo(); }
+  else if (mod && e.key === ",") { e.preventDefault(); openSettings(); }
   else if (mod && /^[1-9]$/.test(e.key)) {
     const ids = NAV.flatMap((g) => g.items);
     const id = ids[Number(e.key) - 1];
@@ -525,7 +532,12 @@ document.addEventListener("keydown", (e) => {
 
 // Pick up changes made elsewhere (an editor, a terminal).
 window.addEventListener("focus", () => refresh({ quiet: true }));
-setInterval(() => { if (document.visibilityState === "visible") refresh({ quiet: true }); }, 5000);
+let refreshTimer = null;
+function scheduleRefresh() {
+  clearInterval(refreshTimer);
+  const secs = state.settings.refresh_secs;
+  if (secs > 0) refreshTimer = setInterval(() => { if (document.visibilityState === "visible") refresh({ quiet: true }); }, secs * 1000);
+}
 
 // ---------------------------------------------------------------- start
 
@@ -535,7 +547,8 @@ async function start() {
   if (/Mac/.test(navigator.platform)) document.documentElement.classList.add("mac");
   else for (const k of document.querySelectorAll(".k")) k.textContent = k.textContent.replace("⌘", "Ctrl+");
   applyTheme(savedTheme());
-  $("#version").textContent = "Canopy " + (await invoke("app_version"));
+  await loadSettings();
+  $("#version").textContent = "canopy " + (await invoke("app_version"));
   const initial = await invoke("initial_path");
   if (await invoke("smoke_mode")) return smoke(initial);
   if (initial) {
@@ -561,6 +574,16 @@ async function smoke(path) {
     const files = grab(".frow .fname");
     const lines = document.querySelectorAll(".dl").length;
     const changesOk = files.length ? lines > 0 : !!document.querySelector(".clean");
+    // Clicking into the commit box keeps it (and what you typed): a click in
+    // the page must not redraw the page.
+    const view0 = $("#view");
+    const summary = $("#c-summary");
+    summary.focus();
+    summary.value = "typed";
+    summary.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 50));
+    const typingOk = $("#view") === view0 && $("#c-summary") === summary && summary.value === "typed";
+    summary.value = "";
     const wait = async (sel) => {
       for (let i = 0; i < 50 && !document.querySelector(sel); i++) await new Promise((r) => setTimeout(r, 100));
       return document.querySelectorAll(sel).length;
@@ -575,14 +598,15 @@ async function smoke(path) {
     const branches = await wait(".brow, .blist .diff-empty");
     go("stash");
     const stash = await wait(".srow, .clean");
+    const stashes = document.querySelectorAll(".srow").length;
     // GitHub: either the pull request list or the setup card (no gh login).
     go("prs");
     for (let i = 0; i < 150 && !(gh.status && (gh.status.state !== "ready" || gh.prs.list)); i++) await new Promise((r) => setTimeout(r, 100));
     const github = gh.status?.state === "ready" ? `${gh.prs.list?.length ?? "?"} open pull requests` : `setup card (${gh.status?.state})`;
     const text = [...home, `changes: ${files.join(", ") || "(clean)"}`, `diff lines: ${lines}`,
       `history: ${commits} commits, ${graphs} graph rows, details ${detail ? "loaded" : "missing"}`,
-      `branches: ${branches} rows`, `stash: ${document.querySelectorAll(".srow").length} stashes`, `github: ${github}`].join("\n");
-    const ok = !!home.length && changesOk
+      `branches: ${branches} rows`, `stash: ${stashes} stashes`, `github: ${github}`, `commit box keeps focus: ${typingOk}`].join("\n");
+    const ok = !!home.length && changesOk && typingOk
       && commits > 0 && graphs === commits && detail > 0 && branches > 0 && stash > 0
       && !!gh.status && (gh.status.state !== "ready" || !!gh.prs.list);
     await invoke("smoke_report", { ok, text });

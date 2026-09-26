@@ -9,7 +9,7 @@ pub mod util;
 
 use canopy_git::RepoState;
 use ratatui::layout::{Constraint, Layout, Rect};
-use ratatui::style::{Modifier, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Paragraph};
 use ratatui::Frame;
@@ -54,12 +54,13 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     let (header, header_gap, tabs, teach_area, footer) =
         (text(header), text(header_gap), text(tabs), text(teach_area), text(footer));
 
-    // The mini tree in the top-right corner, across the header and the gap.
+    // The mini tree in the top-left corner, across the header and the gap,
+    // with light drifting through its leaves.
     let logo_w = 6;
-    let header = if roomy && area.width >= 70 {
-        let r = Rect { x: header.x + header.width - logo_w, y: header.y, width: logo_w, height: 1 + header_gap.height };
-        f.render_widget(Paragraph::new(logo::mini()), r);
-        Rect { width: header.width.saturating_sub(logo_w + 2), ..header }
+    let header = if roomy && area.width >= 50 {
+        let r = Rect { x: header.x, y: header.y, width: logo_w, height: 1 + header_gap.height };
+        f.render_widget(Paragraph::new(logo::mini_animated(app.tick)), r);
+        Rect { x: header.x + logo_w + 2, width: header.width.saturating_sub(logo_w + 2), ..header }
     } else {
         header
     };
@@ -75,15 +76,37 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     modal::draw(f, app);
 }
 
+/// "canopy" in bold, each letter a step along the theme's accent gradient
+/// (like the website's headline).
+fn wordmark(t: &crate::theme::Theme) -> Vec<Span<'static>> {
+    let word = "canopy";
+    let n = word.len() as f32 - 1.0;
+    word.chars()
+        .enumerate()
+        .map(|(i, c)| {
+            let color = match (t.accent, t.accent_alt) {
+                (Color::Rgb(r1, g1, b1), Color::Rgb(r2, g2, b2)) => {
+                    let k = i as f32 / n;
+                    let mix = |a: u8, b: u8| (a as f32 + (b as f32 - a as f32) * k).round() as u8;
+                    Color::Rgb(mix(r1, r2), mix(g1, g2), mix(b1, b2))
+                }
+                (a, _) => a,
+            };
+            Span::styled(c.to_string(), Style::default().fg(color).add_modifier(Modifier::BOLD))
+        })
+        .collect()
+}
+
 fn draw_header(f: &mut Frame, area: Rect, app: &App) {
     let t = &app.theme;
     let b = &app.data.status.branch;
     let branch_glyph = if app.config.nerd_font { "\u{e725} " } else { "" };
-    let mut spans = vec![
-        Span::styled(" canopy ", Style::default().fg(t.bg).bg(t.accent).add_modifier(Modifier::BOLD)),
+    let mut spans = wordmark(t);
+    spans.extend([
+        Span::styled(concat!(" v", env!("CARGO_PKG_VERSION")), t.fg(t.muted)),
         Span::raw("   "),
         Span::styled(app.repo_name(), Style::default().fg(t.fg).add_modifier(Modifier::BOLD)),
-    ];
+    ]);
     if app.git.is_some() {
         let name = b.head.clone().unwrap_or_else(|| "detached".into());
         spans.push(Span::styled(format!("  {branch_glyph}{name}"), t.fg(t.branch)));

@@ -11,6 +11,25 @@ const MAX: usize = 12;
 struct Store {
     #[serde(default)]
     recent: Vec<String>,
+    /// Owned by the settings module; kept as-is here.
+    #[serde(default, skip_serializing_if = "serde_json::Value::is_null")]
+    settings: serde_json::Value,
+}
+
+pub(crate) fn read_settings(file: &Path) -> serde_json::Value {
+    read(file).settings
+}
+
+pub(crate) fn write_settings(file: &Path, settings: serde_json::Value) -> std::io::Result<()> {
+    let mut store = read(file);
+    store.settings = settings;
+    write(file, &store)
+}
+
+pub fn clear(file: &Path) -> std::io::Result<()> {
+    let mut store = read(file);
+    store.recent.clear();
+    write(file, &store)
 }
 
 #[derive(Debug, Clone, Serialize)]

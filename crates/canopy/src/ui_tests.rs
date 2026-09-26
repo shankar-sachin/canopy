@@ -262,6 +262,24 @@ async fn palette_help_workspace_stash() {
 }
 
 #[tokio::test]
+async fn get_canopy_desktop_from_the_palette() {
+    let dir = demo_repo();
+    let mut app = app_for(dir.path()).await;
+    press(&mut app, KeyCode::Char(':')).await;
+    chars(&mut app, "desktop").await;
+    let s = render(&mut app, 120, 34);
+    assert!(s.contains("get Canopy Desktop"), "{s}");
+    press(&mut app, KeyCode::Enter).await;
+    let s = render(&mut app, 120, 34);
+    if cfg!(windows) {
+        assert!(s.contains("coming soon"), "{s}");
+    } else {
+        assert!(s.contains("release preview") && s.contains("Open the download page"), "{s}");
+        assert_eq!(cfg!(target_os = "macos"), s.contains("Copy the Homebrew command"), "{s}");
+    }
+}
+
+#[tokio::test]
 async fn merge_conflict_resolution() {
     let dir = demo_repo();
     sh(
@@ -1082,6 +1100,36 @@ fn frame_html(app: &mut App, w: u16, h: u16) -> String {
 /// Fills `<!-- SCREEN:name -->…<!-- /SCREEN:name -->` and
 /// `<!-- KEYS:START -->…<!-- KEYS:END -->` in every `docs/*.html`.
 /// Run with: cargo test -p canopy-git-tui export_site_screens -- --ignored
+/// A few frames as standalone HTML pages, for sharing previews:
+/// `CANOPY_SHOT_DIR=/tmp/shots cargo test -p canopy-git-tui export_preview_frames -- --ignored`
+#[tokio::test]
+#[ignore]
+async fn export_preview_frames() {
+    let out = std::path::PathBuf::from(std::env::var("CANOPY_SHOT_DIR").expect("set CANOPY_SHOT_DIR"));
+    std::fs::create_dir_all(&out).unwrap();
+    let page = |frame: &str| {
+        format!(
+            "<!doctype html><meta charset=utf-8><link rel=stylesheet href=\"https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap\">\
+             <style>body{{margin:0;background:#101612}}pre{{margin:0;padding:14px;font:14px/1.25 'JetBrains Mono',ui-monospace,Menlo,monospace;color:#d6e2d6;white-space:pre}}\
+             i.g{{font-style:normal;display:inline-block;width:1ch;text-align:center;vertical-align:top}}</style><pre>{frame}</pre>"
+        )
+    };
+    let dir = demo_repo();
+    let bin = TempDir::new().unwrap();
+    // Logged out of GitHub: the Pull requests tab shows the sign-in card.
+    let gh = fake_gh(bin.path(), false);
+    let mut app = github_app(dir.path(), &gh).await;
+    press(&mut app, KeyCode::Char('8')).await;
+    std::fs::write(out.join("tui-github-login.html"), page(&frame_html(&mut app, 118, 30))).unwrap();
+    // Home, with the version in the header and the desktop tip.
+    press(&mut app, KeyCode::Char('1')).await;
+    app.toast_for(crate::app::Level::Info, "Tired of the terminal? Try Canopy Desktop (preview): press ⌥D", 12);
+    std::fs::write(out.join("tui-home-tip.html"), page(&frame_html(&mut app, 118, 30))).unwrap();
+    // The Get Canopy Desktop menu.
+    crate::input::handle_key(&mut app, KeyEvent::new(KeyCode::Char('d'), KeyModifiers::ALT));
+    std::fs::write(out.join("tui-get-desktop.html"), page(&frame_html(&mut app, 118, 30))).unwrap();
+}
+
 #[tokio::test]
 #[ignore]
 async fn export_site_screens() {

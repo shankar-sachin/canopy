@@ -211,6 +211,7 @@ pub fn do_action(app: &mut App, action: Action) {
             app.modal =
                 Modal::input("Filter", "type to filter · enter keep · esc clear", &cur, InputKind::Search(app.screen));
         }
+        GetDesktop => desktop_menu(app),
         ToggleTeach => {
             app.config.teach_mode = !app.config.teach_mode;
             let s = if app.config.teach_mode { "on — the git command behind each action is shown" } else { "off" };
@@ -2027,8 +2028,27 @@ pub fn split_args(s: &str) -> Vec<String> {
 
 /// Run a confirmed/pending operation.
 pub fn execute(app: &mut App, pending: Pending) {
+    // These don't need a repository.
+    let pending = match pending {
+        Pending::CopyText { text, what } => {
+            if crate::terminal::copy_to_clipboard(&text) {
+                app.toast_for(Level::Success, format!("Copied {what}: {text}"), 8);
+            } else {
+                app.toast_for(Level::Info, format!("Run: {text}"), 12);
+            }
+            return;
+        }
+        Pending::OpenUrl(url) => {
+            if !crate::terminal::open_url(&url) {
+                app.toast_for(Level::Info, format!("Open {url}"), 12);
+            }
+            return;
+        }
+        other => other,
+    };
     let Some(git) = app.git.clone() else { return };
     match pending {
+        Pending::CopyText { .. } | Pending::OpenUrl(_) => {}
         Pending::Discard(files) => {
             app.run_op("Discard", Then::Refresh, async move {
                 let tracked: Vec<&str> = files.iter().filter(|f| !f.1).map(|f| f.0.as_str()).collect();
@@ -2236,5 +2256,70 @@ mod tests {
         assert_eq!(split_args("commit -m 'it''s'"), vec!["commit", "-m", "its"]);
         assert_eq!(split_args(r"a\ b c"), vec!["a b", "c"]);
         assert_eq!(split_args("x ''"), vec!["x", ""]);
+    }
+}
+
+/// The Homebrew command for Canopy Desktop (macOS only: casks are Mac apps).
+pub const DESKTOP_CASK: &str = "brew install --cask shankar-sachin/canopy/canopy-desktop";
+pub const DESKTOP_PAGE: &str = "https://shankar-sachin.github.io/canopy/desktop.html";
+
+/// "Get Canopy Desktop": the install command for this platform, or its page.
+fn desktop_menu(app: &mut App) {
+    if cfg!(windows) {
+        app.toast_for(
+            Level::Info,
+            "Canopy Desktop for Windows 11 is coming soon (on winget). It's out for macOS and Linux as a preview.",
+            10,
+        );
+        return;
+    }
+    let mut items = Vec::new();
+    if cfg!(target_os = "macos") {
+        items.push(MenuItem {
+            key: 'c',
+            label: "Copy the Homebrew command".into(),
+            detail: DESKTOP_CASK.into(),
+            pending: Pending::CopyText { text: DESKTOP_CASK.into(), what: "the install command".into() },
+            danger: false,
+        });
+    }
+    items.push(MenuItem {
+        key: 'o',
+        label: "Open the download page".into(),
+        detail: if cfg!(target_os = "macos") { ".dmg for Apple silicon and Intel" } else { ".deb and AppImage" }.into(),
+        pending: Pending::OpenUrl(DESKTOP_PAGE.into()),
+        danger: false,
+    });
+    app.modal =
+        Modal::Menu { title: "Canopy Desktop (release preview, not notarized by Apple yet)".into(), items, sel: 0 };
+}
+
+/// Whether to show the Canopy Desktop tip this launch: at most once a week,
+/// never on the very first launch. Remembers the last time in `stamp`.
+pub fn desktop_tip_due(stamp: &std::path::Path, now: u64) -> bool {
+    const WEEK: u64 = 7 * 24 * 3600;
+    let last = std::fs::read_to_string(stamp).ok().and_then(|s| s.trim().parse::<u64>().ok());
+    let due = matches!(last, Some(t) if now.saturating_sub(t) >= WEEK);
+    if last.is_none() || due {
+        if let Some(dir) = stamp.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        let _ = std::fs::write(stamp, now.to_string());
+    }
+    due
+}
+
+#[cfg(test)]
+mod desktop_tip_tests {
+    #[test]
+    fn once_a_week_and_not_on_first_launch() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let stamp = dir.path().join("x/desktop-tip");
+        let day = 24 * 3600;
+        assert!(!super::desktop_tip_due(&stamp, 1_000_000)); // first launch: just remember
+        assert!(!super::desktop_tip_due(&stamp, 1_000_000 + 3 * day));
+        assert!(super::desktop_tip_due(&stamp, 1_000_000 + 7 * day));
+        assert!(!super::desktop_tip_due(&stamp, 1_000_000 + 8 * day)); // shown yesterday
+        assert!(super::desktop_tip_due(&stamp, 1_000_000 + 15 * day));
     }
 }

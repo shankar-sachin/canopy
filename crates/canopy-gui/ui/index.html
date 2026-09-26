@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Canopy</title>
+<title>canopy</title>
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
@@ -13,10 +13,11 @@
   <div class="drag-strip" data-tauri-drag-region></div>
   <div class="welcome-in">
     <img class="welcome-logo" src="logo.svg" alt="" width="84" height="84">
-    <h1>Canopy</h1>
+    <h1>canopy</h1>
     <p class="welcome-sub">A beautiful, powerful git dashboard.</p>
     <button class="btn primary big" id="open-btn" type="button">Open a repository… <kbd class="k">⌘O</kbd></button>
     <div class="recent" id="recent"></div>
+    <button class="btn ghost small welcome-settings" id="welcome-settings" type="button">Settings</button>
   </div>
 </div>
 
@@ -30,10 +31,15 @@
     </button>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot">
-      <div class="seg" id="theme-seg" role="radiogroup" aria-label="Theme">
-        <button type="button" data-theme-choice="system" title="Follow the system">Auto</button>
-        <button type="button" data-theme-choice="light" title="Light">Light</button>
-        <button type="button" data-theme-choice="dark" title="Dark">Dark</button>
+      <div class="me">
+        <button class="me-btn" id="me" type="button" title="Your GitHub account">
+          <span class="avatar" id="avatar"></span>
+          <span class="me-names"><b id="me-name">…</b><small id="me-sub"></small></span>
+        </button>
+        <button class="btn icon ghost gear" id="settings-btn" type="button" title="Settings (⌘,)">
+          <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M19.14 9.40 L21.94 9.71 L21.94 14.29 L19.14 14.60 L18.89 15.21 L20.65 17.41 L17.41 20.65 L15.21 18.89 L14.60 19.14 L14.29 21.94 L9.71 21.94 L9.40 19.14 L8.79 18.89 L6.59 20.65 L3.35 17.41 L5.11 15.21 L4.86 14.60 L2.06 14.29 L2.06 9.71 L4.86 9.40 L5.11 8.79 L3.35 6.59 L6.59 3.35 L8.79 5.11 L9.40 4.86 L9.71 2.06 L14.29 2.06 L14.60 4.86 L15.21 5.11 L17.41 3.35 L20.65 6.59 L18.89 8.79 Z"/><circle cx="12" cy="12" r="3.4"/></svg>
+          <span class="update-dot" id="update-dot" hidden title="An update is available"></span>
+        </button>
       </div>
       <span class="version" id="version"></span>
     </div>
@@ -70,5 +76,6 @@
 <script src="branches.js"></script>
 <script src="stash.js"></script>
 <script src="github.js"></script>
+<script src="settings.js"></script>
 </body>
 </html>

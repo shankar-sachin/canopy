@@ -33,6 +33,8 @@ pub struct Config {
     pub keys: BTreeMap<String, KeySpec>,
     /// Number of commits loaded per log page.
     pub log_page_size: usize,
+    /// Now and then, mention Canopy Desktop when Canopy starts.
+    pub desktop_tip: bool,
 }
 
 /// `commit = "C"` or `commit = ["C", "ctrl-s"]`
@@ -71,6 +73,7 @@ impl Default for Config {
             compact: false,
             splash: true,
             log_page_size: 300,
+            desktop_tip: true,
         }
     }
 }
@@ -122,6 +125,7 @@ teach_mode = true           # show the git command behind every action
 confirm_destructive = true
 compact = false             # true: tighter layout, no gaps between panels
 splash = true               # the tree animation when Canopy starts
+desktop_tip = true          # now and then, mention Canopy Desktop at startup
 workspace_dirs = ["~/code"] # scanned by the Workspace view (tab 6)
 workspace_depth = 3
 

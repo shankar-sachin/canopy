@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Canopy",
+  "productName": "canopy",
   "mainBinaryName": "canopy-desktop",
   "identifier": "io.github.shankar-sachin.canopy",
   "build": {
@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "Canopy",
+        "title": "canopy",
         "width": 1200,
         "height": 780,
         "minWidth": 820,
@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com"
     }
   },
   "bundle": {
@@ -35,6 +35,19 @@
       "icons/icon.icns",
       "icons/icon.png",
       "icons/icon.ico"
-    ]
+    ],
+    "macOS": {
+      "signingIdentity": "-",
+      "minimumSystemVersion": "10.15"
+    },
+    "linux": {
+      "deb": {
+        "section": "devel"
+      }
+    },
+    "copyright": "\u00a9 Sachin Shankar. MIT licensed.",
+    "longDescription": "Canopy puts your whole repository on one screen: what changed, what's staged, where your branch stands, and what to do next. Stage lines, browse the commit graph, and work with GitHub pull requests, issues and Actions.",
+    "homepage": "https://shankar-sachin.github.io/canopy/",
+    "publisher": "Sachin Shankar"
   }
 }

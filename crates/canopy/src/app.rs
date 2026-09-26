@@ -133,6 +133,8 @@ pub struct Toast {
     pub text: String,
     pub level: Level,
     pub at: Instant,
+    /// Seconds it stays up.
+    pub ttl: u64,
 }
 
 /// Decrements the in-flight task count when dropped.
@@ -283,7 +285,12 @@ impl App {
     }
 
     pub fn toast(&mut self, level: Level, text: impl Into<String>) {
-        self.toast = Some(Toast { text: text.into(), level, at: Instant::now() });
+        let ttl = if level == Level::Error { 8 } else { 4 };
+        self.toast_for(level, text, ttl);
+    }
+
+    pub fn toast_for(&mut self, level: Level, text: impl Into<String>, ttl: u64) {
+        self.toast = Some(Toast { text: text.into(), level, at: Instant::now(), ttl });
     }
 
     pub fn repo_name(&self) -> String {
@@ -969,8 +976,7 @@ impl App {
                         ticker = tokio::time::interval(normal);
                     }
                     if let Some(t) = &self.toast {
-                        let ttl = if t.level == Level::Error { 8 } else { 4 };
-                        if t.at.elapsed() > Duration::from_secs(ttl) {
+                        if t.at.elapsed() > Duration::from_secs(t.ttl) {
                             self.toast = None;
                         }
                     }
