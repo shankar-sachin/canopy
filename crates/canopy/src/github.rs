@@ -1,6 +1,6 @@
 //! GitHub tabs: state, loading, and turning PRs into the details panel.
 
-use canopy_gh::{Gh, GhStatus, PrFilter, PullRequest};
+use canopy_gh::{Gh, GhStatus, Issue, IssueFilter, PrFilter, PullRequest};
 
 use crate::app::{App, Msg};
 use crate::keymap::Screen;
@@ -22,6 +22,52 @@ pub struct GithubState {
     /// Show the PR's diff under its details.
     pub show_pr_diff: bool,
     pub pr_diff: Option<(u64, String)>,
+    pub issues: Vec<Issue>,
+    pub issue_filter: IssueFilterChoice,
+    pub issues_loading: bool,
+    pub issues_loaded: bool,
+}
+
+/// A GitHub item that can be commented on or closed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Target {
+    Pr(u64),
+    Issue(u64),
+}
+
+impl Target {
+    pub fn label(self) -> String {
+        match self {
+            Target::Pr(n) | Target::Issue(n) => format!("#{n}"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct IssueFilterChoice(pub IssueFilter);
+
+impl Default for IssueFilterChoice {
+    fn default() -> Self {
+        IssueFilterChoice(IssueFilter::Open)
+    }
+}
+
+impl IssueFilterChoice {
+    pub fn label(self) -> &'static str {
+        match self.0 {
+            IssueFilter::Open => "open",
+            IssueFilter::Mine => "assigned to me",
+            IssueFilter::All => "all",
+        }
+    }
+
+    pub fn next(self) -> Self {
+        IssueFilterChoice(match self.0 {
+            IssueFilter::Open => IssueFilter::Mine,
+            IssueFilter::Mine => IssueFilter::All,
+            IssueFilter::All => IssueFilter::Open,
+        })
+    }
 }
 
 /// Wrapper so the filter has a Default and a label.
@@ -89,11 +135,87 @@ pub fn load_prs(app: &mut App) {
     app.spawn(async move { Msg::Prs(gh.pr_list(filter, 50).await.map_err(|e| e.to_string())) });
 }
 
-/// Called when a GitHub tab becomes visible: load it the first time.
-pub fn on_enter(app: &mut App, screen: Screen) {
-    if screen == Screen::Pulls && app.github.ready() && !app.github.prs_loaded && !app.github.prs_loading {
+pub fn load_issues(app: &mut App) {
+    if !app.github.ready() {
+        return;
+    }
+    let Some(gh) = app.github.gh.clone() else { return };
+    let filter = app.github.issue_filter.0;
+    app.github.issues_loading = true;
+    app.spawn(async move { Msg::Issues(gh.issue_list(filter, 50).await.map_err(|e| e.to_string())) });
+}
+
+/// Reload whichever GitHub lists have been opened (after an action).
+pub fn reload_loaded(app: &mut App) {
+    if app.github.prs_loaded {
         load_prs(app);
     }
+    if app.github.issues_loaded {
+        load_issues(app);
+    }
+}
+
+/// Called when a GitHub tab becomes visible: load it the first time.
+pub fn on_enter(app: &mut App, screen: Screen) {
+    if !app.github.ready() {
+        return;
+    }
+    let gh = &app.github;
+    match screen {
+        Screen::Pulls if !gh.prs_loaded && !gh.prs_loading => load_prs(app),
+        Screen::Issues if !gh.issues_loaded && !gh.issues_loading => load_issues(app),
+        _ => {}
+    }
+}
+
+pub fn selected_issue(app: &App) -> Option<&Issue> {
+    app.github.issues.get(app.selected(Screen::Issues))
+}
+
+pub fn load_issue_detail(app: &mut App, gen: u64) {
+    let (Some(gh), Some(issue)) = (app.github.gh.clone(), selected_issue(app).cloned()) else {
+        app.diff = None;
+        return;
+    };
+    app.diff = Some(issue_view(&issue, app.last_diff_width));
+    app.spawn(async move {
+        let detail = gh.issue_view(issue.number).await.map(Box::new).map_err(|e| e.to_string());
+        Msg::IssueDetail { gen, detail }
+    });
+}
+
+pub fn issue_view(issue: &Issue, width: usize) -> DiffView {
+    let mut meta = vec![
+        format!("#{} {}", issue.number, issue.title),
+        format!(
+            "{} · opened by {} · updated {} · {} comment(s)",
+            issue.state.to_lowercase(),
+            issue.author.login,
+            ago(issue.updated_at),
+            issue.comments.len()
+        ),
+    ];
+    if !issue.labels.is_empty() {
+        meta.push(format!("labels: {}", issue.labels.iter().map(|l| l.name.as_str()).collect::<Vec<_>>().join(", ")));
+    }
+    meta.push(String::new());
+    if issue.body.trim().is_empty() {
+        meta.push("(no description)".into());
+    } else {
+        meta.extend(wrap(issue.body.trim(), width));
+    }
+    for c in &issue.comments {
+        meta.push(String::new());
+        meta.push(format!("── {} commented · {}", c.author.login, ago(c.created_at)));
+        meta.extend(wrap(c.body.trim(), width));
+    }
+    DiffView::new(
+        format!("issue:{}", issue.number),
+        format!("#{} {}", issue.number, issue.title),
+        meta,
+        Vec::new(),
+        None,
+    )
 }
 
 pub fn selected_pr(app: &App) -> Option<&PullRequest> {

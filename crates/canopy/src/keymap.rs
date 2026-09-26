@@ -15,10 +15,11 @@ pub enum Screen {
     Workspace,
     Reflog,
     Pulls,
+    Issues,
 }
 
 impl Screen {
-    pub const ALL: [Screen; 8] = [
+    pub const ALL: [Screen; 9] = [
         Screen::Home,
         Screen::Status,
         Screen::Log,
@@ -27,6 +28,7 @@ impl Screen {
         Screen::Workspace,
         Screen::Reflog,
         Screen::Pulls,
+        Screen::Issues,
     ];
 
     pub fn title(self) -> &'static str {
@@ -39,6 +41,7 @@ impl Screen {
             Screen::Workspace => "Workspace",
             Screen::Reflog => "Reflog",
             Screen::Pulls => "Pull requests",
+            Screen::Issues => "Issues",
         }
     }
 
@@ -172,9 +175,10 @@ pub enum Action {
     PrCheckout,
     PrCreate,
     PrReview,
-    PrComment,
+    Comment,
     PrMerge,
-    PrClose,
+    CloseItem,
+    IssueCreate,
     OpenInBrowser,
     CycleFilter,
     ToggleDiff,
@@ -228,6 +232,7 @@ impl Action {
             Goto(Screen::Workspace) => "go to workspace",
             Goto(Screen::Reflog) => "go to reflog",
             Goto(Screen::Pulls) => "go to pull requests",
+            Goto(Screen::Issues) => "go to issues",
             NextScreen => "next tab",
             PrevScreen => "previous tab",
             Refresh => "refresh",
@@ -292,9 +297,10 @@ impl Action {
             PrCheckout => "check out this pull request",
             PrCreate => "create a pull request for this branch",
             PrReview => "review: approve / comment / request changes",
-            PrComment => "comment",
+            Comment => "comment",
+            IssueCreate => "new issue",
             PrMerge => "merge pull request",
-            PrClose => "close",
+            CloseItem => "close / reopen",
             OpenInBrowser => "open in browser",
             CycleFilter => "cycle filter",
             ToggleDiff => "show diff / details",
@@ -371,6 +377,9 @@ impl Action {
             PrCreate => "new",
             PrReview => "review",
             PrMerge => "merge",
+            IssueCreate => "new",
+            Comment => "comment",
+            CloseItem => "close",
             OpenInBrowser => "browser",
             CycleFilter => "filter",
             ToggleDiff => "diff",
@@ -423,6 +432,7 @@ pub static GLOBAL: &[Binding] = &[
     b(&["6"], Action::Goto(Screen::Workspace), false),
     b(&["7"], Action::Goto(Screen::Reflog), false),
     b(&["8"], Action::Goto(Screen::Pulls), false),
+    b(&["9"], Action::Goto(Screen::Issues), false),
     b(&["tab"], Action::NextScreen, false),
     b(&["backtab"], Action::PrevScreen, false),
     b(&["ctrl-r"], Action::Refresh, false),
@@ -517,14 +527,23 @@ pub static REFLOG: &[Binding] = &[b(&["enter", "l"], Action::Enter, true), b(&["
 
 pub static HOME: &[Binding] = &[];
 
+pub static ISSUES: &[Binding] = &[
+    b(&["enter", "l"], Action::Enter, false),
+    b(&["n"], Action::IssueCreate, true),
+    b(&["C"], Action::Comment, true),
+    b(&["X"], Action::CloseItem, true),
+    b(&["o"], Action::OpenInBrowser, true),
+    b(&["f"], Action::CycleFilter, true),
+];
+
 pub static PULLS: &[Binding] = &[
     b(&["enter", "l"], Action::Enter, false),
     b(&["space"], Action::PrCheckout, true),
     b(&["n"], Action::PrCreate, true),
     b(&["r"], Action::PrReview, true),
     b(&["M"], Action::PrMerge, true),
-    b(&["C"], Action::PrComment, false),
-    b(&["X"], Action::PrClose, false),
+    b(&["C"], Action::Comment, false),
+    b(&["X"], Action::CloseItem, false),
     b(&["D"], Action::ToggleDiff, true),
     b(&["o"], Action::OpenInBrowser, true),
     b(&["f"], Action::CycleFilter, true),
@@ -590,6 +609,7 @@ pub fn defaults(ctx: Ctx) -> &'static [Binding] {
         Ctx::Screen(Screen::Workspace) => WORKSPACE,
         Ctx::Screen(Screen::Reflog) => REFLOG,
         Ctx::Screen(Screen::Pulls) => PULLS,
+        Ctx::Screen(Screen::Issues) => ISSUES,
         Ctx::Tags => TAGS,
         Ctx::Conflict => CONFLICT,
         Ctx::Remotes => REMOTES,
@@ -628,7 +648,7 @@ pub fn key_name(ev: &KeyEvent) -> String {
     }
 }
 
-pub const ALL_CTX: [Ctx; 15] = [
+pub const ALL_CTX: [Ctx; 16] = [
     Ctx::Global,
     Ctx::Diff,
     Ctx::Screen(Screen::Home),
@@ -639,6 +659,7 @@ pub const ALL_CTX: [Ctx; 15] = [
     Ctx::Screen(Screen::Workspace),
     Ctx::Screen(Screen::Reflog),
     Ctx::Screen(Screen::Pulls),
+    Ctx::Screen(Screen::Issues),
     Ctx::Tags,
     Ctx::Remotes,
     Ctx::Worktrees,

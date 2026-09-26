@@ -75,6 +75,11 @@ pub enum Msg {
         viewer: Option<String>,
     },
     Prs(Result<Vec<canopy_gh::PullRequest>, String>),
+    Issues(Result<Vec<canopy_gh::Issue>, String>),
+    IssueDetail {
+        gen: u64,
+        detail: Result<Box<canopy_gh::Issue>, String>,
+    },
     PrDetail {
         gen: u64,
         detail: Result<Box<canopy_gh::PullRequest>, String>,
@@ -334,6 +339,7 @@ impl App {
             Screen::Workspace => self.visible_workspace().len(),
             Screen::Reflog => self.data.reflog.len(),
             Screen::Pulls => self.github.prs.len(),
+            Screen::Issues => self.github.issues.len(),
         }
     }
 
@@ -638,7 +644,7 @@ impl App {
                     Then::RefreshWorkspace => self.scan_workspace(),
                     Then::GitHub => {
                         self.refresh();
-                        crate::github::load_prs(self);
+                        crate::github::reload_loaded(self);
                     }
                     Then::Bisect => {
                         self.refresh();
@@ -697,6 +703,35 @@ impl App {
                         if self.screen == Screen::Pulls {
                             crate::views::diff::load_for_selection(self);
                         }
+                    }
+                    Err(e) => self.toast(Level::Error, e),
+                }
+            }
+            Msg::Issues(result) => {
+                self.github.issues_loading = false;
+                match result {
+                    Ok(issues) => {
+                        self.github.issues = issues;
+                        self.github.issues_loaded = true;
+                        self.clamp_selections();
+                        if self.screen == Screen::Issues {
+                            crate::views::diff::load_for_selection(self);
+                        }
+                    }
+                    Err(e) => self.toast(Level::Error, e),
+                }
+            }
+            Msg::IssueDetail { gen, detail } => {
+                if gen != self.diff_gen || self.screen != Screen::Issues {
+                    return;
+                }
+                match detail {
+                    Ok(issue) => {
+                        let mut v = crate::github::issue_view(&issue, self.last_diff_width);
+                        if let Some(old) = self.diff.as_ref().filter(|o| o.key == v.key) {
+                            v.cursor = old.cursor.min(v.rows.len().saturating_sub(1));
+                        }
+                        self.diff = Some(v);
                     }
                     Err(e) => self.toast(Level::Error, e),
                 }
