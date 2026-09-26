@@ -4,6 +4,7 @@ pub mod graph;
 pub mod logo;
 pub mod modal;
 pub mod screens;
+pub mod splash;
 pub mod util;
 
 use canopy_git::RepoState;
@@ -23,6 +24,12 @@ pub const SPINNER: [&str; 4] = ["·", "•", "●", "•"];
 
 pub fn draw(f: &mut Frame, app: &mut App) {
     let area = f.area();
+    if let Some(start) = app.splash_start {
+        if splash::fits(area) {
+            splash::draw(f, area, &app.theme, start.elapsed());
+            return;
+        }
+    }
     f.render_widget(Block::default().style(app.theme.base()), area);
     let teach = app.config.teach_mode && app.git.is_some();
     // A blank row under the tabs and above the footer, when there's room.

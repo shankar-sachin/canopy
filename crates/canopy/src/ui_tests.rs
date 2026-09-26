@@ -1271,3 +1271,39 @@ async fn compact_restores_dense_layout() {
     // No blank row between the tabs and the first panel.
     assert!(s.lines().nth(2).unwrap().starts_with('╭'), "{s}");
 }
+
+#[tokio::test]
+async fn startup_splash() {
+    use std::time::{Duration, Instant};
+    let dir = demo_repo();
+    let mut app = app_for(dir.path()).await;
+    let at = |ms: u64| Instant::now().checked_sub(Duration::from_millis(ms)).unwrap();
+
+    // Just started: nothing grown yet, no wordmark.
+    app.splash_start = Some(at(0));
+    let s = render(&mut app, 100, 30);
+    assert!(!s.contains("canopy") && !s.contains('█'), "{s}");
+    assert!(s.contains("any key to skip"), "{s}");
+
+    // Part-way: the trunk is up, the canopy isn't, still no wordmark.
+    app.splash_start = Some(at(200));
+    let s = render(&mut app, 100, 30);
+    let tree_rows: Vec<&str> = s.lines().filter(|l| l.contains('█') || l.contains('▀') || l.contains('▄')).collect();
+    assert!(!tree_rows.is_empty() && tree_rows.len() < 8, "{s}");
+
+    // Finished: whole tree, "canopy", tagline and version.
+    app.splash_start = Some(at(1000));
+    let s = render(&mut app, 100, 30);
+    assert!(s.contains("canopy") && s.contains("a git dashboard for your terminal"), "{s}");
+    assert!(s.contains(&format!("v{}", env!("CARGO_PKG_VERSION"))), "{s}");
+
+    // Any key skips it and does nothing else.
+    press(&mut app, KeyCode::Char('3')).await;
+    assert!(app.splash_start.is_none());
+    assert_eq!(app.screen, Screen::Home);
+
+    // Too small a terminal: straight to the app.
+    app.splash_start = Some(at(0));
+    let s = render(&mut app, 40, 12);
+    assert!(!s.contains("any key to skip"), "{s}");
+}

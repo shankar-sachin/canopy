@@ -92,6 +92,7 @@ nerd_font = false
 teach_mode = true
 confirm_destructive = true
 compact = false             # true: tighter layout, no gaps between panels
+splash = true               # the tree animation when Canopy starts (any key skips)
 workspace_dirs = ["~/code"]
 workspace_depth = 3
 
