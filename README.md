@@ -20,6 +20,12 @@ rebase, and a command palette, all without leaving the keyboard.
 brew install shankar-sachin/canopy/canopy
 ```
 
+Or, without Homebrew (macOS and Linux x86_64; installs to `~/.local/bin` and verifies the checksum):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts/install.sh | sh
+```
+
 Or build from source (stable Rust):
 
 ```sh
@@ -28,9 +34,15 @@ cargo install --locked --path crates/canopy
 
 Canopy needs `git` on your `PATH`.
 
-**On Windows**, download `canopy-<version>-x86_64-pc-windows-msvc.zip` from
-[Releases](https://github.com/shankar-sachin/canopy/releases) (from 1.0.0) and
-put `canopy.exe` on your `PATH`, or use the `cargo install` command above.
+**On Windows**, in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts/install.ps1 | iex
+```
+
+or download `canopy-<version>-x86_64-pc-windows-msvc.zip` from
+[Releases](https://github.com/shankar-sachin/canopy/releases) and put
+`canopy.exe` on your `PATH`.
 Windows Terminal is recommended. Full steps are on the
 [website](https://shankar-sachin.github.io/canopy/get-started.html#windows).
 
@@ -156,13 +168,22 @@ cargo test -p canopy-git-tui export_site_screens -- --ignored
 ## Develop
 
 ```sh
-cargo test --workspace                          # parsers, git ops on temp repos, rendered UI flows
+scripts/check.sh      # fmt + clippy + every test, with a one-line verdict (what CI runs)
+scripts/screens.sh    # regenerate the website's screenshots and key tables
 CANOPY_PRINT=1 cargo test -p canopy-git-tui ui_tests -- --nocapture   # print rendered frames
-cargo clippy --workspace --all-targets -- -D warnings
 ```
 
-Release: push a `vX.Y.Z` tag. CI builds binaries, creates the GitHub release,
-and updates the Homebrew tap.
+| Script | What it does |
+| --- | --- |
+| `scripts/install.sh` | Install a release on macOS/Linux (`… \| sh -s -- v1.0.0` for a version, `--uninstall` to remove) |
+| `scripts/install.ps1` | The same for Windows (`-Version`, `-Uninstall`) |
+| `scripts/check.sh` | Formatting, clippy with warnings as errors, and all tests |
+| `scripts/screens.sh` | Re-render the docs screenshots, keys and theme tables from the real TUI |
+| `scripts/release.sh` | Tag the version in `Cargo.toml`, publish the release as you, wait for the builds, and check the Homebrew tap |
+
+Release: bump `version` in `Cargo.toml` in a PR, merge it, then run
+`scripts/release.sh` on main. CI builds the binaries, attaches them to the
+release, and updates the Homebrew tap.
 
 ## License
 
