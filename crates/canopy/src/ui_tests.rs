@@ -1390,3 +1390,29 @@ async fn startup_splash() {
     let s = render(&mut app, 40, 12);
     assert!(!s.contains("any key to skip"), "{s}");
 }
+
+/// Writes one real frame as a standalone HTML page, for screenshots.
+/// CANOPY_SHOT=path/to/out.html cargo test -p canopy-git-tui screenshot_frame -- --ignored
+#[tokio::test]
+#[ignore]
+async fn screenshot_frame() {
+    let Ok(out) = std::env::var("CANOPY_SHOT") else { return };
+    let base = Path::new("/tmp/canopy-shot");
+    let _ = std::fs::remove_dir_all(base);
+    let dir = base.join("acme-app");
+    std::fs::create_dir_all(&dir).unwrap();
+    demo_repo_at(&dir);
+    let bin = TempDir::new().unwrap();
+    let gh = fake_gh(bin.path(), true);
+    let mut app = github_app(&dir, &gh).await;
+    app.history.push("git add -- lib.rs".into());
+    let (w, h) = (120, 36);
+    let frame = frame_html(&mut app, w, h);
+    let page = format!(
+        "<!doctype html><meta charset=utf-8><style>html,body{{margin:0;background:#101612}}\
+         pre{{margin:0;padding:18px 22px;font:14px/1.2 Menlo,monospace;color:#d6e2d6;background:#101612;white-space:pre}}\
+         i.g{{font-style:normal;display:inline-block;width:1ch;text-align:center}}</style><pre>{frame}</pre>"
+    );
+    std::fs::write(&out, page).unwrap();
+    let _ = std::fs::remove_dir_all(base);
+}
