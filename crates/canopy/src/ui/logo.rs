@@ -11,6 +11,9 @@ use ratatui::text::{Line, Span};
 const PIXELS: [&str; 8] =
     ["..hhhhh..", ".hhggggh.", "ggggggggg", "ggggmgggg", ".mmmmmmm.", "...ttt...", "....t....", "..ttttt.."];
 
+/// A 2-row mini tree for the top-right corner of the header.
+const MINI: [&str; 4] = [".hhhh.", "hggggg", ".mmmm.", "..tt.."];
+
 fn color(c: char) -> Option<Color> {
     match c {
         'h' => Some(Color::Rgb(142, 224, 160)),
@@ -24,6 +27,12 @@ fn color(c: char) -> Option<Color> {
 /// The tree as lines of text. `scale` 1 is 9x4 cells; 2 is 18x8.
 pub fn lines(scale: usize) -> Vec<Line<'static>> {
     grown(scale, 1.0)
+}
+
+/// The mini tree: 6x2 cells.
+pub fn mini() -> Vec<Line<'static>> {
+    let rows: Vec<Vec<char>> = MINI.iter().map(|r| r.chars().collect()).collect();
+    fold(&rows)
 }
 
 /// The tree part-way through growing: `progress` 0.0 shows nothing, 1.0 the
@@ -43,6 +52,11 @@ pub fn grown(scale: usize, progress: f32) -> Vec<Line<'static>> {
         // Rows above the growth line are still empty.
         .map(|(y, row)| if y + visible >= total { row } else { vec!['.'; row.len()] })
         .collect();
+    fold(&rows)
+}
+
+/// Fold pairs of pixel rows into text rows of half blocks.
+fn fold(rows: &[Vec<char>]) -> Vec<Line<'static>> {
     rows.chunks(2)
         .map(|pair| {
             let top = &pair[0];
@@ -77,6 +91,13 @@ mod tests {
         let quarter = text(grown(1, 0.25));
         assert!(quarter[..3].iter().all(|l| l.trim().is_empty()) && !quarter[3].trim().is_empty());
         assert_eq!(text(grown(1, 1.0)), text(lines(1)));
+    }
+
+    #[test]
+    fn mini_tree() {
+        let m = mini();
+        assert_eq!(m.len(), 2);
+        assert!(m.iter().all(|l| l.width() == 6));
     }
 
     #[test]
