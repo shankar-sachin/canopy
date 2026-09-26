@@ -327,14 +327,13 @@ body.busy .btn-group .btn, body.busy [data-ch] { pointer-events: none; opacity: 
 .diff-body { flex: 1; overflow: auto; padding: 10px 0 24px; font: 12.5px/1.55 var(--mono); }
 .diff-empty { color: var(--faint); padding: 32px; text-align: center; font-family: var(--sans); }
 .diff-tip { flex: none; padding: 7px 16px; font-size: 12px; color: var(--faint); border-top: 1px solid var(--border); }
-.hunk { margin: 0 12px 12px; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; width: max-content; min-width: calc(100% - 24px); }
-.hunk-h { position: sticky; left: 0; }
+.hunk { margin: 0 12px 12px; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
 .hunk-h { display: flex; align-items: center; gap: 8px; padding: 3px 6px 3px 12px; background: var(--surface-2); color: var(--teal); font-size: 12px; }
 .hunk-h .mono { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dl { display: grid; grid-template-columns: 46px 46px 18px 1fr; min-height: 20px; }
 .dl .no { color: var(--faint); text-align: right; padding-right: 8px; user-select: none; }
 .dl .sign { color: var(--faint); user-select: none; text-align: center; }
-.dl .code { white-space: pre; padding-right: 16px; }
+.dl .code { white-space: pre-wrap; overflow-wrap: anywhere; padding-right: 16px; }
 .dl.add { background: color-mix(in srgb, var(--green) 11%, transparent); }
 .dl.add .sign, .dl.add .code { color: var(--green-2); }
 html[data-theme="light"] .dl.add .code, html[data-theme="light"] .dl.add .sign { color: var(--green-2); }
