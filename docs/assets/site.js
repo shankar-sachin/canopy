@@ -40,22 +40,42 @@ addEventListener("resize", fitAll);
 if (document.fonts) document.fonts.ready.then(fitAll);
 fitAll();
 
-// Copy buttons: data-copy-text, or data-copy="<element id>".
-document.querySelectorAll(".copy").forEach(btn => {
-  btn.addEventListener("click", async () => {
-    const text = btn.dataset.copyText || document.getElementById(btn.dataset.copy)?.textContent || "";
-    try {
-      await navigator.clipboard.writeText(text.trim());
-      btn.textContent = "Copied";
-      btn.classList.add("done");
-      setTimeout(() => {
-        btn.textContent = "Copy";
-        btn.classList.remove("done");
-      }, 1600);
-    } catch {
-      /* Clipboard blocked: the text stays selectable. */
-    }
-  });
+// Copy buttons: data-copy-text, or data-copy="<element id>". One delegated
+// handler, with a fallback for browsers that refuse the Clipboard API.
+function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text).then(() => true, () => legacyCopy(text));
+  }
+  return Promise.resolve(legacyCopy(text));
+}
+function legacyCopy(text) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;pointer-events:none";
+  document.body.append(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch { ok = false; }
+  ta.remove();
+  return ok;
+}
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".copy");
+  if (!btn) return;
+  e.preventDefault();
+  const text = (btn.dataset.copyText || document.getElementById(btn.dataset.copy)?.textContent || "").trim();
+  if (!text) return;
+  const ok = await copyText(text);
+  btn.classList.toggle("done", ok);
+  btn.setAttribute("aria-label", ok ? "Copied" : "Copy failed: select the text instead");
+  btn.title = ok ? "Copied" : "Couldn't copy: select the text instead";
+  clearTimeout(btn._t);
+  btn._t = setTimeout(() => {
+    btn.classList.remove("done");
+    btn.setAttribute("aria-label", "Copy");
+    btn.title = "Copy";
+  }, 1600);
 });
 
 // Highlight the current page in the nav.
