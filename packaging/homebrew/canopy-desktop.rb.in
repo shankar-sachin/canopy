@@ -14,7 +14,7 @@ cask "canopy-desktop" do
 
   app "canopy.app"
 
-  zap trash: "~/.config/canopy/desktop.json"
+  zap trash: "~/.canopy/desktop.json"
 
   caveats <<~EOS
     This cask isn't notarized by Apple yet since it's a release preview.

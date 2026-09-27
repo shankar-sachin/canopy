@@ -24,6 +24,9 @@ pub struct Settings {
     /// "Fix with AI": auto (the first installed), claude, codex, off, or a
     /// command line (`{prompt}` marks where the prompt goes).
     pub ai_assistant: String,
+    /// Text editor: "system" (the default app), an editor id (code,
+    /// cursor, zed, subl, nvim, vim, hx, nano, emacs) or a command line.
+    pub editor: String,
 }
 
 impl Default for Settings {
@@ -36,6 +39,7 @@ impl Default for Settings {
             check_updates: true,
             last_update_check: 0,
             ai_assistant: "auto".into(),
+            editor: "system".into(),
         }
     }
 }
@@ -44,8 +48,13 @@ impl Settings {
     /// Unknown values fall back to the defaults.
     fn sanitized(mut self) -> Self {
         let d = Settings::default();
-        if !["system", "light", "dark"].contains(&self.theme.as_str()) {
+        // Any theme name is fine (built-in or custom); an unknown one falls
+        // back to the default when it's applied.
+        if self.theme.trim().is_empty() {
             self.theme = d.theme;
+        }
+        if self.editor.trim().is_empty() {
+            self.editor = "system".into();
         }
         if !["default", "merge", "rebase"].contains(&self.pull_mode.as_str()) {
             self.pull_mode = d.pull_mode;
@@ -402,10 +411,10 @@ mod tests {
 
     #[test]
     fn settings_fall_back_to_defaults() {
-        let s: Settings =
-            serde_json::from_str(r#"{"theme":"neon","refresh_secs":99999,"show_commands":false}"#).unwrap();
+        let s: Settings = serde_json::from_str(r#"{"theme":" ","refresh_secs":99999,"show_commands":false}"#).unwrap();
         let s = s.sanitized();
         assert_eq!(s.theme, "system");
+        assert_eq!(s.editor, "system");
         assert_eq!(s.refresh_secs, 3600);
         assert!(!s.show_commands);
         assert_eq!(s.pull_mode, "default");

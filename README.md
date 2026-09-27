@@ -114,7 +114,7 @@ keys this way; on Linux it shows `ctrl-q` / `alt-q` (set `mac_key_symbols` to ch
 
 ## Configure
 
-`~/.config/canopy/config.toml` (run `canopy --example-config` for a template):
+`~/.canopy/config.toml` (run `canopy --example-config` for a template):
 
 ```toml
 theme = "canopy"            # canopy | catppuccin | gruvbox | nord | light

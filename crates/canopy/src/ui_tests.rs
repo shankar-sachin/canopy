@@ -1072,7 +1072,7 @@ fn frame_html(app: &mut App, w: u16, h: u16) -> String {
     // fades in a scaled-down screenshot; lift it a little for the web.
     let border = app.theme.border;
     let hex = |c: Color| match c {
-        c if c == border => Some("#43604a".to_string()),
+        c if c == border && app.theme.name == "canopy" => Some("#43604a".to_string()),
         Color::Rgb(r, g, b) => Some(format!("#{r:02x}{g:02x}{b:02x}")),
         _ => None,
     };
@@ -1182,6 +1182,46 @@ async fn export_ai_frames() {
         10,
     );
     std::fs::write(out.join("tui-ai-launched.html"), page(&frame_html(&mut app, 118, 30))).unwrap();
+}
+
+/// A custom theme (from a JSON file, as Canopy Desktop saves them) as HTML
+/// pages, for previews:
+/// `CANOPY_SHOT_DIR=/tmp/t cargo test -p canopy-git-tui export_theme_frames -- --ignored`
+#[tokio::test]
+#[ignore]
+async fn export_theme_frames() {
+    let out = std::path::PathBuf::from(std::env::var("CANOPY_SHOT_DIR").expect("set CANOPY_SHOT_DIR"));
+    std::fs::create_dir_all(&out).unwrap();
+    let home = TempDir::new().unwrap();
+    std::env::set_var("CANOPY_HOME", home.path());
+    let ocean = r##"{"name":"Ocean","base":"nord","colors":{"bg":"#0f1b2a","fg":"#dce6f0","accent":"#4fc1e9","selection_bg":"#1d3350","border":"#24364d","border_focus":"#4fc1e9","muted":"#7f93aa","branch":"#5fd7c9","hash":"#b79cf2"}}"##;
+    let t = canopy_config::theme::ThemeFile::parse(ocean).unwrap();
+    canopy_config::theme::save(&canopy_config::theme::themes_dir().unwrap(), &t).unwrap();
+    let dir = demo_repo();
+    let bin = TempDir::new().unwrap();
+    let gh = fake_gh(bin.path(), true);
+    let mut app = github_app(dir.path(), &gh).await;
+    app.theme = crate::theme::Theme::find("Ocean").expect("the saved theme loads");
+    app.tick = 30;
+    app.settle().await;
+    let bg = match app.theme.bg {
+        ratatui::style::Color::Rgb(r, g, b) => format!("#{r:02x}{g:02x}{b:02x}"),
+        _ => "#000".into(),
+    };
+    let page = |frame: &str| {
+        format!(
+            "<!doctype html><meta charset=utf-8><link rel=stylesheet href=\"https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap\">\
+             <style>body{{margin:0;background:{bg}}}pre{{margin:0;padding:14px;font:14px/1.25 'JetBrains Mono',ui-monospace,Menlo,monospace;white-space:pre}}\
+             i.g{{font-style:normal;display:inline-block;width:1ch;text-align:center;vertical-align:top}}</style><pre>{frame}</pre>"
+        )
+    };
+    std::fs::write(out.join("tui-ocean-home.html"), page(&frame_html(&mut app, 118, 30))).unwrap();
+    press(&mut app, KeyCode::Char('2')).await;
+    app.settle().await;
+    std::fs::write(out.join("tui-ocean-changes.html"), page(&frame_html(&mut app, 118, 30))).unwrap();
+    press(&mut app, KeyCode::Char('3')).await;
+    app.settle().await;
+    std::fs::write(out.join("tui-ocean-history.html"), page(&frame_html(&mut app, 118, 30))).unwrap();
 }
 
 /// A short tour as numbered HTML frames (for a screen recording):

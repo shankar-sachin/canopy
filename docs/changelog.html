@@ -45,10 +45,21 @@
   </div>
 </header>
 <main class="wrap doc">
-  <aside class="toc"><b>On this page</b><a href="#v1-0-6">v1.0.6</a><a href="#v1-0-5">v1.0.5</a><a href="#v1-0-4">v1.0.4</a><a href="#v1-0-3">v1.0.3</a><a href="#v1-0-2">v1.0.2</a><a href="#v1-0-1">v1.0.1</a><a href="#v1-0-0">v1.0.0</a><a href="#v0-4-0">v0.4.0</a><a href="#v0-3-0">v0.3.0</a><a href="#v0-2-0">v0.2.0</a><a href="#v0-1-0">v0.1.0</a><a href="#next">What's next</a></aside>
+  <aside class="toc"><b>On this page</b><a href="#v1-0-7">v1.0.7</a><a href="#v1-0-6">v1.0.6</a><a href="#v1-0-5">v1.0.5</a><a href="#v1-0-4">v1.0.4</a><a href="#v1-0-3">v1.0.3</a><a href="#v1-0-2">v1.0.2</a><a href="#v1-0-1">v1.0.1</a><a href="#v1-0-0">v1.0.0</a><a href="#v0-4-0">v0.4.0</a><a href="#v0-3-0">v0.3.0</a><a href="#v0-2-0">v0.2.0</a><a href="#v0-1-0">v0.1.0</a><a href="#next">What's next</a></aside>
   <article class="prose">
 
-<div class="release" id="v1-0-6"><h2>v1.0.6 <span class="tag-new">Latest</span></h2><div class="date">September 2026</div>
+<div class="release" id="v1-0-7"><h2>v1.0.7 <span class="tag-new">Latest</span></h2><div class="date">September 2026</div>
+<p><b><a href="wiki/themes.html#your-own">Your own themes</a></b>, shared between the terminal and desktop apps.</p>
+<ul>
+  <li>Themes are JSON files in <code>~/.canopy/themes/</code>. The terminal app picks them up for <code>theme</code>, <code>-t</code> and <kbd>⌃T</kbd>; <code>canopy --list-themes</code> lists them and <code>canopy --export-theme nord</code> gives you one to start from.</li>
+  <li>Desktop app: Settings has a new <b>Appearance</b> page with every theme (catppuccin, gruvbox and nord are new there) and a <b>theme editor</b>: pick colors and see them live, with a preview of the terminal app. Save it and the terminal app can use it straight away. Themes can be imported, exported, or opened in your editor as JSON.</li>
+  <li><b>Move settings between the apps</b>: the theme, text editor, AI assistant and the show-commands setting. <code>canopy --export-settings</code> / <code>--import-settings FILE</code> in the terminal; <b>Import from terminal app</b>, <b>Send to terminal app</b>, <b>Export</b> and <b>Import</b> in the desktop app.</li>
+  <li><b>Choose your text editor</b>: <code>editor = "code --wait"</code> in the terminal app&#39;s config; in the desktop app, Settings lists the editors it finds (VS Code, Cursor, Zed, Sublime Text, Neovim, Vim, Helix, nano, Emacs) or takes any command. Terminal editors open in a new terminal window.</li>
+  <li>Desktop app: <b>Open in editor</b> on the Changes page (and on conflicted files); Details on a failed run opens in your chosen editor.</li>
+  <li>Canopy&#39;s folder is now <code>~/.canopy</code> (<code>CANOPY_HOME</code> to change it). Your settings from <code>~/.config/canopy</code> are copied over the first time 1.0.7 runs.</li>
+</ul></div>
+
+<div class="release" id="v1-0-6"><h2>v1.0.6</h2><div class="date">September 2026</div>
 <ul>
   <li><b>Details</b> for a failed run: the full write-up of what went wrong. Desktop: a popup with Copy, Open in editor and View in GitHub, on the Home banner and on failed runs. Terminal: <kbd>e</kbd> on a failed run opens it in your editor.</li>
   <li><b>View in GitHub</b> buttons across the desktop app, with the GitHub mark; the terminal app's <kbd>o</kbd> hint says so too.</li>

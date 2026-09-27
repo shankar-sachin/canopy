@@ -218,8 +218,9 @@ pub fn do_action(app: &mut App, action: Action) {
             app.toast(Level::Info, format!("Teach mode {s}"));
         }
         CycleTheme => {
-            let i = Theme::NAMES.iter().position(|n| *n == app.theme.name).unwrap_or(0);
-            app.theme = Theme::by_name(Theme::NAMES[(i + 1) % Theme::NAMES.len()]);
+            let names = Theme::all_names();
+            let i = names.iter().position(|n| *n == app.theme.name).unwrap_or(0);
+            app.theme = Theme::by_name(&names[(i + 1) % names.len()]);
             app.toast(Level::Info, format!("Theme: {}", app.theme.name));
         }
         RawGit => {
@@ -2307,7 +2308,14 @@ mod tests {
 /// steps aside until the editor exits.
 pub fn open_in_editor(app: &mut App, file: &std::path::Path) {
     let fallback = if cfg!(windows) { "notepad" } else { "vi" };
-    let editor = std::env::var("VISUAL").or_else(|_| std::env::var("EDITOR")).unwrap_or_else(|_| fallback.into());
+    let editor = app
+        .config
+        .editor
+        .clone()
+        .filter(|e| !e.trim().is_empty())
+        .or_else(|| std::env::var("VISUAL").ok())
+        .or_else(|| std::env::var("EDITOR").ok())
+        .unwrap_or_else(|| fallback.into());
     let status = app.suspend(|| {
         if cfg!(windows) {
             // No POSIX shell on Windows: run the editor directly.

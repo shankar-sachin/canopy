@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Themes · Canopy wiki</title>
-<meta name="description" content="Five built-in themes. Set one with theme = "…" in the config, pass -t, or cycle live with ⌃T.">
+<meta name="description" content="Five built-in themes, plus your own. Set one with theme = … in the config, pass -t, or cycle live with ⌃T.">
 <meta property="og:title" content="Themes · Canopy wiki">
 <meta property="og:image" content="https://shankar-sachin.github.io/canopy/assets/og.png">
 <meta name="theme-color" content="#0b100c">
@@ -70,7 +70,7 @@
     <article class="wprose">
       <div class="crumbs"><a href="index.html">Wiki</a><span>/</span>Reference</div>
       <h1>Themes</h1>
-      <p class="wlede">Five built-in themes. Set one with theme = "…" in the config, pass -t, or cycle live with ⌃T.</p>
+      <p class="wlede">Five built-in themes, plus your own as JSON files (made by hand or in Canopy Desktop&#39;s theme editor). Set one with theme = "…" in the config, pass -t, or cycle live with ⌃T.</p>
 <!-- THEMES:START -->
 <h2 id="theme-canopy">canopy</h2>
 <div class="theme-sample" style="background:#101612;color:#d6e2d6;border-color:#2e4032"><span style="color:#7ac878;font-weight:700">● main</span> <span style="color:#a096e6">f5be172</span> <span style="color:#7ac878">+ added line</span> <span style="color:#e86e64">- removed line</span> <span style="color:#708474">3h ago</span></div>
@@ -88,6 +88,42 @@
 <div class="theme-sample" style="background:#fafaf6;color:#282c28;border-color:#ced4cc"><span style="color:#2e8c46;font-weight:700">● main</span> <span style="color:#6450be">f5be172</span> <span style="color:#288c3c">+ added line</span> <span style="color:#c83232">- removed line</span> <span style="color:#788078">3h ago</span></div>
 <div class="swatches"><span class="swatch"><i style="background:#fafaf6"></i>background<code>#fafaf6</code></span><span class="swatch"><i style="background:#282c28"></i>text<code>#282c28</code></span><span class="swatch"><i style="background:#2e8c46"></i>accent<code>#2e8c46</code></span><span class="swatch"><i style="background:#b06e14"></i>highlight<code>#b06e14</code></span><span class="swatch"><i style="background:#288c3c"></i>added<code>#288c3c</code></span><span class="swatch"><i style="background:#c83232"></i>removed<code>#c83232</code></span><span class="swatch"><i style="background:#b06e14"></i>modified<code>#b06e14</code></span><span class="swatch"><i style="background:#6450be"></i>commit<code>#6450be</code></span><span class="swatch"><i style="background:#14828c"></i>branch<code>#14828c</code></span><span class="swatch"><i style="background:#285ab4"></i>remote<code>#285ab4</code></span></div>
 <!-- THEMES:END -->
+<h2 id="your-own">Your own themes</h2>
+<p>A theme is a small JSON file in <code>~/.canopy/themes/</code> (on Windows, <code>%USERPROFILE%\.canopy\themes</code>). Both the terminal app and Canopy Desktop read that folder, so a theme made in one shows up in the other.</p>
+<p>Start from a built-in one:</p>
+<pre><code>mkdir -p ~/.canopy/themes
+canopy --export-theme nord &gt; ~/.canopy/themes/ocean.json</code></pre>
+<p>Then change its name and any colors you like. Colors you leave out come from <code>base</code>:</p>
+<pre><code>{
+  "name": "Ocean",
+  "base": "nord",
+  "colors": {
+    "bg": "#0f1b2a",
+    "accent": "#4fc1e9",
+    "selection_bg": "#1d3350"
+  }
+}</code></pre>
+<p>Use it with <code>theme = "Ocean"</code> in the config or <code>canopy -t Ocean</code>; <kbd>⌃T</kbd> cycles through your themes too. <code>canopy --list-themes</code> lists everything Canopy found, and a file with a mistake in it is skipped with a note.</p>
+<table>
+<thead><tr><th>Color</th><th>Used for</th></tr></thead>
+<tbody>
+<tr><td><code>bg</code>, <code>fg</code>, <code>muted</code></td><td>Background, text, and quieter text (times, hints)</td></tr>
+<tr><td><code>border</code>, <code>border_focus</code></td><td>Panel borders, and the focused panel&#39;s border</td></tr>
+<tr><td><code>accent</code>, <code>accent_alt</code></td><td>Titles and highlights, and a second highlight</td></tr>
+<tr><td><code>selection_bg</code></td><td>The selected row</td></tr>
+<tr><td><code>added</code>, <code>removed</code>, <code>modified</code>, <code>conflict</code></td><td>File states and diff lines</td></tr>
+<tr><td><code>added_bg</code>, <code>removed_bg</code></td><td>Behind added and removed diff lines</td></tr>
+<tr><td><code>hash</code>, <code>branch</code>, <code>remote</code>, <code>tag</code></td><td>Commit ids, branches, remotes, tags</td></tr>
+<tr><td><code>warn</code>, <code>error</code></td><td>Warnings and errors</td></tr>
+</tbody>
+</table>
+<h3 id="desktop">With Canopy Desktop</h3>
+<p>Canopy Desktop has a theme editor (Settings, Appearance): pick colors, see them live, and save. Saved themes go in the same folder, so the terminal app can use them straight away. It can also import and export theme files, and open one in your text editor for fine-tuning.</p>
+<h3 id="sync">Moving settings between the apps</h3>
+<p>The terminal app is set up in <code>config.toml</code>; the desktop app has its own settings screen. They can swap the settings they share (theme, text editor, AI assistant, showing git commands) as one JSON file:</p>
+<pre><code>canopy --export-settings &gt; my-canopy.json   # theme, editor, ai, teach_mode
+canopy --import-settings my-canopy.json     # updates config.toml (and saves the theme)</code></pre>
+<p>In Canopy Desktop, Settings has <b>Import from terminal app</b> and <b>Send to terminal app</b>, which do the same through <code>config.toml</code> directly, and <b>Export</b> / <b>Import</b> for the file. Importing only changes those keys; your comments and the rest of the config stay as they are.</p>
 <p>Themes use 24-bit color. If colors look wrong, your terminal may not support it; see <a href="troubleshooting.html#colors">Troubleshooting</a>.</p>
 <nav class="pager" aria-label="Pages"><a href="cli.html"><small>Previous</small>Command line</a><a href="troubleshooting.html" class="next"><small>Next</small>Troubleshooting</a></nav>
     </article>

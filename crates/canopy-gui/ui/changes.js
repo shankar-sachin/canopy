@@ -116,6 +116,7 @@ function diffHtml() {
         <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code> and <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code> markers, then mark it resolved.
         Or take one side for the whole file:</p>
         <div class="conflict-actions">
+          <button class="btn" data-ch="edit">Open in editor</button>
           <button class="btn" data-ch="ours">Keep mine (ours)</button>
           <button class="btn" data-ch="theirs">Take theirs</button>
           <button class="btn primary" data-ch="resolved">Mark resolved</button>
@@ -124,9 +125,10 @@ function diffHtml() {
   }
   if (!ch.diff) return `<div class="diff-empty">Loading…</div>`;
   const unstage = section === "staged";
-  const fileBtns = unstage
+  const edit = `<button class="btn small ghost" data-ch="edit" title="Open this file in your text editor (Settings → General)">Open in editor</button>`;
+  const fileBtns = edit + (unstage
     ? `<button class="btn small" data-ch="unstage">Unstage file</button>`
-    : `<button class="btn small" data-ch="discard">Discard…</button><button class="btn small primary" data-ch="stage">Stage file</button>`;
+    : `<button class="btn small" data-ch="discard">Discard…</button><button class="btn small primary" data-ch="stage">Stage file</button>`);
   let body = "";
   for (const file of ch.diff) {
     if (file.binary) body += `<div class="diff-empty">Binary file: no text diff.</div>`;
@@ -258,6 +260,10 @@ async function onAction(what, el) {
     case "stage": return run(`Staged ${target.path}`, "stage", { paths: [target.path] });
     case "unstage": return run(`Unstaged ${target.path}`, "unstage", { paths: [target.path] });
     case "stage-all": return run("Staged everything", "stage_all");
+    case "edit":
+      return invoke("open_in_editor", { path: target.path })
+        .then((where) => toast(`Opened ${target.path} in ${where}`))
+        .catch((err) => toast("Couldn't open the editor", { error: true, detail: String(err) }));
     case "unstage-all": return run("Unstaged everything", "unstage_all");
     case "discard": {
       const ok = await ask({

@@ -103,7 +103,7 @@
 <h3>2b. Or build it with Cargo</h3>
 <pre class="code"><span class="p">PS&gt; </span>winget install --id Rustlang.Rustup -e
 <span class="p">PS&gt; </span>cargo install --locked --git https://github.com/shankar-sachin/canopy canopy-git-tui</pre>
-<div class="note"><b>On Windows:</b> the config file is <code>%USERPROFILE%\.config\canopy\config.toml</code>. "alt" shortcuts use the Alt key. Custom commands run with <code>cmd /C</code>, <kbd>e</kbd> opens files in the editor set in <code>VISUAL</code> or <code>EDITOR</code> (for example <code>code --wait</code>), and teach mode shows commands quoted for PowerShell.</div>
+<div class="note"><b>On Windows:</b> the config file is <code>%USERPROFILE%\.canopy\config.toml</code>. "alt" shortcuts use the Alt key. Custom commands run with <code>cmd /C</code>, <kbd>e</kbd> opens files in the editor set in <code>VISUAL</code> or <code>EDITOR</code> (for example <code>code --wait</code>), and teach mode shows commands quoted for PowerShell.</div>
 
 <h2 id="first">First run</h2>
 <p>The first time, Canopy shows a short welcome with the keys that matter and writes a starter config. From then on:</p>
@@ -114,7 +114,7 @@
 </ul>
 
 <h2 id="config">Configuration</h2>
-<p>The config file lives at <code>~/.config/canopy/config.toml</code> (<code>canopy --config-path</code> prints it; <code>canopy --example-config</code> prints a template).</p>
+<p>The config file lives at <code>~/.canopy/config.toml</code> (<code>canopy --config-path</code> prints it; <code>canopy --example-config</code> prints a template).</p>
 <pre class="code">theme = "canopy"            <span class="m"># canopy | catppuccin | gruvbox | nord | light</span>
 teach_mode = true           <span class="m"># show the git command behind each action</span>
 confirm_destructive = true

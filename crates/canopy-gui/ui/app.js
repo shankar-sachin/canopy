@@ -58,12 +58,77 @@ function icon(name, size = 16) {
 
 // ---------------------------------------------------------------- theme
 
+// "system", "light" and "dark" are the looks in app.css. Any other theme is a
+// palette (catppuccin, nord, one of yours), turned into the same color tokens.
+const THEME_VARS = ["--bg", "--bg-2", "--surface", "--surface-2", "--hover", "--border", "--border-2", "--text", "--muted",
+  "--faint", "--green", "--green-2", "--amber", "--teal", "--violet", "--red", "--on-accent", "--shadow"];
+const NATIVE_THEMES = ["system", "light", "dark"];
+
+function rgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function mix(a, b, t) {
+  const [x, y] = [rgb(a), rgb(b)];
+  return "#" + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, "0")).join("");
+}
+
+function luma(hex) {
+  const [r, g, b] = rgb(hex);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+
+/// A palette's colors (the 20 the terminal app uses) as this app's tokens.
+function paletteVars(c) {
+  const dark = luma(c.bg) < 0.5;
+  return {
+    dark,
+    vars: {
+      "--bg": c.bg, "--bg-2": mix(c.bg, c.fg, 0.03), "--surface": mix(c.bg, c.fg, 0.05), "--surface-2": mix(c.bg, c.fg, 0.08),
+      "--hover": mix(c.bg, c.fg, 0.11), "--border": c.border, "--border-2": mix(c.border, c.fg, 0.15),
+      "--text": c.fg, "--muted": c.muted, "--faint": mix(c.muted, c.bg, 0.35),
+      "--green": c.accent, "--green-2": mix(c.accent, c.fg, 0.3), "--amber": c.modified, "--teal": c.branch,
+      "--violet": c.hash, "--red": c.removed,
+      "--on-accent": luma(c.accent) > 0.55 ? mix(c.bg, "#000000", 0.3) : "#ffffff",
+      "--shadow": dark ? "0 18px 50px -24px #000" : "0 16px 40px -26px #00000044",
+    },
+  };
+}
+
+function setThemeVars(look) {
+  const root = document.documentElement;
+  for (const k of THEME_VARS) root.style.removeProperty(k);
+  if (!look) return;
+  root.dataset.theme = look.dark ? "dark" : "light";
+  for (const [k, v] of Object.entries(look.vars)) root.style.setProperty(k, v);
+}
+
 function applyTheme(choice) {
-  if (choice === "light" || choice === "dark") document.documentElement.dataset.theme = choice;
-  else delete document.documentElement.dataset.theme;
+  const root = document.documentElement;
+  let look = null;
+  if (!NATIVE_THEMES.includes(choice)) {
+    const t = state.themes?.themes.find((t) => t.name === choice);
+    if (t) look = paletteVars(t.colors);
+    else if (!state.themes) look = cachedLook(choice); // before the list loads
+    if (!look) choice = "system"; // deleted or never existed
+  }
+  if (choice === "light" || choice === "dark") root.dataset.theme = choice;
+  else delete root.dataset.theme;
+  setThemeVars(look);
   for (const b of document.querySelectorAll("[data-theme-choice]")) b.classList.toggle("on", b.dataset.themeChoice === choice);
   // Also kept here so the first paint already has the right colors.
-  try { localStorage.setItem("canopy-theme", choice); } catch {}
+  try {
+    localStorage.setItem("canopy-theme", choice);
+    localStorage.setItem("canopy-theme-look", JSON.stringify(look ? { name: choice, ...look } : null));
+  } catch {}
+}
+
+function cachedLook(name) {
+  try {
+    const l = JSON.parse(localStorage.getItem("canopy-theme-look"));
+    return l && l.name === name ? l : null;
+  } catch { return null; }
 }
 
 function savedTheme() {
@@ -624,10 +689,25 @@ async function smoke(path) {
     go("prs");
     for (let i = 0; i < 150 && !(gh.status && (gh.status.state !== "ready" || gh.prs.list)); i++) await new Promise((r) => setTimeout(r, 100));
     const github = gh.status?.state === "ready" ? `${gh.prs.list?.length ?? "?"} open pull requests` : `setup card (${gh.status?.state})`;
-    const text = [...(setup ? [setup] : []), ...home, `changes: ${files.join(", ") || "(clean)"}`, `diff lines: ${lines}`,
+    // Themes: the built-ins load, the gallery draws them, and a palette
+    // theme turns into the app's colors (without saving the choice).
+    await loadThemes();
+    const nord = state.themes?.themes.find((t) => t.name === "nord");
+    const before = state.settings.theme;
+    applyTheme("nord");
+    const nordOk = !!nord && getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() === nord.colors.bg;
+    applyTheme(before);
+    setts.section = "appearance";
+    await openSettings();
+    const cards = document.querySelectorAll(".tcard").length;
+    document.querySelector('[data-s2="close"]')?.click();
+    const editors = (await invoke("detect_editors")).map((e) => e.name);
+    const themesOk = (state.themes?.themes.length ?? 0) >= 5 && nordOk && cards >= 6;
+    const text = [...(setup ? [setup] : []), ...home,
+      `themes: ${state.themes?.themes.map((t) => t.name).join(", ")} (${cards} cards, nord applied: ${nordOk})`, `editors found: ${editors.join(", ") || "none"}`, `changes: ${files.join(", ") || "(clean)"}`, `diff lines: ${lines}`,
       `history: ${commits} commits, ${graphs} graph rows, details ${detail ? "loaded" : "missing"}`,
       `branches: ${branches} rows`, `stash: ${stashes} stashes`, `github: ${github}`, `commit box keeps focus: ${typingOk}`].join("\n");
-    const ok = !!home.length && changesOk && typingOk
+    const ok = !!home.length && changesOk && typingOk && themesOk
       && commits > 0 && graphs === commits && detail > 0 && branches > 0 && stash > 0
       && !!gh.status && (gh.status.state !== "ready" || !!gh.prs.list);
     await invoke("smoke_report", { ok, text });
