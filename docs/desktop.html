@@ -65,7 +65,6 @@
 <pre class="code"><span class="p">$ </span>git clone https://github.com/shankar-sachin/canopy.git &amp;&amp; cd canopy
 <span class="p">$ </span>cargo run --release -p canopy-desktop -- ~/code/your-repo</pre>
 <p>On Linux this needs the WebKitGTK development packages (<code>libwebkit2gtk-4.1-dev</code>). Canopy Desktop needs <code>git</code>; the GitHub pages also use the <a href="https://cli.github.com">GitHub CLI</a>.</p>
-<p>Already using the terminal app? Press <kbd>⌥D</kbd> (or search "desktop" in the palette) and it hands you the install command.</p>
 
 <h2 id="learning">Made for learning</h2>
 <ul>
@@ -95,6 +94,7 @@
 
 <h2 id="fix-with-ai">Fix with AI</h2>
 <p>When CI fails on your latest commit, Home says so: <b>Canopy found an error in your latest commit</b>, with what failed. <b>Details</b> shows exactly what went wrong in a popup (copy it, open it in an editor, or <b>View in GitHub</b>), and <b>Fix with Claude Code</b> (or Codex, or your own command, set in Settings → AI assistant) writes a prompt from the failure and opens the assistant in a new terminal window to fix it. The same button is on every failed run in Actions. <a href="github.html#fix-with-ai">How it works</a>.</p>
+<p>On a Mac, the first time Canopy starts while Terminal is open, macOS asks whether <b>canopy</b> may control Terminal. That's what lets it open the assistant (or a terminal editor like Vim) in a new window. If you said no, see <a href="wiki/troubleshooting.html#automation">how to turn it back on</a>.</p>
 
 <h2 id="new-repo">Start a new repository</h2>
 <p>Choose <b>Start a new one…</b> on the welcome screen, or open a folder that isn't a repository yet. Canopy sets it up (branch, <code>.gitignore</code>, README, license, first commit) and can connect it to GitHub: create it there with your gh login, or connect an existing repository over HTTPS or SSH, with the difference explained. See <a href="wiki/new-repo.html">the recipe</a>.</p>
@@ -127,7 +127,7 @@
 </table>
 <p>On Windows and Linux, use <kbd>Ctrl</kbd> instead of <kbd>⌘</kbd>.</p>
 <h2 id="more">Ready for more? Canopy for the terminal</h2>
-<p>When you want every git and GitHub action one key away, try <a href="features.html">Canopy for the terminal</a>: interactive rebase, bisect, worktrees, every repository at once, remappable keys and your own commands. New power features land there first. It shares your themes and settings with this app, and <b>Settings → General</b> shows the command that installs it.</p>
+<p>When you want every git and GitHub action one key away, try <a href="features.html">Canopy for the terminal</a>: interactive rebase, bisect, worktrees, every repository at once, remappable keys and your own commands. New power features land there first. It shares your themes and settings with this app, and <b>Settings → General</b> shows the command that installs it. Now and then the desktop app mentions it too, if you don't have it yet (turn that off in Settings → General).</p>
 
 <div class="next-links"><a href="github.html"><small>Previous</small>GitHub</a><a href="get-started.html"><small>Next</small>Get started</a></div>
   </article>

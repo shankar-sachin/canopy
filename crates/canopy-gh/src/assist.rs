@@ -351,6 +351,44 @@ pub enum Launched {
     Opened(&'static str),
     /// Couldn't open a new tab or window: run `argv` here instead.
     RunHere(Vec<String>),
+    /// macOS didn't let us control this terminal app (Automation permission).
+    Blocked(&'static str),
+}
+
+/// What to do when macOS blocks Canopy from controlling a terminal app.
+pub fn blocked_help(app: &str) -> String {
+    format!(
+        "macOS didn't let Canopy open {app}. Allow it in System Settings → Privacy & Security → Automation \
+         (turn on {app} under canopy), then try again."
+    )
+}
+
+/// How an AppleScript run went.
+#[derive(Debug, PartialEq, Eq)]
+enum Script {
+    Ok,
+    /// The user (or the system) denied the Automation permission.
+    Denied,
+    Failed,
+}
+
+/// Run AppleScript and wait for it (it returns as soon as the terminal has
+/// the command), so a refusal isn't mistaken for success.
+fn osascript(script: &str) -> Script {
+    match Command::new("osascript").args(["-e", script]).stdin(Stdio::null()).output() {
+        Ok(o) if o.status.success() => Script::Ok,
+        Ok(o) => script_error(&String::from_utf8_lossy(&o.stderr)),
+        Err(_) => Script::Failed,
+    }
+}
+
+/// -1743 is errAEEventNotPermitted: Automation is off for this app pair.
+fn script_error(stderr: &str) -> Script {
+    if stderr.contains("-1743") || stderr.contains("Not authorized to send Apple events") {
+        Script::Denied
+    } else {
+        Script::Failed
+    }
 }
 
 fn sh_quote(s: &str) -> String {
@@ -426,8 +464,10 @@ pub fn launch(dir: &Path, argv: &[String], open_in: OpenIn, inside_terminal: boo
                 "tell application \"iTerm2\" to tell current window to create tab with default profile command {}",
                 applescript_string(&format!("/bin/sh -lc {}", sh_quote(&format!("{line}; exec $SHELL"))))
             );
-            if spawn("osascript", &["-e".into(), script]) {
-                return Launched::Opened("a new iTerm tab");
+            match osascript(&script) {
+                Script::Ok => return Launched::Opened("a new iTerm tab"),
+                Script::Denied => return Launched::Blocked("iTerm"),
+                Script::Failed => {}
             }
         }
     }
@@ -435,6 +475,7 @@ pub fn launch(dir: &Path, argv: &[String], open_in: OpenIn, inside_terminal: boo
     // A new window.
     if cfg!(target_os = "macos") {
         let term = std::env::var("TERM_PROGRAM").unwrap_or_default();
+        let app = if term == "iTerm.app" { "iTerm" } else { "Terminal" };
         let script = if term == "iTerm.app" {
             format!(
                 "tell application \"iTerm2\" to create window with default profile command {}",
@@ -443,8 +484,11 @@ pub fn launch(dir: &Path, argv: &[String], open_in: OpenIn, inside_terminal: boo
         } else {
             format!("tell application \"Terminal\"\nactivate\ndo script {}\nend tell", applescript_string(&line))
         };
-        if spawn("osascript", &["-e".into(), script]) {
-            return Launched::Opened("a new Terminal window");
+        match osascript(&script) {
+            Script::Ok if app == "iTerm" => return Launched::Opened("a new iTerm window"),
+            Script::Ok => return Launched::Opened("a new Terminal window"),
+            Script::Denied => return Launched::Blocked(app),
+            Script::Failed => {}
         }
     } else if cfg!(windows) {
         let mut a = vec!["-w".to_string(), "new".into(), "new-tab".into(), "-d".into(), d.clone()];
@@ -485,6 +529,14 @@ pub fn launch(dir: &Path, argv: &[String], open_in: OpenIn, inside_terminal: boo
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_refused_apple_event_is_not_success() {
+        let denied = "execution error: Not authorized to send Apple events to Terminal. (-1743)";
+        assert_eq!(script_error(denied), Script::Denied);
+        assert_eq!(script_error("execution error: Terminal got an error: some other problem (-1728)"), Script::Failed);
+        assert!(blocked_help("Terminal").contains("Privacy & Security → Automation"));
+    }
 
     fn failure(conclusion: &str, jobs: Vec<Job>, summary: &str) -> Failure {
         let run: Run = serde_json::from_value(serde_json::json!({

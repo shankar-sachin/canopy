@@ -301,6 +301,7 @@ function settingsBody() {
         ${row("New to git?", "The short introduction on Home: changes, staging, commits and pushing.", `<button class="btn small" data-s2="show-intro"${s.seen_intro ? "" : " disabled"}>${s.seen_intro ? "Show it again" : "Showing on Home"}</button>`)}
         <h3 class="sub">Terminal app</h3>
         ${terminalRow()}
+        ${row("Suggest the terminal app", "Now and then, mention Canopy for the terminal (only if it isn't installed).", toggle("terminal_tip", s.terminal_tip))}
         ${row("Share settings", "The theme, text editor, AI assistant and git-command setting can move between this app and the terminal app (<code>canopy</code>), which keeps them in <code>config.toml</code>. Only those settings change.",
           `<div class="row-btns"><button class="btn small" data-s2="from-tui">Import from terminal app</button><button class="btn small" data-s2="to-tui">Send to terminal app</button></div>`)}
         ${row("Settings file", "Save them as a JSON file (for another computer, or <code>canopy --import-settings</code>), or load one.",

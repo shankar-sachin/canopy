@@ -211,7 +211,6 @@ pub fn do_action(app: &mut App, action: Action) {
             app.modal =
                 Modal::input("Filter", "type to filter · enter keep · esc clear", &cur, InputKind::Search(app.screen));
         }
-        GetDesktop => desktop_menu(app),
         ToggleTeach => {
             app.config.teach_mode = !app.config.teach_mode;
             let s = if app.config.teach_mode { "on — the git command behind each action is shown" } else { "off" };
@@ -2059,20 +2058,6 @@ pub fn split_args(s: &str) -> Vec<String> {
 pub fn execute(app: &mut App, pending: Pending) {
     // These don't need a repository.
     let pending = match pending {
-        Pending::CopyText { text, what } => {
-            if crate::terminal::copy_to_clipboard(&text) {
-                app.toast_for(Level::Success, format!("Copied {what}: {text}"), 8);
-            } else {
-                app.toast_for(Level::Info, format!("Run: {text}"), 12);
-            }
-            return;
-        }
-        Pending::OpenUrl(url) => {
-            if !crate::terminal::open_url(&url) {
-                app.toast_for(Level::Info, format!("Open {url}"), 12);
-            }
-            return;
-        }
         p if p.is_setup() => {
             crate::setup::step(app, p);
             return;
@@ -2082,9 +2067,7 @@ pub fn execute(app: &mut App, pending: Pending) {
     let Some(git) = app.git.clone() else { return };
     match pending {
         // Handled above, before a repository is needed.
-        Pending::CopyText { .. }
-        | Pending::OpenUrl(_)
-        | Pending::SetupBranch
+        Pending::SetupBranch
         | Pending::SetupWorkspace
         | Pending::SetupQuit
         | Pending::SetupIgnore(_)
@@ -2290,20 +2273,6 @@ pub fn execute(app: &mut App, pending: Pending) {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::split_args;
-
-    #[test]
-    fn splits_quoted_args() {
-        assert_eq!(split_args("log --oneline -5"), vec!["log", "--oneline", "-5"]);
-        assert_eq!(split_args(r#"commit -m "hello world""#), vec!["commit", "-m", "hello world"]);
-        assert_eq!(split_args("commit -m 'it''s'"), vec!["commit", "-m", "its"]);
-        assert_eq!(split_args(r"a\ b c"), vec!["a b", "c"]);
-        assert_eq!(split_args("x ''"), vec!["x", ""]);
-    }
-}
-
 /// Open `file` in $VISUAL / $EDITOR (vi, or Notepad on Windows); Canopy
 /// steps aside until the editor exits.
 pub fn open_in_editor(app: &mut App, file: &std::path::Path) {
@@ -2333,76 +2302,16 @@ pub fn open_in_editor(app: &mut App, file: &std::path::Path) {
     }
 }
 
-/// How to install Canopy Desktop here: the Homebrew cask on macOS, winget on
-/// Windows (Linux gets the download page: a .deb or an AppImage).
-pub const DESKTOP_CASK: &str = "brew install --cask shankar-sachin/canopy/canopy-desktop";
-pub const DESKTOP_WINGET: &str = "winget install shankars.canopy-desktop";
-pub const DESKTOP_PAGE: &str = "https://shankar-sachin.github.io/canopy/desktop.html";
-
-/// "Get Canopy Desktop": the install command for this platform, or its page.
-fn desktop_menu(app: &mut App) {
-    let mut items = Vec::new();
-    let command = if cfg!(target_os = "macos") {
-        Some(("Copy the Homebrew command", DESKTOP_CASK))
-    } else if cfg!(windows) {
-        Some(("Copy the winget command", DESKTOP_WINGET))
-    } else {
-        None
-    };
-    if let Some((label, cmd)) = command {
-        items.push(MenuItem {
-            key: 'c',
-            label: label.into(),
-            detail: cmd.into(),
-            pending: Pending::CopyText { text: cmd.into(), what: "the install command".into() },
-            danger: false,
-        });
-    }
-    let files = if cfg!(target_os = "macos") {
-        ".dmg for Apple silicon and Intel"
-    } else if cfg!(windows) {
-        "installer for x64 and Arm"
-    } else {
-        ".deb and AppImage"
-    };
-    items.push(MenuItem {
-        key: 'o',
-        label: "Open the download page".into(),
-        detail: files.into(),
-        pending: Pending::OpenUrl(DESKTOP_PAGE.into()),
-        danger: false,
-    });
-    let note =
-        if cfg!(target_os = "macos") { "release preview, not notarized by Apple yet" } else { "release preview" };
-    app.modal = Modal::Menu { title: format!("Canopy Desktop ({note})"), items, sel: 0 };
-}
-
-/// Whether to show the Canopy Desktop tip this launch: at most once a week,
-/// never on the very first launch. Remembers the last time in `stamp`.
-pub fn desktop_tip_due(stamp: &std::path::Path, now: u64) -> bool {
-    const WEEK: u64 = 7 * 24 * 3600;
-    let last = std::fs::read_to_string(stamp).ok().and_then(|s| s.trim().parse::<u64>().ok());
-    let due = matches!(last, Some(t) if now.saturating_sub(t) >= WEEK);
-    if last.is_none() || due {
-        if let Some(dir) = stamp.parent() {
-            let _ = std::fs::create_dir_all(dir);
-        }
-        let _ = std::fs::write(stamp, now.to_string());
-    }
-    due
-}
-
 #[cfg(test)]
-mod desktop_tip_tests {
+mod tests {
+    use super::split_args;
+
     #[test]
-    fn once_a_week_and_not_on_first_launch() {
-        let dir = tempfile::TempDir::new().unwrap();
-        let stamp = dir.path().join("x/desktop-tip");
-        let day = 24 * 3600;
-        assert!(!super::desktop_tip_due(&stamp, 1_000_000)); // first launch: just remember
-        assert!(!super::desktop_tip_due(&stamp, 1_000_000 + 3 * day));
-        assert!(super::desktop_tip_due(&stamp, 1_000_000 + 7 * day));
-        assert!(!super::desktop_tip_due(&stamp, 1_000_000 + 8 * day)); // shown yesterday
-        assert!(super::desktop_tip_due(&stamp, 1_000_000 + 15 * day));
+    fn splits_quoted_args() {
+        assert_eq!(split_args("log --oneline -5"), vec!["log", "--oneline", "-5"]);
+        assert_eq!(split_args(r#"commit -m "hello world""#), vec!["commit", "-m", "hello world"]);
+        assert_eq!(split_args("commit -m 'it''s'"), vec!["commit", "-m", "its"]);
+        assert_eq!(split_args(r"a\ b c"), vec!["a b", "c"]);
+        assert_eq!(split_args("x ''"), vec!["x", ""]);
     }
 }

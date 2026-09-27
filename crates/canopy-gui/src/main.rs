@@ -215,6 +215,7 @@ fn main() {
             github::open_details,
             settings::get_settings,
             settings::set_settings,
+            settings::ask_automation,
             settings::clear_recent,
             settings::check_update,
             settings::environment,

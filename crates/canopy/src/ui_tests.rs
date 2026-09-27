@@ -262,21 +262,6 @@ async fn palette_help_workspace_stash() {
 }
 
 #[tokio::test]
-async fn get_canopy_desktop_from_the_palette() {
-    let dir = demo_repo();
-    let mut app = app_for(dir.path()).await;
-    press(&mut app, KeyCode::Char(':')).await;
-    chars(&mut app, "desktop").await;
-    let s = render(&mut app, 120, 34);
-    assert!(s.contains("get Canopy Desktop"), "{s}");
-    press(&mut app, KeyCode::Enter).await;
-    let s = render(&mut app, 120, 34);
-    assert!(s.contains("release preview") && s.contains("Open the download page"), "{s}");
-    assert_eq!(cfg!(target_os = "macos"), s.contains("Copy the Homebrew command"), "{s}");
-    assert_eq!(cfg!(windows), s.contains("Copy the winget command"), "{s}");
-}
-
-#[tokio::test]
 async fn starting_a_repository_explains_https_and_ssh() {
     use canopy_git::init::{Ignore, Protocol};
     let tmp = TempDir::new().unwrap();
@@ -1279,10 +1264,8 @@ async fn export_tui_tour() {
     app.settle().await;
     shot(&mut app, "actions");
     press(&mut app, KeyCode::Char(':')).await;
-    chars(&mut app, "desk").await;
+    chars(&mut app, "stash").await;
     shot(&mut app, "palette");
-    press(&mut app, KeyCode::Enter).await;
-    shot(&mut app, "get-desktop");
 }
 
 /// A few frames as standalone HTML pages, for sharing previews:
@@ -1306,17 +1289,6 @@ async fn export_preview_frames() {
     let mut app = github_app(dir.path(), &gh).await;
     press(&mut app, KeyCode::Char('8')).await;
     std::fs::write(out.join("tui-github-login.html"), page(&frame_html(&mut app, 118, 30))).unwrap();
-    // Home, with the version in the header and the desktop tip.
-    press(&mut app, KeyCode::Char('1')).await;
-    app.toast_for(
-        crate::app::Level::Info,
-        "Prefer a window? Canopy Desktop is the friendly app (preview): press ⌥D",
-        12,
-    );
-    std::fs::write(out.join("tui-home-tip.html"), page(&frame_html(&mut app, 118, 30))).unwrap();
-    // The Get Canopy Desktop menu.
-    crate::input::handle_key(&mut app, KeyEvent::new(KeyCode::Char('d'), KeyModifiers::ALT));
-    std::fs::write(out.join("tui-get-desktop.html"), page(&frame_html(&mut app, 118, 30))).unwrap();
 }
 
 #[tokio::test]

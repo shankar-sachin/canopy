@@ -31,12 +31,22 @@ function plural(n, word) {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
 }
 
-function toast(text, { error = false, detail = "" } = {}) {
+/// A message in the corner. `action` ({label, run}) adds a button, and keeps
+/// the message up longer.
+function toast(text, { error = false, detail = "", action = null } = {}) {
   const el = document.createElement("div");
   el.className = "toast" + (error ? " error" : "");
   el.innerHTML = (error ? "<b>Something went wrong.</b> " : "") + esc(text) + (detail ? `<code>${esc(detail)}</code>` : "");
+  if (action) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn small";
+    b.textContent = action.label;
+    b.addEventListener("click", () => { el.remove(); action.run(); });
+    el.append(b);
+  }
   $("#toasts").append(el);
-  setTimeout(() => el.remove(), error ? 7000 : 3500);
+  setTimeout(() => el.remove(), action ? 15000 : error ? 7000 : 3500);
 }
 
 const ICONS = {
@@ -683,11 +693,40 @@ async function start() {
   $("#version").textContent = "canopy " + (await invoke("app_version"));
   const initial = await invoke("initial_path");
   if (await invoke("smoke_mode")) return smoke(initial);
-  if (initial) {
-    await openRepo(initial);
-    if (state.overview) return;
+  if (initial) await openRepo(initial);
+  if (!state.overview) showWelcome();
+  askAutomation();
+  setTimeout(terminalTip, 20000);
+}
+
+// macOS: ask right away whether Canopy may open Terminal windows (Fix with
+// AI and terminal editors need it), instead of the first time it matters.
+// macOS only asks while Terminal is running, so try again on later launches
+// until it has asked.
+async function askAutomation() {
+  if (!/Mac/.test(navigator.platform) || state.settings.automation_asked) return;
+  const answer = await invoke("ask_automation").catch(() => "later");
+  if (answer === "later") return;
+  await saveSettings({ automation_asked: true });
+  if (answer === "denied") {
+    toast("Canopy can't open Terminal windows, so Fix with AI will save its prompt for you to run. Allow it any time in System Settings → Privacy & Security → Automation.");
   }
-  showWelcome();
+}
+
+// Now and then (at most every two weeks, never in the first week), suggest
+// Canopy for the terminal to people who don't have it. Off in Settings.
+async function terminalTip() {
+  const s = state.settings;
+  if (!s.terminal_tip || !state.overview) return;
+  const now = Math.floor(Date.now() / 1000);
+  if (!s.last_terminal_tip) return saveSettings({ last_terminal_tip: now });
+  if (now - s.last_terminal_tip < 14 * 24 * 3600) return;
+  const env = await invoke("environment").catch(() => null);
+  await saveSettings({ last_terminal_tip: now });
+  if (!env || env.terminal_app) return;
+  toast("Want more power? Canopy for the terminal does everything from the keyboard: interactive rebase, bisect, worktrees and more.", {
+    action: { label: "Get it", run: () => openSettings("general") },
+  });
 }
 
 // `canopy-desktop --smoke <repo>`: prove the real web view can call the Rust

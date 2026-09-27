@@ -82,12 +82,6 @@ pub enum Pending {
     SetupExisting,
     SetupConnect(canopy_git::init::Protocol),
     SetupSkip,
-    /// Copy text to the clipboard; `what` names it in the toast.
-    CopyText {
-        text: String,
-        what: String,
-    },
-    OpenUrl(String),
 }
 
 #[derive(Debug, Clone)]

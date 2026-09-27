@@ -342,6 +342,9 @@ pub async fn fix_with_ai(id: u64, state: State<'_, AppState>) -> Res<FixLaunched
     let opened = match launched {
         assist::Launched::Opened(w) => w.to_string(),
         assist::Launched::RunHere(_) => "nothing: no terminal app was found".into(),
+        assist::Launched::Blocked(app) => {
+            return Err(format!("{} The prompt is saved in {}.", assist::blocked_help(app), file.display()))
+        }
     };
     if opened.starts_with("nothing") {
         return Err(format!("Couldn't open a terminal. The prompt is saved in {}.", file.display()));
