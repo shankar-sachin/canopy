@@ -129,6 +129,15 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
             }
         }
     }
+    // Unread GitHub notifications, and the key that shows them.
+    if let Some(n) = app.github.unread.filter(|n| *n > 0) {
+        let more = if n >= 50 { "+" } else { "" };
+        spans.push(Span::styled(format!("   ● {n}{more} unread"), t.fg(t.accent_alt)));
+        let key = app.keymap.key_for(&[crate::keymap::Ctx::Global], crate::keymap::Action::ShowNotifications);
+        if let Some(k) = key {
+            spans.push(Span::styled(format!(" {}", crate::keymap::pretty_key(k)), t.fg(t.muted)));
+        }
+    }
     f.render_widget(Paragraph::new(Line::from(spans)), area);
 
     // Right side: busy spinner / progress.

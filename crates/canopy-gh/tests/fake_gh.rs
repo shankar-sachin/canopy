@@ -148,6 +148,7 @@ async fn notifications() {
     assert_eq!(n.len(), 3);
     assert!(n[0].unread && n[0].subject.kind == "PullRequest");
     assert_eq!(n[0].web_url(), "https://github.com/o/r/pull/12");
+    assert_eq!((n[0].number(), n[1].number(), n[2].number()), (Some(12), Some(7), None));
     assert_eq!(n[1].web_url(), "https://github.com/o/r/issues/7");
     // No subject URL (a release): falls back to the repository page.
     assert_eq!(n[2].web_url(), "https://github.com/o/other");

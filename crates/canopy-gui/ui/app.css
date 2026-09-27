@@ -448,6 +448,11 @@ html[data-theme="light"] .dl.add .code, html[data-theme="light"] .dl.add .sign {
 .grow-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 9px; cursor: pointer; }
 .grow-row:hover { background: var(--hover); }
 .grow-row.on { background: color-mix(in srgb, var(--green) 14%, transparent); }
+.notif .gtitle { color: var(--muted); }
+.notif.unread .gtitle { color: var(--text); font-weight: 600; }
+.dot-unread { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+.notif-why { color: var(--muted); margin: 12px 0; }
+.tabs .check.small { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-right: 8px; }
 .gmain { flex: 1; min-width: 0; }
 .gtitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 13.5px; }
 .gsub { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--faint); font-size: 12px; margin-top: 2px; }

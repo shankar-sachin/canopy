@@ -59,6 +59,7 @@ const ICONS = {
   pr: '<circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="12.5" r="1.5"/><path d="M4.5 5v6M11.5 11V6.5A2 2 0 0 0 9.5 4.5H7M8.5 3 7 4.5 8.5 6"/>',
   issue: '<circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="1" fill="currentColor"/>',
   actions: '<circle cx="8" cy="8" r="5.5"/><path d="M6.8 5.8v4.4L10.2 8z"/>',
+  bell: '<path d="M4 11.5V7a4 4 0 0 1 8 0v4.5l1 1.5H3z"/><path d="M6.5 13.5a1.5 1.5 0 0 0 3 0"/>',
   stash: '<path d="M2.5 9.5 4 4h8l1.5 5.5v3a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z"/><path d="M2.5 9.5h3.5l.5 1.5h3l.5-1.5h3.5"/>',
 };
 
