@@ -1,6 +1,6 @@
 [package]
 name = "canopy-desktop"
-description = "Canopy Desktop: the Canopy git dashboard as a desktop app"
+description = "Canopy Desktop: git, at a glance. A friendly desktop app for git and GitHub"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

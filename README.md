@@ -2,12 +2,16 @@
 
 <h1 align="center">Canopy</h1>
 
-**A beautiful, powerful git dashboard for your terminal.**
+**Git, at a glance.** One Canopy, two ways to use it:
 
-Canopy puts your whole repository on one screen: what changed, what's staged,
-where your branch stands against the remote, and what to do next. Beginners get
-guidance and a safety net. Power users get line-level staging, interactive
-rebase, and a command palette, all without leaving the keyboard.
+- **Canopy Desktop: start here.** A friendly app for macOS, Windows and Linux. It shows
+  your whole repository, explains every term in plain words, gives you a button for the
+  next step, asks before anything destructive, and undoes the last commit, reset or checkout.
+- **Canopy for the terminal: everything, from the keyboard.** The power tool: line-level
+  staging, interactive rebase, bisect, worktrees, every repository at once, remappable keys
+  and your own commands. New power features land here first.
+
+Both run the real `git` and GitHub CLI on your machine and share themes and settings in `~/.canopy`.
 
 **Website:** [shankar-sachin.github.io/canopy](https://shankar-sachin.github.io/canopy/), with a feature tour, the GitHub guide, and the full key reference.
 
@@ -16,10 +20,20 @@ rebase, and a command palette, all without leaving the keyboard.
 
 ## Install
 
-> **New: Canopy Desktop (release preview).** The same dashboard as a Mac, Windows and Linux app:
-> `brew install --cask shankar-sachin/canopy/canopy-desktop`, `winget install shankars.canopy-desktop`, or a `.dmg`, installer, `.deb` or AppImage from
-> [Releases](https://github.com/shankar-sachin/canopy/releases). It isn't notarized by Apple yet, so macOS asks you to
-> confirm the first time you open it. [More →](https://shankar-sachin.github.io/canopy/desktop.html)
+### Canopy Desktop (start here)
+
+A release preview for macOS, Windows and Linux:
+
+```sh
+brew install --cask shankar-sachin/canopy/canopy-desktop   # macOS
+winget install shankars.canopy-desktop                     # Windows 11
+```
+
+Or get a `.dmg`, installer, `.deb` or AppImage from
+[Releases](https://github.com/shankar-sachin/canopy/releases). It isn't notarized by Apple yet, so macOS asks you to
+confirm the first time you open it. [More →](https://shankar-sachin.github.io/canopy/desktop.html)
+
+### Canopy for the terminal
 
 ```sh
 brew install shankar-sachin/canopy/canopy
@@ -57,7 +71,7 @@ or download `canopy-<version>-x86_64-pc-windows-msvc.zip` (or `aarch64-…` for 
 Windows Terminal is recommended. Full steps are on the
 [website](https://shankar-sachin.github.io/canopy/get-started.html#windows).
 
-## Use
+## Use the terminal app
 
 ```sh
 canopy                 # open the repo you're in
@@ -149,8 +163,11 @@ command line. Line staging builds a minimal patch and applies it to the index
 with `git apply --cached`.
 
 ```
-crates/canopy-git   git runner, parsers, typed operations (no UI)
-crates/canopy       the TUI (Ratatui): app loop, screens, keymap, themes
+crates/canopy-git     git runner, parsers, typed operations (no UI)
+crates/canopy-gh      GitHub through the gh CLI
+crates/canopy-config  themes and settings shared by both apps
+crates/canopy         the terminal app (Ratatui): app loop, screens, keymap, themes
+crates/canopy-gui     Canopy Desktop (Tauri; plain HTML/CSS/JS front end)
 ```
 
 ## Roadmap
@@ -160,7 +177,9 @@ crates/canopy       the TUI (Ratatui): app loop, screens, keymap, themes
 - [x] GitHub Actions runs
 - [x] The Canopy wiki, the logo, a startup animation, and a roomier layout (v0.4)
 - [x] More GitHub: notifications, releases, inline review comments, a CI log viewer, and Windows builds (v1.0)
-- [ ] A desktop GUI
+- [x] Canopy Desktop for macOS, Windows and Linux (v1.0.2–1.0.3)
+- [x] Start a new repository, Fix with AI, your own themes (v1.0.4–1.0.7)
+- [x] Desktop to start, the terminal for power: plain-language help in the desktop app (v1.0.8)
 - [ ] Syntax-highlighted diffs
 - [x] Conflict editor with per-conflict ours/theirs
 - [x] File history and blame

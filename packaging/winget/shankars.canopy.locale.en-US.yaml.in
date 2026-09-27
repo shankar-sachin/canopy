@@ -11,13 +11,14 @@ PackageName: Canopy
 PackageUrl: https://shankar-sachin.github.io/canopy/
 License: MIT
 LicenseUrl: https://github.com/shankar-sachin/canopy/blob/main/LICENSE
-ShortDescription: A beautiful, powerful git dashboard for your terminal.
+ShortDescription: Canopy for the terminal. Git and GitHub, everything from the keyboard.
 Description: |-
-  Canopy puts your whole repository on one screen: what changed, what's staged,
-  where your branch stands against the remote, and what to do next. Beginners get
-  guidance and a safety net. Power users get line-level staging, interactive
-  rebase, and a command palette. With the GitHub CLI it also shows pull requests,
-  issues, Actions runs, releases and notifications.
+  Canopy for the terminal puts your whole repository on one screen and every git
+  and GitHub action one key away: line-level staging, interactive rebase, bisect,
+  worktrees, every repository at once, a command palette, remappable keys and your
+  own commands. With the GitHub CLI it also shows pull requests, issues, Actions
+  runs, releases and notifications. Teach mode and next steps still explain
+  everything. New to git? Try Canopy Desktop (shankars.canopy-desktop).
 Moniker: canopy
 Tags:
 - git

@@ -45,6 +45,10 @@ pub enum StepAction {
     Pull,
     Changes,
     Branches,
+    History,
+    /// Open the setup panel at its Connect step (add a remote, or create the
+    /// repository on GitHub).
+    Connect,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -136,7 +140,7 @@ pub fn next_steps(s: &Status, c: &Counts, state: RepoState, has_commits: bool, h
         add(
             Level::Warn,
             "A bisect is in progress. Test the checked-out commit, then mark it good or bad.".into(),
-            None,
+            Some(History),
         );
     }
     if b.head.is_none() && b.oid.is_some() {
@@ -172,8 +176,8 @@ pub fn next_steps(s: &Status, c: &Counts, state: RepoState, has_commits: bool, h
         } else {
             add(
                 Level::Info,
-                "No remote configured yet. Add one (for example on GitHub) to back up and share your work.".into(),
-                None,
+                "No remote configured yet. Connect it to GitHub to back up and share your work.".into(),
+                Some(Connect),
             );
         }
     }
@@ -256,6 +260,19 @@ mod tests {
         assert_eq!(got[0].action, Some(StepAction::Push));
         let got = next_steps(&s, &counts(&s), RepoState::Clean, false, false);
         assert!(got[0].text.starts_with("Fresh repository"));
+    }
+
+    #[test]
+    fn every_guidance_step_has_a_button() {
+        // No remote yet: offer to connect it to GitHub.
+        let s = status(vec![], 0, 0, false);
+        let got = next_steps(&s, &counts(&s), RepoState::Clean, true, false);
+        assert_eq!(got[0].action, Some(StepAction::Connect));
+        let json = serde_json::to_value(&got[0]).unwrap();
+        assert_eq!(json["action"], "connect");
+        // Bisecting: the commits are in History.
+        let s = status(vec![], 0, 0, true);
+        assert_eq!(steps(&s, RepoState::Bisecting), vec![(Level::Warn, Some(StepAction::History))]);
     }
 
     #[tokio::test]

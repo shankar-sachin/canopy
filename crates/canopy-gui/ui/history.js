@@ -263,3 +263,5 @@ addPage("history", {
     return true;
   },
 });
+
+ACTIONS.history = { label: "Open History", run: () => go("history") };

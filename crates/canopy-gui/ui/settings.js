@@ -274,6 +274,18 @@ function editorRow(s) {
        <div class="sctl"><input class="input" id="editor-cmd" value="${esc(s.editor === "custom" ? "" : s.editor)}" placeholder="idea --line 1" spellcheck="false"></div></div>` : "");
 }
 
+// A pointer to the terminal app, for when you want more power.
+function terminalRow() {
+  const env = setts.env;
+  if (!env) return "";
+  if (env.terminal_app) {
+    return row("Canopy for the terminal", `Installed (${esc(env.terminal_app)}). Run <code>canopy</code> in a repository for everything, from the keyboard: line staging, interactive rebase, bisect, worktrees and your own commands.`, "");
+  }
+  return `<div class="srow2 stack"><div><b>Canopy for the terminal</b>
+      <p>Want more power? The terminal app does everything this one does and more, from the keyboard: interactive rebase, bisect, worktrees, every repository at once, and your own commands. New power features land there first.</p></div>
+    <div class="cmd"><code class="selectable">${esc(env.terminal_install)}</code><button class="btn small" data-s2="copy" data-text="${esc(env.terminal_install)}">Copy</button></div></div>`;
+}
+
 function settingsBody() {
   const s = state.settings;
   switch (setts.section) {
@@ -286,7 +298,9 @@ function settingsBody() {
         ${row("Pull", "What Pull does when your branch and the remote both have new commits. Default follows your git config (pull.rebase).", seg("pull_mode", s.pull_mode, [["default", "Default"], ["merge", "Merge"], ["rebase", "Rebase"]]))}
         ${aiRow(s)}
         ${row("Recent repositories", "The list on the welcome screen.", `<button class="btn small" data-s2="clear-recent">Clear list</button>`)}
+        ${row("New to git?", "The short introduction on Home: changes, staging, commits and pushing.", `<button class="btn small" data-s2="show-intro"${s.seen_intro ? "" : " disabled"}>${s.seen_intro ? "Show it again" : "Showing on Home"}</button>`)}
         <h3 class="sub">Terminal app</h3>
+        ${terminalRow()}
         ${row("Share settings", "The theme, text editor, AI assistant and git-command setting can move between this app and the terminal app (<code>canopy</code>), which keeps them in <code>config.toml</code>. Only those settings change.",
           `<div class="row-btns"><button class="btn small" data-s2="from-tui">Import from terminal app</button><button class="btn small" data-s2="to-tui">Send to terminal app</button></div>`)}
         ${row("Settings file", "Save them as a JSON file (for another computer, or <code>canopy --import-settings</code>), or load one.",
@@ -297,7 +311,7 @@ function settingsBody() {
       return updateHtml();
     case "about":
       return `<div class="about"><img src="logo.svg" alt="" width="64" height="64"><h3>canopy ${esc(setts.env?.version || "")}</h3>
-        <p>A beautiful, powerful git dashboard. MIT licensed.</p>
+        <p>Git, at a glance: a friendly desktop app for git and GitHub. MIT licensed.</p>
         <div class="row-btns">
           <button class="btn small" data-s2="open" data-url="https://shankar-sachin.github.io/canopy/">Website</button>
           <button class="btn small" data-s2="open" data-url="https://shankar-sachin.github.io/canopy/wiki/">Wiki</button>
@@ -447,6 +461,11 @@ async function openSettings(section) {
           toast("Select the command and copy it.");
         }
         return;
+      case "show-intro":
+        await saveSettings({ seen_intro: false });
+        toast("The introduction is back on Home.");
+        if (state.overview) render();
+        return drawSettings();
       case "clear-recent":
         await invoke("clear_recent");
         toast("Cleared the recent repositories.");

@@ -11,21 +11,21 @@ PackageName: canopy (desktop)
 PackageUrl: https://shankar-sachin.github.io/canopy/
 License: MIT
 LicenseUrl: https://github.com/shankar-sachin/canopy/blob/main/LICENSE
-ShortDescription: The Canopy git dashboard as a desktop app (release preview).
+ShortDescription: Git, at a glance. A friendly desktop app for git and GitHub (release preview).
 Description: |-
-  Canopy puts your whole repository on one screen: what changed, what's staged,
-  where your branch stands against the remote, and what to do next. Beginners get
-  guidance and a safety net. Power users get line-level staging, interactive
-  rebase, and a command palette. With the GitHub CLI it also shows pull requests,
-  issues, Actions runs, releases and notifications.
+  Canopy Desktop is the place to start with git. It shows your whole repository in
+  one window: what changed, what's staged, where your branch stands, and what to
+  do next, with a button for each step. It explains every term in plain words,
+  asks before anything destructive, and undoes the last commit, reset or checkout.
+  Stage single lines with a click, browse the commit graph, and (with the GitHub
+  CLI) work with pull requests, issues and Actions runs.
 Moniker: canopy-desktop
 Tags:
 - git
 - github
-- terminal
-- tui
+- desktop
+- gui
 - dashboard
-- cli
 ReleaseNotesUrl: https://github.com/shankar-sachin/canopy/releases/tag/v@VERSION@
 Documentations:
 - DocumentLabel: Wiki

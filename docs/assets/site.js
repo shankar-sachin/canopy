@@ -25,6 +25,37 @@ if (screen && tabs) {
   if (shots.length) show(shots[0].id);
 }
 
+// Desktop screenshots (home page): one tab per image in #app-shots.
+const appShots = document.getElementById("app-shots");
+const appTabs = document.getElementById("app-tabs");
+if (appShots && appTabs) {
+  const imgs = [...appShots.querySelectorAll("img")];
+  const show = img => {
+    imgs.forEach(i => (i.hidden = i !== img));
+    [...appTabs.children].forEach((b, k) => b.setAttribute("aria-selected", String(imgs[k] === img)));
+  };
+  imgs.forEach(img => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("role", "tab");
+    b.textContent = img.dataset.label;
+    b.addEventListener("click", () => show(img));
+    appTabs.appendChild(b);
+  });
+  if (imgs.length) show(imgs[0]);
+}
+
+// Desktop app / terminal app switch above the screenshots.
+document.querySelectorAll(".surface-switch [data-surface]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const desktop = btn.dataset.surface === "desktop";
+    btn.parentElement.querySelectorAll("[data-surface]").forEach(b => b.setAttribute("aria-selected", String(b === btn)));
+    for (const id of ["app-shots", "app-tabs"]) document.getElementById(id).hidden = !desktop;
+    for (const id of ["term-window", "shot-tabs"]) document.getElementById(id).hidden = desktop;
+    fitAll();
+  });
+});
+
 // Scale each visible terminal frame so its widest line fits its container.
 function fitAll() {
   document.querySelectorAll(".screen").forEach(box => {
