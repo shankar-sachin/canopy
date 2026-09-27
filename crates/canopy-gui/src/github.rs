@@ -419,9 +419,9 @@ pub fn open_url(url: String) -> Res<()> {
     let mut cmd = if cfg!(target_os = "macos") {
         std::process::Command::new("open")
     } else if cfg!(windows) {
-        // `start` is a cmd built-in; the empty string is the window title.
-        let mut c = std::process::Command::new("cmd");
-        c.args(["/C", "start", ""]);
+        // Not `cmd /C start`: cmd would cut the URL at any `&` in it.
+        let mut c = std::process::Command::new("rundll32");
+        c.arg("url.dll,FileProtocolHandler");
         c
     } else {
         std::process::Command::new("xdg-open")

@@ -66,21 +66,39 @@ impl Shared {
     /// and keeping everything else (comments included).
     pub fn apply_to_toml(&self, text: &str) -> String {
         let mut keys: Vec<(&str, String)> = Vec::new();
-        let q = |s: &str| format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""));
         if let Some(t) = &self.theme {
-            keys.push(("theme", q(t)));
+            keys.push(("theme", toml_string(t)));
         }
         if let Some(e) = &self.editor {
-            keys.push(("editor", q(e)));
+            keys.push(("editor", toml_string(e)));
         }
         if let Some(a) = &self.ai {
-            keys.push(("ai", q(a)));
+            keys.push(("ai", toml_string(a)));
         }
         if let Some(b) = self.show_commands {
             keys.push(("teach_mode", b.to_string()));
         }
         set_top_level_keys(text, &keys)
     }
+}
+
+/// `s` as a TOML basic string. Control characters are escaped too: a raw
+/// newline or tab would make config.toml unreadable.
+fn toml_string(s: &str) -> String {
+    let mut out = String::from("\"");
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\t' => out.push_str("\\t"),
+            '\r' => out.push_str("\\r"),
+            c if c.is_control() => out.push_str(&format!("\\u{:04X}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
 }
 
 /// Set top-level `key = value` lines in TOML text (before the first
@@ -152,6 +170,13 @@ mod tests {
             Shared { theme: Some("y".into()), ..Default::default() }.apply_to_toml(t2),
             "theme = \"y\"\n[keys]\ntheme = \"x\"\n"
         );
+    }
+
+    #[test]
+    fn written_values_are_valid_toml() {
+        let s = Shared { editor: Some("my \"ed\"\tx\\y\nz\u{7}".into()), ..Default::default() };
+        let back = Shared::from_toml(&s.apply_to_toml("")).unwrap();
+        assert_eq!(back.editor, s.editor);
     }
 
     #[test]

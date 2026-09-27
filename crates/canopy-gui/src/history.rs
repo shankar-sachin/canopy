@@ -126,11 +126,16 @@ pub enum UndoPlan {
     Reset { last: String, oid: String, subject: String, soft: bool },
 }
 
+/// Enough reflog to see back past a long rebase.
+const UNDO_REFLOG: usize = 200;
+
 pub fn undo_plan(reflog: &[ReflogEntry]) -> UndoPlan {
-    let (Some(last), Some(prev)) = (reflog.first(), reflog.get(1)) else { return UndoPlan::None };
+    let Some(last) = reflog.first() else { return UndoPlan::None };
     if let Some((from, _)) = last.subject.strip_prefix("checkout: moving from ").and_then(|r| r.split_once(" to ")) {
         return UndoPlan::Checkout { last: last.subject.clone(), to: from.to_string() };
     }
+    // A whole rebase counts as one action.
+    let Some(prev) = canopy_git::parse::log::before_last_action(reflog) else { return UndoPlan::None };
     UndoPlan::Reset {
         last: last.subject.clone(),
         oid: prev.oid.clone(),
@@ -142,13 +147,13 @@ pub fn undo_plan(reflog: &[ReflogEntry]) -> UndoPlan {
 #[tauri::command]
 pub async fn undo_info(state: State<'_, AppState>) -> Res<UndoPlan> {
     let git = current(&state).await?;
-    Ok(undo_plan(&git.reflog(2).await.unwrap_or_default()))
+    Ok(undo_plan(&git.reflog(UNDO_REFLOG).await.unwrap_or_default()))
 }
 
 #[tauri::command]
 pub async fn undo(state: State<'_, AppState>) -> Res<Done> {
     let git = current(&state).await?;
-    let res = match undo_plan(&git.reflog(2).await.map_err(err)?) {
+    let res = match undo_plan(&git.reflog(UNDO_REFLOG).await.map_err(err)?) {
         UndoPlan::None => return Err("Nothing to undo.".into()),
         UndoPlan::Checkout { to, .. } => git.checkout(&to).await,
         UndoPlan::Reset { oid, soft: true, .. } => git.reset(&oid, ResetMode::Soft).await,
@@ -183,6 +188,17 @@ mod tests {
         }
         match undo_plan(&[r("b", "reset: moving to HEAD~2"), r("a", "commit: x")]) {
             UndoPlan::Reset { soft, .. } => assert!(!soft),
+            other => panic!("{other:?}"),
+        }
+        // Undoing a rebase goes back to before it started, not one step.
+        let rebase = [
+            r("c2", "rebase (finish): returning to refs/heads/feature"),
+            r("c2", "rebase (pick): x"),
+            r("m", "rebase (start): checkout main"),
+            r("f", "commit: x"),
+        ];
+        match undo_plan(&rebase) {
+            UndoPlan::Reset { oid, soft, .. } => assert_eq!((oid.as_str(), soft), ("f", false)),
             other => panic!("{other:?}"),
         }
     }

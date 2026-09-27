@@ -282,7 +282,8 @@ impl ThemeFile {
 pub fn parse_hex(s: &str) -> Option<[u8; 3]> {
     let h = s.trim().strip_prefix('#')?;
     let h: String = if h.len() == 3 { h.chars().flat_map(|c| [c, c]).collect() } else { h.to_string() };
-    if h.len() != 6 {
+    // Only hex digits (from_str_radix would also take a leading "+").
+    if h.len() != 6 || !h.bytes().all(|b| b.is_ascii_hexdigit()) {
         return None;
     }
     let v = u32::from_str_radix(&h, 16).ok()?;
@@ -392,6 +393,8 @@ mod tests {
             .unwrap_err()
             .contains("unknown color"));
         assert!(ThemeFile::parse(r#"{"name": "x", "colors": {"bg": "red"}}"#).unwrap_err().contains("isn't a color"));
+        assert_eq!(parse_hex("#+12345"), None);
+        assert_eq!(parse_hex("#-1-2-3"), None);
         assert!(ThemeFile::parse(r#"{"name": "x", "base": "dracula"}"#).unwrap_err().contains("unknown base"));
         assert!(ThemeFile::parse("nope").is_err());
         // A full export parses back to the same palette.

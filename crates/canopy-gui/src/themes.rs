@@ -201,9 +201,8 @@ pub fn open_with_editor(file: &Path, setting: &str) -> Res<String> {
             c.arg("-t");
             c
         } else if cfg!(windows) {
-            let mut c = std::process::Command::new("cmd");
-            c.args(["/C", "start", "", "notepad"]);
-            c
+            // Directly, not through `cmd /C start` (which misreads `&` in a path).
+            std::process::Command::new("notepad")
         } else {
             std::process::Command::new("xdg-open")
         };

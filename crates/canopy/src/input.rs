@@ -465,18 +465,14 @@ fn repo_action(app: &mut App, action: Action) {
         TagCommit => {
             let Some(c) = app.selected_commit() else { return };
             let oid = c.oid.clone();
-            app.modal = Modal::input(
-                format!("Tag {}", &oid[..7.min(oid.len())]),
-                "tag name, e.g. v1.0.0",
-                "",
-                InputKind::Tag(oid),
-            );
+            app.modal =
+                Modal::input(format!("Tag {}", short_rev(&oid)), "tag name, e.g. v1.0.0", "", InputKind::Tag(oid));
         }
         BranchFromCommit => {
             let Some(c) = app.selected_commit() else { return };
             let oid = c.oid.clone();
             app.modal = Modal::input(
-                format!("New branch at {}", &oid[..7.min(oid.len())]),
+                format!("New branch at {}", short_rev(&oid)),
                 "branch name · switches to it",
                 "",
                 InputKind::NewBranch { start: Some(oid) },
@@ -1535,10 +1531,6 @@ fn undo(app: &mut App) {
         app.toast(Level::Info, "Nothing to undo");
         return;
     };
-    let Some(prev) = app.data.reflog.get(1).cloned() else {
-        app.toast(Level::Info, "Nothing to undo");
-        return;
-    };
     if let Some(rest) = last.subject.strip_prefix("checkout: moving from ") {
         if let Some((from, _to)) = rest.split_once(" to ") {
             confirm(
@@ -1551,6 +1543,11 @@ fn undo(app: &mut App) {
             return;
         }
     }
+    // A whole rebase counts as one action.
+    let Some(prev) = canopy_git::parse::log::before_last_action(&app.data.reflog).cloned() else {
+        app.toast(Level::Info, "Nothing to undo");
+        return;
+    };
     let soft = last.subject.starts_with("commit");
     let how = if soft {
         "The commit's changes come back as staged changes (git reset --soft)."
@@ -1562,7 +1559,7 @@ fn undo(app: &mut App) {
         "Undo last action?",
         vec![
             format!("Last action: {}", last.subject),
-            format!("Move the branch back to {} ({})", &prev.oid[..7], prev.subject),
+            format!("Move the branch back to {} ({})", short_rev(&prev.oid), prev.subject),
             String::new(),
             how.into(),
         ],
@@ -2204,7 +2201,7 @@ pub fn execute(app: &mut App, pending: Pending) {
                 ResetMode::Mixed => "mixed",
                 ResetMode::Hard => "hard",
             };
-            app.run_op(format!("Reset ({m}) to {}", &rev[..7.min(rev.len())]), Then::Refresh, async move {
+            app.run_op(format!("Reset ({m}) to {}", short_rev(&rev)), Then::Refresh, async move {
                 git.reset(&rev, mode).await
             });
         }
@@ -2225,9 +2222,7 @@ pub fn execute(app: &mut App, pending: Pending) {
             });
         }
         Pending::Checkout(rev) => {
-            app.run_op(format!("Checkout {}", &rev[..7.min(rev.len())]), Then::Refresh, async move {
-                git.checkout(&rev).await
-            });
+            app.run_op(format!("Checkout {}", short_rev(&rev)), Then::Refresh, async move { git.checkout(&rev).await });
         }
         Pending::AbortOp => {
             let label = format!("Abort {}", state_word(git.state()));
@@ -2287,6 +2282,16 @@ pub fn execute(app: &mut App, pending: Pending) {
     }
 }
 
+/// A commit id shortened to 7 characters for a label; any other revision
+/// (a tag or branch name, which may not be ASCII) as it is.
+pub fn short_rev(rev: &str) -> &str {
+    if rev.len() > 7 && rev.bytes().all(|b| b.is_ascii_hexdigit()) {
+        &rev[..7]
+    } else {
+        rev
+    }
+}
+
 /// Open `file` in $VISUAL / $EDITOR (vi, or Notepad on Windows); Canopy
 /// steps aside until the editor exits.
 pub fn open_in_editor(app: &mut App, file: &std::path::Path) {
@@ -2318,7 +2323,14 @@ pub fn open_in_editor(app: &mut App, file: &std::path::Path) {
 
 #[cfg(test)]
 mod tests {
-    use super::split_args;
+    use super::{short_rev, split_args};
+
+    #[test]
+    fn short_revs_never_split_a_character() {
+        assert_eq!(short_rev("0123456789abcdef"), "0123456");
+        assert_eq!(short_rev("リリース-1"), "リリース-1");
+        assert_eq!(short_rev("v1.0.10-beta"), "v1.0.10-beta");
+    }
 
     #[test]
     fn splits_quoted_args() {

@@ -22,7 +22,7 @@ pub fn parse_rfc3339(s: &str) -> Option<i64> {
         "Z" | "z" => 0,
         o if o.len() == 6 && (o.starts_with('+') || o.starts_with('-')) => {
             let sign = if o.starts_with('-') { -1 } else { 1 };
-            sign * (o[1..3].parse::<i64>().ok()? * 3600 + o[4..6].parse::<i64>().ok()? * 60)
+            sign * (o.get(1..3)?.parse::<i64>().ok()? * 3600 + o.get(4..6)?.parse::<i64>().ok()? * 60)
         }
         _ => return None,
     };
@@ -52,5 +52,6 @@ mod tests {
         assert_eq!(parse_rfc3339("2026-09-26T00:40:42.123Z"), Some(1790383242));
         assert_eq!(parse_rfc3339("nonsense"), None);
         assert_eq!(parse_rfc3339(""), None);
+        assert_eq!(parse_rfc3339("2026-09-26T00:40:42+0é00"), None);
     }
 }

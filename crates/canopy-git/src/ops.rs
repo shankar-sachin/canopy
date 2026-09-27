@@ -70,7 +70,12 @@ impl Git {
         if q.all {
             // Every branch, remote branch and tag, but not refs/stash: --all
             // would draw each stash's internal index/untracked commits.
-            args.extend(["--branches", "--remotes", "--tags", "HEAD"].map(String::from));
+            args.extend(["--branches", "--remotes", "--tags"].map(String::from));
+            // HEAD too (a detached HEAD is on no branch), unless it has no
+            // commit yet: git log fails on an unborn HEAD.
+            if self.has_head().await {
+                args.push("HEAD".into());
+            }
         } else if let Some(r) = &q.rev {
             args.push(r.clone());
         }
@@ -167,6 +172,12 @@ impl Git {
         Ok(parse::diff::parse(&out.stdout))
     }
 
+    /// Whether HEAD points at a commit (false in a repository with no
+    /// commits yet, or on a new orphan branch).
+    pub async fn has_head(&self) -> bool {
+        self.run(&["rev-parse", "-q", "--verify", "HEAD^{commit}"]).await.is_ok()
+    }
+
     pub async fn config_get(&self, key: &str) -> Option<String> {
         self.run(&["config", "--get", key]).await.ok().map(|o| o.stdout.trim().to_string())
     }
@@ -188,12 +199,14 @@ impl Git {
         args.extend_from_slice(paths);
         match self.run(&args).await {
             Ok(o) => Ok(o),
-            // No HEAD yet: fall back to removing from the index.
-            Err(_) => {
+            // No HEAD yet: fall back to removing from the index. (Only then:
+            // otherwise `rm --cached` would stage the file's deletion.)
+            Err(_) if !self.has_head().await => {
                 let mut args = vec!["rm", "--cached", "-r", "-q", "--"];
                 args.extend_from_slice(paths);
                 self.run(&args).await
             }
+            Err(e) => Err(e),
         }
     }
 
@@ -266,9 +279,11 @@ impl Git {
 
     pub async fn checkout(&self, rev: &str) -> Result<Output> {
         // `switch` refuses bare commits without --detach; fall back to checkout.
+        // The `--` makes git read `rev` as a revision only: without it, a
+        // name that's also a file would throw away that file's edits.
         match self.run(&["switch", rev]).await {
             Ok(o) => Ok(o),
-            Err(_) => self.run(&["checkout", rev]).await,
+            Err(_) => self.run(&["checkout", rev, "--"]).await,
         }
     }
 
