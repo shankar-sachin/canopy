@@ -318,8 +318,10 @@ fn home(f: &mut Frame, area: Rect, app: &mut App) {
     let pad = crate::ui::util::pad_top();
     // Only reserve the GitHub card (and its gap) when there's something to show.
     let (gh_area, right) = if app.github.status.is_some() {
+        // One more line when there are unread notifications.
+        let unread = u16::from(app.github.unread.is_some_and(|u| u > 0));
         let [g, rest] =
-            Layout::vertical([Constraint::Length(5 + pad), Constraint::Fill(1)]).spacing(gap()).areas(right);
+            Layout::vertical([Constraint::Length(5 + pad + unread), Constraint::Fill(1)]).spacing(gap()).areas(right);
         (g, rest)
     } else {
         (Rect::default(), right)
@@ -448,6 +450,17 @@ fn github_card<'a>(app: &App, theme: &Theme) -> Vec<Line<'a>> {
             if let Some(n) = app.github.review_requests {
                 let style = if n > 0 { theme.fg(theme.accent_alt) } else { theme.muted() };
                 lines.push(Line::styled(format!("{n} review request(s) for you"), style));
+            }
+            if let Some(u) = app.github.unread.filter(|u| *u > 0) {
+                let key = app
+                    .keymap
+                    .key_for(&[crate::keymap::Ctx::Global], crate::keymap::Action::ShowNotifications)
+                    .map(|k| format!("  {} to see them", crate::keymap::pretty_key(k)))
+                    .unwrap_or_default();
+                lines.push(Line::from(vec![
+                    Span::styled(format!("● {u} unread notification(s)"), theme.fg(theme.accent_alt)),
+                    Span::styled(key, theme.muted()),
+                ]));
             }
             lines
         }

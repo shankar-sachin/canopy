@@ -3,8 +3,8 @@
 //! or logged out the page shows how to set it up.
 
 use canopy_gh::{
-    CheckState, ChecksSummary, Gh, GhError, GhStatus, Issue, IssueFilter, Job, MergeMethod, PrFilter, PullRequest,
-    RepoInfo, ReviewKind, Run,
+    CheckState, ChecksSummary, Gh, GhError, GhStatus, Issue, IssueFilter, Job, MergeMethod, Notification, PrFilter,
+    PullRequest, RepoInfo, ReviewKind, Run,
 };
 use serde::Serialize;
 use tauri::State;
@@ -170,6 +170,56 @@ pub fn tail_log(log: &str, n: usize) -> String {
         .join("\n")
 }
 
+// ------------------------------------------------------------------ notifications
+
+/// A notification, with what the page needs worked out.
+#[derive(Debug, Clone, Serialize)]
+pub struct NotificationRow {
+    pub id: String,
+    pub unread: bool,
+    pub reason: String,
+    /// Why you got it, in plain words.
+    pub why: &'static str,
+    pub updated_at: i64,
+    pub title: String,
+    /// PullRequest, Issue, Release, Commit, Discussion, CheckSuite, ...
+    pub kind: String,
+    /// owner/name
+    pub repo: String,
+    pub url: String,
+    /// The pull request or issue number, when it's one of those.
+    pub number: Option<u64>,
+}
+
+impl From<Notification> for NotificationRow {
+    fn from(n: Notification) -> Self {
+        NotificationRow {
+            why: n.reason_text(),
+            url: n.web_url(),
+            number: n.number(),
+            id: n.id,
+            unread: n.unread,
+            reason: n.reason,
+            updated_at: n.updated_at,
+            title: n.subject.title,
+            kind: n.subject.kind,
+            repo: n.repository.full_name,
+        }
+    }
+}
+
+/// Notifications for this repository or every repository; `include_read`
+/// also shows ones you've already read. Newest first (GitHub's order).
+#[tauri::command]
+pub async fn gh_notifications(
+    everywhere: bool,
+    include_read: bool,
+    state: State<'_, AppState>,
+) -> Res<Vec<NotificationRow>> {
+    let list = gh(&state).await?.notifications(!everywhere, include_read).await.map_err(err)?;
+    Ok(list.into_iter().map(NotificationRow::from).collect())
+}
+
 /// GitHub actions that change something. `args` depend on `op`.
 #[tauri::command]
 pub async fn gh_op(op: String, args: Vec<String>, state: State<'_, AppState>) -> Res<Done> {
@@ -205,6 +255,10 @@ pub async fn gh_op(op: String, args: Vec<String>, state: State<'_, AppState>) ->
         "issue-close" => gh.issue_close(n()?).await,
         "issue-reopen" => gh.issue_reopen(n()?).await,
         "run-rerun" => gh.run_rerun_failed(n()?).await,
+        // args: thread id
+        "notif-read" => gh.notification_read(a(0)).await,
+        // args: "everywhere" to mark every repository's, else just this one's
+        "notif-read-all" => gh.notifications_read_all(a(0) != "everywhere").await,
         other => return Err(format!("unknown GitHub operation {other}")),
     };
     res.map(done).map_err(err)

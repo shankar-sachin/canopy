@@ -389,6 +389,14 @@ impl Notification {
         self.repository.html_url.clone()
     }
 
+    /// The pull request or issue number, when it's one of those.
+    pub fn number(&self) -> Option<u64> {
+        if !matches!(self.subject.kind.as_str(), "PullRequest" | "Issue") {
+            return None;
+        }
+        self.subject.url.rsplit('/').next()?.parse().ok()
+    }
+
     /// Why you got it, in plain words.
     pub fn reason_text(&self) -> &'static str {
         match self.reason.as_str() {

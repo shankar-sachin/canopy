@@ -9,6 +9,9 @@ const gh = {
   prs: { filter: "open", list: null, sel: null, detail: null },
   issues: { filter: "open", list: null, sel: null, detail: null },
   runs: { all: false, list: null, sel: null, jobs: null, log: null, loadedAt: 0 },
+  // Notifications: every repository's by default, unread only. `unread` is
+  // the sidebar badge (every repository), refreshed every two minutes.
+  notifs: { everywhere: true, includeRead: false, list: null, sel: null, unread: 0, countAt: 0 },
   ai: null, // { installed, chosen } from ai_status
   failure: undefined, // latest_failure for HEAD (null = none), undefined = not checked
   failureFor: "",
@@ -99,7 +102,8 @@ async function ghReady() {
     gh.statusFor = root;
     gh.status = null;
     gh.home = null;
-    gh.prs.list = gh.issues.list = gh.runs.list = null;
+    gh.prs.list = gh.issues.list = gh.runs.list = gh.notifs.list = null;
+    gh.notifs.countAt = 0;
   }
   if (!gh.status) gh.status = await invoke("gh_status").catch(() => ({ state: "not_installed" }));
   return gh.status.state === "ready";
@@ -365,12 +369,117 @@ async function loadRun() {
   drawGh("runs");
 }
 
+// ---------------------------------------------------------------- notifications
+
+const NOTIF_KIND = {
+  PullRequest: ["pr", "Pull request"],
+  Issue: ["issue", "Issue"],
+  Release: ["actions", "Release"],
+  CheckSuite: ["actions", "CI"],
+  Discussion: ["issue", "Discussion"],
+  Commit: ["history", "Commit"],
+};
+
+/// Whether notification `n` is about the repository that's open.
+function notifHere(n) {
+  return n.repo.toLowerCase() === (gh.status?.repo?.nameWithOwner || "").toLowerCase();
+}
+
+function notifListHtml() {
+  const s = gh.notifs;
+  if (!s.list) return `<div class="diff-empty">Loading…</div>`;
+  if (!s.list.length) {
+    return `<div class="diff-empty">${s.includeRead ? "No notifications." : "You're all caught up: no unread notifications."}</div>`;
+  }
+  return `<ul class="glist">${s.list.map((n) => {
+      const [ic, label] = NOTIF_KIND[n.kind] || ["bell", n.kind];
+      return `<li class="grow-row notif${n.unread ? " unread" : ""}${s.sel === n.id ? " on" : ""}" data-id="${esc(n.id)}">
+      <span class="ck" title="${esc(label)}">${icon(ic, 14)}</span>
+      <div class="gmain"><div class="gtitle">${n.number ? `<span class="num">#${n.number}</span> ` : ""}${esc(n.title)}</div>
+      <div class="gsub">${s.everywhere ? `<span class="mono">${esc(n.repo)}</span>` : ""}<span>${esc(n.why)}</span><span>${ago(n.updated_at)}</span></div></div>
+      ${n.unread ? `<span class="dot-unread" title="Unread"></span>` : ""}
+    </li>`;
+    }).join("")}</ul>`;
+}
+
+function notifDetailHtml() {
+  const s = gh.notifs;
+  const n = s.list?.find((x) => x.id === s.sel);
+  if (!n) return `<div class="diff-empty">${s.list?.length ? "Select a notification." : ""}</div>`;
+  const [, label] = NOTIF_KIND[n.kind] || ["bell", n.kind];
+  const inCanopy = notifHere(n) && n.number && (n.kind === "PullRequest" || n.kind === "Issue");
+  return `<div class="gdetail">
+    <h2 class="selectable">${esc(n.title)}${n.number ? ` <span class="num">#${n.number}</span>` : ""}</h2>
+    <div class="gmeta"><span class="pill">${esc(label)}</span>${n.unread ? `<span class="pill green">unread</span>` : `<span class="pill">read</span>`}
+      <span class="mono">${esc(n.repo)}</span><span class="faint">${ago(n.updated_at)}</span></div>
+    <p class="notif-why">You got this because <b>${esc(n.why)}</b>.</p>
+    <div class="cactions">
+      ${inCanopy ? `<button class="btn small primary" data-g="notif-show">Open in Canopy</button>` : ""}
+      <button class="btn small${inCanopy ? "" : " primary"}" data-g="notif-open">${brand("github")}View in GitHub</button>
+      ${n.unread ? `<button class="btn small" data-g="notif-read">Mark as read</button>` : ""}
+    </div>
+    ${notifHere(n) ? "" : `<p class="faint small">This is about another repository, so it opens on GitHub.</p>`}
+  </div>`;
+}
+
+async function loadNotifs() {
+  if (!(await ghReady())) return drawGh("notifs");
+  const s = gh.notifs;
+  try {
+    s.list = await invoke("gh_notifications", { everywhere: s.everywhere, includeRead: s.includeRead });
+  } catch (e) {
+    s.list = [];
+    toast(String(e), { error: true });
+  }
+  if (s.everywhere && !s.includeRead) {
+    s.unread = s.list.length;
+    s.countAt = Date.now();
+    renderNav();
+  }
+  if (!s.list.some((n) => n.id === s.sel)) s.sel = s.list[0]?.id || null;
+  drawGh("notifs");
+}
+
+/// The sidebar badge: unread notifications in every repository. Refreshed
+/// in the background at most every two minutes.
+function notifBadge() {
+  const s = gh.notifs;
+  if (state.overview && Date.now() - s.countAt > 120000) {
+    s.countAt = Date.now();
+    ghReady().then(async (ready) => {
+      if (!ready) return;
+      const list = await invoke("gh_notifications", { everywhere: true, includeRead: false }).catch(() => null);
+      if (!list) return;
+      if (list.length !== s.unread) {
+        s.unread = list.length;
+        renderNav();
+        if (state.page === "home") { delete $("#view").dataset.shown; render(); }
+      }
+    });
+  }
+  if (!s.unread) return "";
+  return `<span class="badge info" title="Unread notifications, in every repository">${s.unread >= 50 ? "50+" : s.unread}</span>`;
+}
+
+/// Mark `ids` read here (without waiting for GitHub), and keep the badge right.
+function markLocallyRead(ids) {
+  const s = gh.notifs;
+  for (const n of s.list || []) {
+    if (ids.includes(n.id) && n.unread) {
+      n.unread = false;
+      s.unread = Math.max(0, s.unread - 1);
+    }
+  }
+  renderNav();
+}
+
 // ---------------------------------------------------------------- shared page code
 
 const GH_PAGES = {
   prs: { list: prListHtml, detail: prDetailHtml, load: loadPrs, one: loadPr },
   issues: { list: issueListHtml, detail: issueDetailHtml, load: loadIssues, one: loadIssue },
   runs: { list: runListHtml, detail: runDetailHtml, load: loadRuns, one: loadRun },
+  notifs: { list: notifListHtml, detail: notifDetailHtml, load: loadNotifs, one: () => drawGh("notifs") },
 };
 
 function ghPageHtml(ns) {
@@ -380,6 +489,9 @@ function ghPageHtml(ns) {
     prs: filterTabs("prs", [["open", "Open"], ["mine", "Mine"], ["review", "To review"], ["all", "All"]], `<button class="btn small primary" data-g="pr-create">New PR…</button>`),
     issues: filterTabs("issues", [["open", "Open"], ["mine", "Assigned to me"], ["all", "All"]], `<button class="btn small primary" data-g="issue-create">New issue…</button>`),
     runs: `<div class="tabs"><button class="tab${gh.runs.all ? "" : " on"}" data-g="runs-all" data-all="">This branch</button><button class="tab${gh.runs.all ? " on" : ""}" data-g="runs-all" data-all="1">All branches</button></div>`,
+    notifs: `<div class="tabs"><button class="tab${gh.notifs.everywhere ? " on" : ""}" data-g="notif-where" data-all="1">All repositories</button><button class="tab${gh.notifs.everywhere ? "" : " on"}" data-g="notif-where" data-all="">This repository</button>
+      <span class="grow"></span><label class="check small" title="Also show notifications you've read"><input type="checkbox" data-g="notif-include-read"${gh.notifs.includeRead ? " checked" : ""}> Read too</label>
+      <button class="btn small" data-g="notif-read-all">Mark all read</button></div>`,
   }[ns];
   return `<div class="gh">
     <div class="gleft">${tools}<div class="hscroll" id="glist">${GH_PAGES[ns].list()}</div></div>
@@ -490,6 +602,47 @@ async function ghAction(ns, what, el) {
       return fixWithAi(gh.runs.sel);
     case "run-rerun":
       return after(await run("Re-running failed jobs", "gh_op", { op: "run-rerun", args: [String(gh.runs.sel)] }));
+    case "notif-where":
+      gh.notifs.everywhere = !!el.dataset.all;
+      gh.notifs.list = null;
+      drawGh(ns);
+      return loadNotifs();
+    case "notif-include-read":
+      gh.notifs.includeRead = el.checked;
+      gh.notifs.list = null;
+      drawGh(ns);
+      return loadNotifs();
+    case "notif-open":
+    case "notif-show":
+    case "notif-read": {
+      const n = gh.notifs.list?.find((x) => x.id === gh.notifs.sel);
+      if (!n) return;
+      if (what === "notif-open") openUrl(n.url);
+      if (what === "notif-show") {
+        const page = n.kind === "PullRequest" ? "prs" : "issues";
+        Object.assign(gh[page], { filter: "all", list: null, sel: n.number, detail: null });
+      }
+      if (n.unread) {
+        markLocallyRead([n.id]);
+        invoke("gh_op", { op: "notif-read", args: [n.id] }).catch((e) => toast("Couldn't mark it read", { error: true, detail: String(e) }));
+      }
+      if (what === "notif-show") return go(n.kind === "PullRequest" ? "prs" : "issues");
+      return drawGh(ns);
+    }
+    case "notif-read-all": {
+      const where = gh.notifs.everywhere ? "in every repository" : "in this repository";
+      const ok = await ask({ title: "Mark all notifications read?", text: `Every unread notification ${where} is marked read on GitHub.`, buttons: [{ label: "Mark all read", value: true, kind: "primary" }] });
+      if (!ok) return;
+      const res = await run("Marked all read", "gh_op", { op: "notif-read-all", args: [gh.notifs.everywhere ? "everywhere" : ""] });
+      if (res) {
+        markLocallyRead((gh.notifs.list || []).map((n) => n.id));
+        if (gh.notifs.everywhere) gh.notifs.unread = 0;
+        gh.notifs.countAt = 0;
+        renderNav();
+        await loadNotifs();
+      }
+      return;
+    }
   }
 }
 
@@ -505,8 +658,12 @@ function ghPage(ns, title, icon) {
         if (act) return ghAction(ns, act.dataset.g, act);
         const row = e.target.closest(".grow-row");
         if (!row) return;
-        const n = Number(row.dataset.n);
         const s = gh[ns];
+        if (ns === "notifs") {
+          s.sel = row.dataset.id;
+          return drawGh(ns);
+        }
+        const n = Number(row.dataset.n);
         s.sel = n;
         if (ns === "runs") s.jobs = s.log = null;
         else s.detail = null;
@@ -525,6 +682,7 @@ function ghPage(ns, title, icon) {
 addPage("prs", ghPage("prs", "Pull requests", "pr"), 1);
 addPage("issues", ghPage("issues", "Issues", "issue"), 1);
 addPage("runs", ghPage("runs", "Actions", "actions"), 1);
+addPage("notifs", { ...ghPage("notifs", "Notifications", "bell"), badge: notifBadge }, 1);
 
 // ---------------------------------------------------------------- Home card
 
@@ -583,21 +741,29 @@ function ghHomeCard() {
     });
   }
   const h = gh.home;
-  if (!h || (!h.branch_pr && !h.review_requests)) return "";
-  const pr = h.branch_pr;
+  const unread = gh.notifs.unread;
+  if ((!h || (!h.branch_pr && !h.review_requests)) && !unread) return "";
+  const pr = h?.branch_pr;
   const prLine = pr
     ? `<div class="gh-home-row" data-gh-pr="${pr.number}">${checkIcon(pr.check_state)}<span><span class="num">#${pr.number}</span> ${esc(pr.title)}</span>${REVIEW[pr.reviewDecision] || ""}
        <span class="faint">${pr.checks.total ? `${pr.checks.passed}/${pr.checks.total} checks passed` : "no checks"}</span></div>`
     : "";
-  const reviews = h.review_requests
+  const reviews = h?.review_requests
     ? `<div class="gh-home-row" data-gh-reviews>${checkIcon("")}<span>${plural(h.review_requests, "pull request")} waiting for your review</span></div>`
     : "";
-  return `<div class="card span-12"><div class="card-h"><h3>GitHub</h3></div><div class="card-b">${prLine}${reviews}</div></div>`;
+  const notifs = unread
+    ? `<div class="gh-home-row" data-gh-notifs><span class="ck">${icon("bell", 14)}</span><span>${unread >= 50 ? "50+" : unread} unread notification${unread === 1 ? "" : "s"}</span></div>`
+    : "";
+  return `<div class="card span-12"><div class="card-h"><h3>GitHub</h3></div><div class="card-b">${prLine}${reviews}${notifs}</div></div>`;
 }
 
 document.addEventListener("click", (e) => {
   const pr = e.target.closest("[data-gh-pr]");
   const reviews = e.target.closest("[data-gh-reviews]");
+  if (e.target.closest("[data-gh-notifs]")) {
+    Object.assign(gh.notifs, { everywhere: true, includeRead: false, list: null });
+    return go("notifs");
+  }
   if (pr) {
     gh.prs.filter = "open";
     gh.prs.sel = Number(pr.dataset.ghPr);

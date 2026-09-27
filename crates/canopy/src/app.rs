@@ -94,6 +94,7 @@ pub enum Msg {
         branch: Option<String>,
         pr: Option<Box<canopy_gh::PullRequest>>,
         reviews: Option<usize>,
+        unread: Option<usize>,
     },
     RunDetail {
         gen: u64,
@@ -843,7 +844,10 @@ impl App {
                 crate::github::on_enter(self, self.screen);
                 crate::github::load_home(self);
             }
-            Msg::GhHome { branch, pr, reviews } => {
+            Msg::GhHome { branch, pr, reviews, unread } => {
+                if unread.is_some() {
+                    self.github.unread = unread;
+                }
                 if branch.as_deref() == self.current_branch() {
                     self.github.branch_pr = Some(pr.map(|p| *p));
                     self.github.review_requests = reviews;
@@ -910,6 +914,10 @@ impl App {
                 self.github.notif_loading = false;
                 match result {
                     Ok(list) => {
+                        // The unread inbox: keep the header's count current.
+                        if self.github.notif_everywhere && !self.github.notif_include_read {
+                            self.github.unread = Some(list.iter().filter(|n| n.unread).count());
+                        }
                         self.github.notifications = list;
                         self.github.notif_loaded = true;
                         self.clamp_selections();
