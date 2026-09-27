@@ -28,7 +28,7 @@ function Remove-FromPath($d) {
 if ($Uninstall) {
     if (Test-Path $Dir) { Remove-Item -Recurse -Force $Dir; Write-Host "canopy: removed $Dir" }
     Remove-FromPath $Dir
-    Write-Host "canopy: your config (%USERPROFILE%\.config\canopy) was left alone"
+    Write-Host "canopy: your config (%USERPROFILE%\.canopy) was left alone"
     return
 }
 

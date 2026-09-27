@@ -6,11 +6,14 @@ const setts = {
   section: "general",
   update: null, // last check_update result
   env: null, // environment()
+  editors: null, // detect_editors()
+  editing: null, // the theme being customized: { name, base, colors, existing }
 };
 
 async function loadSettings() {
   loadProfile();
   state.settings = await invoke("get_settings").catch(() => state.settings);
+  await loadThemes();
   applyTheme(state.settings.theme);
   scheduleRefresh();
   // Look for a new version at most once a day.
@@ -42,6 +45,18 @@ async function saveSettings(patch) {
 function setTheme(choice) {
   saveSettings({ theme: choice });
 }
+
+async function loadThemes() {
+  state.themes = await invoke("list_themes").catch(() => state.themes || null);
+}
+
+// Coming back from editing a theme's JSON: pick up the change.
+window.addEventListener("focus", async () => {
+  if (setts.editing) return;
+  await loadThemes();
+  applyTheme(state.settings.theme);
+  if ($("#settings-panel") && setts.section === "appearance") drawSettings();
+});
 
 function seg(name, value, options) {
   return `<div class="seg" role="radiogroup">${options
@@ -102,17 +117,182 @@ function aiRow(s) {
        <div class="sctl"><input class="input" id="ai-cmd" value="${esc(current === "custom" ? "" : current)}" placeholder="aider --message {prompt}" spellcheck="false"></div></div>` : "");
 }
 
+// ---------------------------------------------------------------- themes
+
+const NATIVE_LABELS = { system: "Auto (follows your computer)", dark: "Canopy", light: "Canopy Light" };
+
+function themeLabel(name) {
+  return NATIVE_LABELS[name] || name;
+}
+
+function themeByName(name) {
+  return state.themes?.themes.find((t) => t.name === name);
+}
+
+/// The palette behind a choice ("dark" is the terminal app's canopy theme).
+function paletteFor(name) {
+  if (name === "system") name = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  return themeByName(name === "dark" ? "canopy" : name);
+}
+
+function swatchStrip(c) {
+  if (!c) return "";
+  return `<span class="tstrip" style="background:${c.bg};border-color:${c.border}">
+    ${["accent", "added", "removed", "modified", "hash", "branch"].map((k) => `<i style="background:${c[k]}"></i>`).join("")}
+    <b style="color:${c.fg}">Aa</b></span>`;
+}
+
+function themeCard(id, label, colors, extra = "") {
+  const on = state.settings.theme === id;
+  const auto = id === "system" ? ` auto` : "";
+  return `<button type="button" class="tcard${on ? " on" : ""}${auto}" data-theme-pick="${esc(id)}" aria-pressed="${on}">
+    ${id === "system" ? `<span class="tsplit">${swatchStrip(themeByName("canopy")?.colors)}${swatchStrip(themeByName("light")?.colors)}</span>` : swatchStrip(colors)}
+    <span class="tname">${esc(label)}${extra}</span></button>`;
+}
+
+function appearanceHtml() {
+  const ts = state.themes;
+  if (!ts) return `<h3>Appearance</h3><p class="faint">Loading themes…</p>`;
+  const builtin = ts.themes.filter((t) => t.builtin && t.name !== "canopy" && t.name !== "light");
+  const mine = ts.themes.filter((t) => !t.builtin);
+  const cur = themeByName(state.settings.theme);
+  const custom = cur && !cur.builtin;
+  return `<h3>Appearance</h3>
+    <div class="tgrid">
+      ${themeCard("system", "Auto")}
+      ${themeCard("dark", "Canopy", themeByName("canopy")?.colors)}
+      ${themeCard("light", "Canopy Light", themeByName("light")?.colors)}
+      ${builtin.map((t) => themeCard(t.name, t.name, t.colors)).join("")}
+    </div>
+    <h3 class="sub">Your themes</h3>
+    ${mine.length ? `<div class="tgrid">${mine.map((t) => themeCard(t.name, t.name, t.colors)).join("")}</div>`
+      : `<p class="faint small">None yet. Customize any theme to make one; it's saved where the terminal app finds it too.</p>`}
+    <div class="row-btns tactions">
+      <button class="btn small primary" data-s2="customize">${custom ? "Edit" : "Customize"} ${esc(themeLabel(state.settings.theme))}…</button>
+      ${custom ? `<button class="btn small" data-s2="theme-json">Edit JSON</button>` : ""}
+      <button class="btn small" data-s2="theme-export">Export…</button>
+      <button class="btn small" data-s2="theme-import">Import…</button>
+      ${custom ? `<button class="btn small ghost" data-s2="theme-delete">Delete</button>` : ""}
+    </div>
+    <p class="faint small">Themes are JSON files in <code class="selectable">${esc(ts.folder)}</code>. The terminal app uses the same ones: <code>canopy -t "name"</code>, or <code>theme = "name"</code> in its config. <a href="#" data-s2="open" data-url="https://shankar-sachin.github.io/canopy/wiki/themes.html#your-own">How the file works</a></p>`;
+}
+
+const FIELD_GROUPS = [
+  ["Base", ["bg", "fg", "muted", "border", "border_focus", "selection_bg"]],
+  ["Highlights", ["accent", "accent_alt", "warn", "error"]],
+  ["Changes", ["added", "removed", "modified", "conflict", "added_bg", "removed_bg"]],
+  ["Git", ["hash", "branch", "remote", "tag"]],
+];
+
+/// A little terminal-app screen in the theme's colors, so every color shows.
+function tuiPreview(c) {
+  const sp = (k, t, bold) => `<span style="color:${c[k]}${bold ? ";font-weight:700" : ""}">${t}</span>`;
+  return `<div class="tui-prev" style="background:${c.bg};color:${c.fg};border-color:${c.border_focus}">
+    <div>${sp("accent", "canopy", true)} ${sp("muted", "·")} ${sp("branch", "● main")} ${sp("remote", "↑1 origin/main")} ${sp("tag", "v1.0.7")}</div>
+    <div class="tp-box" style="border-color:${c.border}"><div style="background:${c.selection_bg}">${sp("hash", "f5be172")} Add a theme editor ${sp("muted", "2h ago")}</div>
+      <div>${sp("hash", "37e26d5")} Details for failed runs ${sp("muted", "1d ago")}</div></div>
+    <div>${sp("modified", "M")} src/app.rs  ${sp("added", "A")} themes.rs  ${sp("conflict", "U")} config.toml</div>
+    <div style="background:${c.added_bg}">${sp("added", "+ let theme = Theme::find(name);")}</div>
+    <div style="background:${c.removed_bg}">${sp("removed", "- let theme = Theme::by_name(name);")}</div>
+    <div>${sp("accent_alt", "Tip:")} ${sp("warn", "2 behind")} ${sp("error", "✕ CI failed")}</div></div>`;
+}
+
+function themeEditorHtml() {
+  const e = setts.editing;
+  const f = state.themes.fields.reduce((m, [k, d]) => ((m[k] = d), m), {});
+  const inputs = FIELD_GROUPS.map(([title, keys]) => `<div class="tgroup"><b>${title}</b>${keys.map((k) => `
+      <label class="tcolor" title="${esc(f[k] || k)}"><input type="color" data-color="${k}" value="${e.colors[k]}"><span>${esc(f[k] || k)}</span><code>${k}</code>
+        <input class="input hex" data-hex="${k}" value="${e.colors[k]}" maxlength="7" spellcheck="false"></label>`).join("")}</div>`).join("");
+  return `<h3>${e.existing ? "Edit" : "New"} theme</h3>
+    <div class="tedit">
+      <label class="field"><span>Name</span><input class="input" id="t-name" value="${esc(e.name)}" autocomplete="off" spellcheck="false"></label>
+      <p class="hint">Starts from <b>${esc(themeLabel(e.base === "canopy" ? "dark" : e.base))}</b>; the app changes as you pick colors. Some colors only show in the terminal app, so here's a preview of it too:</p>
+      <div id="t-prev">${tuiPreview(e.colors)}</div>
+      <div class="tgroups">${inputs}</div>
+    </div>
+    <div class="modal-actions sticky">
+      <button class="btn ghost" data-s2="theme-cancel">Cancel</button>
+      <button class="btn primary" data-s2="theme-save">Save theme</button>
+    </div>`;
+}
+
+function startEditing() {
+  const name = state.settings.theme;
+  const cur = paletteFor(name);
+  const existing = cur && !cur.builtin;
+  setts.editing = {
+    name: existing ? cur.name : `My ${cur?.name || "theme"}`,
+    base: existing ? cur.base : cur?.name || "canopy",
+    colors: { ...(cur?.colors || {}) },
+    existing,
+  };
+}
+
+function previewEditing() {
+  setThemeVars(paletteVars(setts.editing.colors));
+  const p = $("#t-prev");
+  if (p) p.innerHTML = tuiPreview(setts.editing.colors);
+}
+
+function stopEditing() {
+  if (!setts.editing) return;
+  setts.editing = null;
+  applyTheme(state.settings.theme);
+}
+
+async function saveEditing() {
+  const e = setts.editing;
+  e.name = ($("#t-name").value || "").trim();
+  if (!e.name) return toast("Give the theme a name.");
+  // Only what differs from the base goes in the file, so it stays short.
+  const base = themeByName(e.base)?.colors || {};
+  const colors = Object.fromEntries(Object.entries(e.colors).filter(([k, v]) => v.toLowerCase() !== (base[k] || "").toLowerCase()));
+  try {
+    const path = await invoke("save_theme", { theme: { name: e.name, base: e.base, colors } });
+    setts.editing = null;
+    await loadThemes();
+    await saveSettings({ theme: e.name });
+    toast(`Saved "${e.name}". The terminal app can use it too: canopy -t "${e.name}"`, { detail: path });
+  } catch (err) {
+    toast("Couldn't save the theme", { error: true, detail: String(err) });
+  }
+}
+
+// ---------------------------------------------------------------- editor
+
+function editorRow(s) {
+  const found = setts.editors || [];
+  const ids = ["system", ...found.map((e) => e.id)];
+  const custom = !ids.includes(s.editor);
+  const opts = [["system", "System default"], ...found.map((e) => [e.id, e.name + (e.terminal ? " (in a terminal)" : "")]), ["custom", "Custom command…"]];
+  const help = setts.editors
+    ? `"Open in editor" on Changes and Details uses this. ${found.length ? `Found ${found.map((e) => e.name).join(", ")}.` : "No editors found on your PATH."}`
+    : `"Open in editor" on Changes and Details uses this.`;
+  return row("Text editor", esc(help),
+    `<select class="input small-select" id="editor-pick">${opts.map(([v, l]) => `<option value="${v}"${(custom ? "custom" : s.editor) === v ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`)
+    + (custom ? `<div class="srow2"><div><b>Command</b><p>Your editor's command line; the file is added at the end.</p></div>
+       <div class="sctl"><input class="input" id="editor-cmd" value="${esc(s.editor === "custom" ? "" : s.editor)}" placeholder="idea --line 1" spellcheck="false"></div></div>` : "");
+}
+
 function settingsBody() {
   const s = state.settings;
   switch (setts.section) {
     case "general":
       return `<h3>General</h3>
-        ${row("Theme", "", seg("theme", s.theme, [["system", "Auto"], ["light", "Light"], ["dark", "Dark"]]))}
+        ${row("Theme", `${esc(themeLabel(s.theme))}. Pick another or make your own in Appearance.`, `<button class="btn small" data-section="appearance">Appearance…</button>`)}
+        ${editorRow(s)}
         ${row("Show git commands", "After each action, show the git command Canopy ran, so you learn git as you go.", toggle("show_commands", s.show_commands))}
         ${row("Refresh", "How often Canopy looks for changes made outside it. It also refreshes when you switch back to the window.", seg("refresh_secs", s.refresh_secs, [[2, "2s"], [5, "5s"], [15, "15s"], [60, "1m"], [0, "Off"]]))}
         ${row("Pull", "What Pull does when your branch and the remote both have new commits. Default follows your git config (pull.rebase).", seg("pull_mode", s.pull_mode, [["default", "Default"], ["merge", "Merge"], ["rebase", "Rebase"]]))}
         ${aiRow(s)}
-        ${row("Recent repositories", "The list on the welcome screen.", `<button class="btn small" data-s2="clear-recent">Clear list</button>`)}`;
+        ${row("Recent repositories", "The list on the welcome screen.", `<button class="btn small" data-s2="clear-recent">Clear list</button>`)}
+        <h3 class="sub">Terminal app</h3>
+        ${row("Share settings", "The theme, text editor, AI assistant and git-command setting can move between this app and the terminal app (<code>canopy</code>), which keeps them in <code>config.toml</code>. Only those settings change.",
+          `<div class="row-btns"><button class="btn small" data-s2="from-tui">Import from terminal app</button><button class="btn small" data-s2="to-tui">Send to terminal app</button></div>`)}
+        ${row("Settings file", "Save them as a JSON file (for another computer, or <code>canopy --import-settings</code>), or load one.",
+          `<div class="row-btns"><button class="btn small" data-s2="export-settings">Export…</button><button class="btn small" data-s2="import-settings">Import…</button></div>`)}`;
+    case "appearance":
+      return setts.editing ? themeEditorHtml() : appearanceHtml();
     case "updates":
       return updateHtml();
     case "about":
@@ -140,13 +320,14 @@ async function openSettings(section) {
   if (section) setts.section = section;
   const wrap = document.createElement("div");
   wrap.className = "modal-wrap";
-  const secs = [["general", "General"], ["updates", "Updates"], ["about", "About"]];
+  const secs = [["general", "General"], ["appearance", "Appearance"], ["updates", "Updates"], ["about", "About"]];
   wrap.innerHTML = `<div class="modal settings" id="settings-panel" role="dialog" aria-modal="true" aria-label="Settings">
     <nav class="snav"><h2>Settings</h2>${secs.map(([id, l]) => `<button type="button" data-section="${id}">${l}${id === "updates" ? `<span class="update-dot"${setts.update?.newer ? "" : " hidden"}></span>` : ""}</button>`).join("")}</nav>
     <div class="sbody"></div>
     <button class="btn icon ghost sclose" type="button" data-s2="close" title="Close (Esc)">${icon("x", 14)}</button>
   </div>`;
   const close = () => {
+    stopEditing();
     wrap.remove();
     document.removeEventListener("keydown", onKey, true);
   };
@@ -155,8 +336,14 @@ async function openSettings(section) {
   };
   wrap.addEventListener("click", async (e) => {
     if (e.target === wrap) return close();
+    const pick = e.target.closest("[data-theme-pick]");
+    if (pick) {
+      await saveSettings({ theme: pick.dataset.themePick });
+      return drawSettings();
+    }
     const sec = e.target.closest("[data-section]");
     if (sec) {
+      stopEditing();
       setts.section = sec.dataset.section;
       return drawSettings();
     }
@@ -168,8 +355,89 @@ async function openSettings(section) {
     }
     const act = e.target.closest("[data-s2]");
     if (!act) return;
+    e.preventDefault();
+    const shared = async (p) => {
+      state.settings = p;
+      await loadThemes();
+      applyTheme(p.theme);
+      gh.ai = null;
+      aiStatus().then(drawSettings);
+    };
     switch (act.dataset.s2) {
       case "close": return close();
+      case "customize":
+        startEditing();
+        return drawSettings();
+      case "theme-cancel":
+        stopEditing();
+        return drawSettings();
+      case "theme-save":
+        await saveEditing();
+        return drawSettings();
+      case "theme-json": {
+        const t = themeByName(state.settings.theme);
+        return invoke("open_in_editor", { path: t.path })
+          .then((w) => toast(`Opened it in ${w}. Save the file and come back; Canopy picks up the change.`))
+          .catch((err) => toast("Couldn't open the editor", { error: true, detail: String(err) }));
+      }
+      case "theme-export": {
+        const name = paletteFor(state.settings.theme)?.name || "canopy";
+        const path = await invoke("export_theme", { name }).catch((err) => toast("Couldn't export", { error: true, detail: String(err) }));
+        if (path) toast(`Exported ${name}`, { detail: path });
+        return;
+      }
+      case "theme-import": {
+        try {
+          const name = await invoke("import_theme");
+          if (!name) return;
+          await loadThemes();
+          await saveSettings({ theme: name });
+          toast(`Imported "${name}"`);
+        } catch (err) {
+          toast("Couldn't import that theme", { error: true, detail: String(err) });
+        }
+        return drawSettings();
+      }
+      case "theme-delete": {
+        const name = state.settings.theme;
+        const ok = await ask({ title: `Delete the theme "${name}"?`, text: "Its file is removed, so the terminal app loses it too.", buttons: [{ label: "Delete", value: true, kind: "danger" }] });
+        if (!ok) return;
+        await invoke("delete_theme", { name }).catch((err) => toast("Couldn't delete it", { error: true, detail: String(err) }));
+        await loadThemes();
+        await saveSettings({ theme: "system" });
+        return drawSettings();
+      }
+      case "from-tui":
+        try {
+          await shared(await invoke("import_from_terminal"));
+          toast("Took the terminal app's theme, editor and AI settings");
+        } catch (err) {
+          toast("Couldn't read the terminal app's settings", { error: true, detail: String(err) });
+        }
+        return drawSettings();
+      case "to-tui":
+        try {
+          const path = await invoke("send_to_terminal");
+          toast("The terminal app now uses these settings", { detail: path });
+        } catch (err) {
+          toast("Couldn't update the terminal app's config", { error: true, detail: String(err) });
+        }
+        return;
+      case "export-settings": {
+        const path = await invoke("export_settings").catch((err) => toast("Couldn't export", { error: true, detail: String(err) }));
+        if (path) toast("Exported your settings", { detail: path });
+        return;
+      }
+      case "import-settings":
+        try {
+          const p = await invoke("import_settings");
+          if (!p) return;
+          await shared(p);
+          toast("Imported the settings");
+        } catch (err) {
+          toast("Couldn't import those settings", { error: true, detail: String(err) });
+        }
+        return drawSettings();
       case "open": return openUrl(act.dataset.url);
       case "copy":
         try {
@@ -192,7 +460,28 @@ async function openSettings(section) {
         return drawSettings();
     }
   });
+  wrap.addEventListener("input", (e) => {
+    const k = e.target.dataset.color || e.target.dataset.hex;
+    if (!k || !setts.editing) return;
+    let v = e.target.value.trim().toLowerCase();
+    if (e.target.dataset.hex) {
+      if (!v.startsWith("#")) v = "#" + v;
+      if (/^#[0-9a-f]{3}$/.test(v)) v = "#" + [...v.slice(1)].map((x) => x + x).join("");
+      if (!/^#[0-9a-f]{6}$/.test(v)) return;
+      $(`[data-color="${k}"]`).value = v;
+    } else $(`[data-hex="${k}"]`).value = v;
+    setts.editing.colors[k] = v;
+    previewEditing();
+  });
   wrap.addEventListener("change", async (e) => {
+    if (e.target.id === "editor-pick") {
+      await saveSettings({ editor: e.target.value });
+      return drawSettings();
+    }
+    if (e.target.id === "editor-cmd" && e.target.value.trim()) {
+      await saveSettings({ editor: e.target.value.trim() });
+      return toast("Saved the editor command");
+    }
     const t = e.target.closest("input[data-set]");
     if (t) saveSettings({ [t.dataset.set]: t.checked });
     if (e.target.id === "ai-pick") {
@@ -213,6 +502,7 @@ async function openSettings(section) {
   document.body.append(wrap);
   drawSettings();
   if (!gh.ai) aiStatus().then(drawSettings);
+  if (!setts.editors) invoke("detect_editors").then((e) => { setts.editors = e; drawSettings(); }).catch(() => {});
   if (!setts.env) {
     setts.env = await invoke("environment").catch(() => null);
     drawSettings();

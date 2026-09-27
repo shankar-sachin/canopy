@@ -1020,7 +1020,7 @@ fn workspace(f: &mut Frame, area: Rect, app: &mut App) {
         let msg: Vec<&str> = if app.workspace_scanning {
             vec!["Scanning for repositories…"]
         } else {
-            vec!["No repositories found", &l2, "Set workspace_dirs in ~/.config/canopy/config.toml"]
+            vec!["No repositories found", &l2, "Set workspace_dirs in ~/.canopy/config.toml"]
         };
         empty(f, area, &theme, "Workspace", &msg);
         return;

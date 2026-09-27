@@ -300,27 +300,18 @@ pub async fn failure_details(id: u64, state: State<'_, AppState>) -> Res<Failure
     })
 }
 
-/// Open the saved details in the system's default app for .md files.
+/// Open the saved details in the editor from Settings.
 #[tauri::command]
-pub async fn open_details(state: State<'_, AppState>) -> Res<()> {
+pub async fn open_details(state: State<'_, AppState>) -> Res<String> {
     let git = current(&state).await?;
     let file = git.repo.git_dir.join("canopy").join("fix-ci.md");
     if !file.exists() {
         return Err("There are no details saved yet.".into());
     }
-    let mut cmd = if cfg!(target_os = "macos") {
-        let mut c = std::process::Command::new("open");
-        // TextEdit when nothing claims .md files.
-        c.arg("-t");
-        c
-    } else if cfg!(windows) {
-        let mut c = std::process::Command::new("cmd");
-        c.args(["/C", "start", "", "notepad"]);
-        c
-    } else {
-        std::process::Command::new("xdg-open")
-    };
-    cmd.arg(&file).spawn().map(|_| ()).map_err(|e| format!("Couldn't open an editor: {e}"))
+    let setting = crate::settings::load().editor;
+    tauri::async_runtime::spawn_blocking(move || crate::themes::open_with_editor(&file, &setting))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[derive(Debug, Clone, Serialize)]

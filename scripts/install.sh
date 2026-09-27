@@ -20,7 +20,7 @@ for arg in "$@"; do
   case "$arg" in
     --uninstall)
       if [ -e "$DIR/canopy" ]; then rm -f "$DIR/canopy"; say "removed $DIR/canopy"; else say "nothing to remove in $DIR"; fi
-      say "your config (~/.config/canopy) was left alone"
+      say "your config (~/.canopy) was left alone"
       exit 0 ;;
     -h|--help) sed -n '2,10p' "$0" 2>/dev/null || true; exit 0 ;;
     v*) VERSION="$arg" ;;

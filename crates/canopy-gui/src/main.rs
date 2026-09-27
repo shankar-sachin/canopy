@@ -15,6 +15,7 @@ mod overview;
 mod recent;
 mod settings;
 mod setup;
+mod themes;
 
 use canopy_git::Git;
 use tauri::State;
@@ -219,6 +220,17 @@ fn main() {
             settings::environment,
             settings::profile,
             settings::account,
+            themes::list_themes,
+            themes::save_theme,
+            themes::delete_theme,
+            themes::import_theme,
+            themes::export_theme,
+            themes::detect_editors,
+            themes::open_in_editor,
+            themes::import_from_terminal,
+            themes::send_to_terminal,
+            themes::export_settings,
+            themes::import_settings,
             setup::inspect_folder,
             setup::init_repo,
             setup::remote_preview,

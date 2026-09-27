@@ -75,7 +75,11 @@
 <table class="ref">
 <tr><td><code>PATH</code></td><td>Repository to open. Defaults to the current folder. If it isn't a repository yet, Canopy offers to <a href="new-repo.html">create one</a>.</td></tr>
 <tr><td><code>-w</code>, <code>--workspace DIR</code></td><td>Start in the Workspace tab, scanning <code>DIR</code> for repositories.</td></tr>
-<tr><td><code>-t</code>, <code>--theme THEME</code></td><td>Use a theme for this run: <code>canopy</code>, <code>catppuccin</code>, <code>gruvbox</code>, <code>nord</code>, <code>light</code>.</td></tr>
+<tr><td><code>-t</code>, <code>--theme THEME</code></td><td>Use a theme for this run: <code>canopy</code>, <code>catppuccin</code>, <code>gruvbox</code>, <code>nord</code>, <code>light</code>, or <a href="themes.html#your-own">one of yours</a>.</td></tr>
+<tr><td><code>--list-themes</code></td><td>List the built-in themes and yours, then exit.</td></tr>
+<tr><td><code>--export-theme THEME</code></td><td>Print a theme as JSON, to start your own from, then exit.</td></tr>
+<tr><td><code>--export-settings</code></td><td>Print the settings Canopy Desktop shares (theme, editor, AI assistant, teach mode) as JSON, then exit.</td></tr>
+<tr><td><code>--import-settings FILE</code></td><td>Apply a settings file from <code>--export-settings</code> or Canopy Desktop to your config, then exit.</td></tr>
 <tr><td><code>--config-path</code></td><td>Print where Canopy reads its config, then exit.</td></tr>
 <tr><td><code>--example-config</code></td><td>Print a starter config, then exit.</td></tr>
 <tr><td><code>-V</code>, <code>--version</code></td><td>Print the version.</td></tr>
@@ -84,9 +88,9 @@
 <h2 id="env">Environment variables<a class="hash" href="#env" aria-label="Link to this section">#</a></h2>
 <table class="ref">
 <tr><td><code>CANOPY_CONFIG</code></td><td>Read the config from this file instead of the default location.</td></tr>
-<tr><td><code>XDG_CONFIG_HOME</code></td><td>If set, the config lives at <code>$XDG_CONFIG_HOME/canopy/config.toml</code>.</td></tr>
+<tr><td><code>CANOPY_HOME</code></td><td>Use this folder instead of <code>~/.canopy</code> for the config, themes and Canopy Desktop&#39;s settings.</td></tr>
 <tr><td><code>CANOPY_GH</code></td><td>Path to the GitHub CLI (same as <code>gh_program</code> in the config).</td></tr>
-<tr><td><code>VISUAL</code>, <code>EDITOR</code></td><td>The editor <kbd>e</kbd> opens files in, e.g. <code>code --wait</code> (falls back to <code>vi</code>).</td></tr>
+<tr><td><code>VISUAL</code>, <code>EDITOR</code></td><td>The editor <kbd>e</kbd> opens files in, e.g. <code>code --wait</code>, when <code>editor</code> isn&#39;t set in the config (falls back to <code>vi</code>).</td></tr>
 </table>
 
 <nav class="pager" aria-label="Pages"><a href="config.html"><small>Previous</small>Configuration</a><a href="themes.html" class="next"><small>Next</small>Themes</a></nav>

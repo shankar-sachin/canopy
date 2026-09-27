@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use serde::Deserialize;
 
-/// `~/.config/canopy/config.toml`
+/// `~/.canopy/config.toml`
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default)]
 pub struct Config {
@@ -40,6 +40,9 @@ pub struct Config {
     pub ai: String,
     /// Where it opens: tab (a new tab when the terminal can), window, here.
     pub ai_open: String,
+    /// Text editor for e (files, failure details): a command like
+    /// "code --wait" or "nvim". Unset: $VISUAL, then $EDITOR, then vi.
+    pub editor: Option<String>,
 }
 
 /// `commit = "C"` or `commit = ["C", "ctrl-s"]`
@@ -81,6 +84,7 @@ impl Default for Config {
             desktop_tip: true,
             ai: "auto".into(),
             ai_open: "tab".into(),
+            editor: None,
         }
     }
 }
@@ -103,10 +107,8 @@ impl Config {
         if let Ok(p) = std::env::var("CANOPY_CONFIG") {
             return Some(PathBuf::from(p));
         }
-        let home = directories::BaseDirs::new()?.home_dir().to_path_buf();
-        // Prefer XDG-style ~/.config on every platform: that's what terminal users expect.
-        let xdg = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from).unwrap_or_else(|| home.join(".config"));
-        Some(xdg.join("canopy").join("config.toml"))
+        // ~/.canopy on every platform (moved from ~/.canopy in 1.0.7).
+        Some(canopy_config::config_dir()?.join("config.toml"))
     }
 
     /// Load the config, returning a warning message if it was invalid.
@@ -135,6 +137,7 @@ splash = true               # the tree animation when Canopy starts
 desktop_tip = true          # now and then, mention Canopy Desktop at startup
 ai = "auto"                 # Fix with AI (A on a failed run): auto | claude | codex | off | "my-ai {prompt}"
 ai_open = "tab"             # where it opens: tab | window | here
+# editor = "code --wait"    # for e; unset uses $VISUAL / $EDITOR / vi
 workspace_dirs = ["~/code"] # scanned by the Workspace view (tab 6)
 workspace_depth = 3
 

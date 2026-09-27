@@ -71,9 +71,10 @@
       <div class="crumbs"><a href="index.html">Wiki</a><span>/</span>Reference</div>
       <h1>Configuration</h1>
       <p class="wlede">Every setting in config.toml, with its default.</p>
-<p>The config file is <code>~/.config/canopy/config.toml</code> (or <code>$XDG_CONFIG_HOME/canopy/config.toml</code>; on Windows, <code>%USERPROFILE%\.config\canopy\config.toml</code>). <code>canopy --config-path</code> prints where Canopy looks; <code>canopy --example-config</code> prints a starter file. Every setting is optional.</p>
+<p>The config file is <code>~/.canopy/config.toml</code> (on Windows, <code>%USERPROFILE%\.canopy\config.toml</code>; set <code>CANOPY_HOME</code> to use another folder). Before 1.0.7 it lived in <code>~/.config/canopy</code>; Canopy copies that folder over the first time it runs. <code>canopy --config-path</code> prints where Canopy looks; <code>canopy --example-config</code> prints a starter file. Every setting is optional.</p>
 <table class="ref" id="config-table">
-<tr><td><code>theme</code></td><td><code>"canopy"</code></td><td>Color theme: <code>canopy</code>, <code>catppuccin</code>, <code>gruvbox</code>, <code>nord</code> or <code>light</code>. See <a href="themes.html">Themes</a>.</td></tr>
+<tr><td><code>theme</code></td><td><code>"canopy"</code></td><td>Color theme: <code>canopy</code>, <code>catppuccin</code>, <code>gruvbox</code>, <code>nord</code>, <code>light</code>, or the name of <a href="themes.html#your-own">your own theme</a>. See <a href="themes.html">Themes</a>.</td></tr>
+<tr><td><code>editor</code></td><td>unset</td><td>The editor <kbd>e</kbd> opens files in, e.g. <code>"code --wait"</code>, <code>"nvim"</code> or <code>"zed --wait"</code>. Unset means <code>$VISUAL</code>, then <code>$EDITOR</code>, then <code>vi</code> (Notepad on Windows).</td></tr>
 <tr><td><code>teach_mode</code></td><td><code>true</code></td><td>Show the git command behind each action in the footer. <kbd>T</kbd> toggles it while running.</td></tr>
 <tr><td><code>confirm_destructive</code></td><td><code>true</code></td><td>Ask before discarding changes, hard resets, force deletes and similar.</td></tr>
 <tr><td><code>compact</code></td><td><code>false</code></td><td>Tighter layout: less padding and no gaps between panels.</td></tr>

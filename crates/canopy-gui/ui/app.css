@@ -602,3 +602,33 @@ html[data-theme="light"] .dl.add .code, html[data-theme="light"] .dl.add .sign {
 .details-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 20px; border-top: 1px solid var(--border); }
 .details-foot .mono { font-size: 12px; }
 .btn .brand { flex: none; }
+
+/* Settings → Appearance: theme gallery and editor */
+.sbody h3.sub { margin: 22px 0 10px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.tcard { display: flex; flex-direction: column; gap: 8px; padding: 8px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; text-align: left; font: inherit; }
+.tcard:hover { border-color: var(--border-2); background: var(--hover); }
+.tcard.on { border-color: var(--green); box-shadow: 0 0 0 1px var(--green); }
+.tstrip { display: flex; align-items: center; gap: 4px; height: 38px; padding: 0 9px; border-radius: 7px; border: 1px solid; flex: 1; }
+.tstrip i { width: 11px; height: 11px; border-radius: 50%; }
+.tstrip b { margin-left: auto; font-size: 13px; }
+.tsplit { display: flex; gap: 0; }
+.tsplit .tstrip { border-radius: 7px 0 0 7px; min-width: 0; overflow: hidden; }
+.tsplit .tstrip + .tstrip { border-radius: 0 7px 7px 0; border-left: 0; }
+.tsplit .tstrip i:nth-child(n+4) { display: none; }
+.tname { font-size: 12.5px; padding: 0 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tactions { margin: 18px 0 10px; }
+.tui-prev { font: 12px/1.55 var(--mono); padding: 8px 10px; border: 1px solid; border-radius: 8px; margin: 4px 0 14px; overflow: hidden; }
+.tui-prev > div, .tui-prev .tp-box > div { white-space: nowrap; }
+.tui-prev .tp-box { border: 1px solid; border-radius: 4px; margin: 4px 0; padding: 0 4px; }
+.tgroups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 18px; }
+.tgroup { display: flex; flex-direction: column; gap: 2px; }
+.tgroup > b { font-size: 12px; color: var(--muted); margin: 8px 0 4px; text-transform: uppercase; letter-spacing: .06em; }
+.tcolor { display: grid; grid-template-columns: 26px 1fr 78px; grid-template-rows: auto auto; column-gap: 8px; align-items: center; padding: 4px 0; cursor: pointer; }
+.tcolor input[type=color] { grid-row: span 2; width: 26px; height: 26px; padding: 0; border: 1px solid var(--border-2); border-radius: 6px; background: none; cursor: pointer; }
+.tcolor input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+.tcolor input[type=color]::-webkit-color-swatch { border: 0; border-radius: 5px; }
+.tcolor span { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tcolor code { grid-column: 2; font-size: 11px; color: var(--faint); background: none; padding: 0; }
+.tcolor .hex { grid-column: 3; grid-row: 1 / span 2; height: 26px; font: 12px var(--mono); padding: 0 6px; }
+.modal-actions.sticky { position: sticky; bottom: -20px; background: var(--surface); padding: 12px 0; margin-bottom: -20px; border-top: 1px solid var(--border); }

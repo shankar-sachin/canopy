@@ -335,10 +335,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "canopy-config"
+version = "1.0.7"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "toml 1.1.6+spec-1.1.0",
+]
+
+[[package]]
 name = "canopy-desktop"
-version = "1.0.6"
+version = "1.0.7"
 dependencies = [
  "anyhow",
+ "canopy-config",
  "canopy-gh",
  "canopy-git",
  "serde",
@@ -352,7 +363,7 @@ dependencies = [
 
 [[package]]
 name = "canopy-gh"
-version = "1.0.6"
+version = "1.0.7"
 dependencies = [
  "canopy-git",
  "serde",
@@ -364,7 +375,7 @@ dependencies = [
 
 [[package]]
 name = "canopy-git"
-version = "1.0.6"
+version = "1.0.7"
 dependencies = [
  "anyhow",
  "serde",
@@ -375,9 +386,10 @@ dependencies = [
 
 [[package]]
 name = "canopy-git-tui"
-version = "1.0.6"
+version = "1.0.7"
 dependencies = [
  "anyhow",
+ "canopy-config",
  "canopy-gh",
  "canopy-git",
  "clap",

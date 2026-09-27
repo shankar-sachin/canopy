@@ -1,4 +1,4 @@
-//! Recently opened repositories, kept in `~/.config/canopy/desktop.json`
+//! Recently opened repositories, kept in `~/.canopy/desktop.json`
 //! (next to the TUI's config.toml).
 
 use std::path::{Path, PathBuf};
@@ -43,9 +43,7 @@ pub struct RecentRepo {
 }
 
 pub fn store_path() -> Option<PathBuf> {
-    let home = home()?;
-    let base = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from).unwrap_or_else(|| home.join(".config"));
-    Some(base.join("canopy").join("desktop.json"))
+    Some(canopy_config::config_dir()?.join("desktop.json"))
 }
 
 fn read(file: &Path) -> Store {

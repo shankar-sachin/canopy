@@ -232,7 +232,9 @@ pub struct App {
 impl App {
     pub fn new(git: Option<Git>, config: Config, workspace_root: PathBuf) -> Self {
         let (tx, rx) = unbounded_channel();
-        let theme = Theme::by_name(&config.theme);
+        let found = Theme::find(&config.theme);
+        let missing_theme = found.is_none().then(|| config.theme.clone());
+        let theme = found.unwrap_or_else(Theme::canopy);
         let (keymap, key_warnings) = Keymap::with_overrides(&config.key_overrides());
         crate::ui::util::set_compact(config.compact);
         if let Some(on) = config.mac_key_symbols {
@@ -283,6 +285,9 @@ impl App {
         };
         if !key_warnings.is_empty() {
             app.toast(Level::Error, format!("Config [keys]: {}", key_warnings.join("; ")));
+        }
+        if let Some(name) = missing_theme {
+            app.toast(Level::Warn, format!("No theme called {name:?}; using canopy (canopy --list-themes shows them)"));
         }
         app
     }
