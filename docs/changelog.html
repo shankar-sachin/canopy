@@ -45,10 +45,22 @@
   </div>
 </header>
 <main class="wrap doc">
-  <aside class="toc"><b>On this page</b><a href="#v1-0-10">v1.0.10</a><a href="#v1-0-9">v1.0.9</a><a href="#v1-0-8">v1.0.8</a><a href="#v1-0-7">v1.0.7</a><a href="#v1-0-6">v1.0.6</a><a href="#v1-0-5">v1.0.5</a><a href="#v1-0-4">v1.0.4</a><a href="#v1-0-3">v1.0.3</a><a href="#v1-0-2">v1.0.2</a><a href="#v1-0-1">v1.0.1</a><a href="#v1-0-0">v1.0.0</a><a href="#v0-4-0">v0.4.0</a><a href="#v0-3-0">v0.3.0</a><a href="#v0-2-0">v0.2.0</a><a href="#v0-1-0">v0.1.0</a><a href="#next">What's next</a></aside>
+  <aside class="toc"><b>On this page</b><a href="#v1-0-11">v1.0.11</a><a href="#v1-0-10">v1.0.10</a><a href="#v1-0-9">v1.0.9</a><a href="#v1-0-8">v1.0.8</a><a href="#v1-0-7">v1.0.7</a><a href="#v1-0-6">v1.0.6</a><a href="#v1-0-5">v1.0.5</a><a href="#v1-0-4">v1.0.4</a><a href="#v1-0-3">v1.0.3</a><a href="#v1-0-2">v1.0.2</a><a href="#v1-0-1">v1.0.1</a><a href="#v1-0-0">v1.0.0</a><a href="#v0-4-0">v0.4.0</a><a href="#v0-3-0">v0.3.0</a><a href="#v0-2-0">v0.2.0</a><a href="#v0-1-0">v0.1.0</a><a href="#next">What's next</a></aside>
   <article class="prose">
 
-<div class="release" id="v1-0-10"><h2>v1.0.10 <span class="tag-new">Latest</span></h2><div class="date">September 2026</div>
+<div class="release" id="v1-0-11"><h2>v1.0.11 <span class="tag-new">Latest</span></h2><div class="date">September 2026</div>
+<p><b>Bug fixes</b> across both apps, from a scan of the whole codebase.</p>
+<ul>
+  <li>Checking out a name that is also a file (say a branch called <code>notes</code> when there&#39;s a file <code>notes</code>) could throw away your unsaved edits to that file. Now git only ever reads it as a branch or commit, in both apps.</li>
+  <li>Undo after a rebase (or <code>pull --rebase</code>) now goes back to before the rebase, instead of one step inside it, which changed nothing.</li>
+  <li>Terminal app: tags and branches with non-Latin names (like <code>リリース</code>) no longer crash Canopy when you check them out, tag or reset.</li>
+  <li>History of every branch works in a repository with no commits yet, and on a new branch that has none.</li>
+  <li>Unstaging a file when git hits an unrelated error no longer stages the file&#39;s deletion instead.</li>
+  <li>Windows: links with <code>&amp;</code> in them open correctly in your browser, and the default editor opens files whose path has an <code>&amp;</code>.</li>
+  <li>Settings: an editor or AI command with a tab or line break in it no longer breaks <code>config.toml</code>; <code>~</code> on its own works in <code>workspace_dirs</code>; theme colors like <code>#+12345</code> are rejected.</li>
+</ul></div>
+
+<div class="release" id="v1-0-10"><h2>v1.0.10</h2><div class="date">September 2026</div>
 <p><b>Notifications, one step away</b> in both apps.</p>
 <ul>
   <li>Desktop app: a <b>Notifications</b> page in the sidebar, with a count of unread ones there and on Home. It shows every repository or just this one, unread or all, and says why you got each. Open one in Canopy (pull requests and issues in this repository), view it on GitHub, mark it read, or mark all read.</li>

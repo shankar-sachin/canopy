@@ -146,7 +146,11 @@ impl Git {
         let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
         let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
         if !out.status.success() {
-            return Err(GitError::Failed { cmd, code: out.status.code().unwrap_or(-1), stderr });
+            return Err(GitError::Failed {
+                cmd,
+                code: out.status.code().unwrap_or(-1),
+                stderr: if stderr.trim().is_empty() { stdout } else { stderr },
+            });
         }
         Ok(Output { cmd, stdout, stderr })
     }

@@ -152,10 +152,9 @@ workspace_depth = 3
 }
 
 pub fn expand_tilde(p: &str) -> PathBuf {
-    if let Some(rest) = p.strip_prefix("~/") {
-        if let Some(b) = directories::BaseDirs::new() {
-            return b.home_dir().join(rest);
-        }
+    let rest = if p == "~" { Some("") } else { p.strip_prefix("~/").or_else(|| p.strip_prefix("~\\")) };
+    if let (Some(rest), Some(b)) = (rest, directories::BaseDirs::new()) {
+        return b.home_dir().join(rest);
     }
     PathBuf::from(p)
 }
@@ -169,6 +168,14 @@ mod tests {
         let c: Config = toml::from_str(Config::EXAMPLE).unwrap();
         assert_eq!(c.theme, "canopy");
         assert_eq!(c.workspace_dirs, vec!["~/code"]);
+    }
+
+    #[test]
+    fn tilde_expands() {
+        let home = directories::BaseDirs::new().unwrap().home_dir().to_path_buf();
+        assert_eq!(expand_tilde("~"), home);
+        assert_eq!(expand_tilde("~/code"), home.join("code"));
+        assert_eq!(expand_tilde("/srv/x"), PathBuf::from("/srv/x"));
     }
 
     #[test]

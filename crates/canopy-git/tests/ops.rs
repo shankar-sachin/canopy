@@ -44,6 +44,40 @@ async fn empty_repo_status_and_log() {
     assert_eq!(st.branch.head.as_deref(), Some("main"));
     assert!(st.is_clean());
     assert!(git.log(&LogQuery::default()).await.unwrap().is_empty());
+    // Every branch at once works before the first commit too.
+    assert!(git.log(&LogQuery { all: true, ..Default::default() }).await.unwrap().is_empty());
+    // Unstaging a new file before the first commit takes it out of the index.
+    write(&dir, "new.txt", "x\n");
+    git.stage(&["new.txt"]).await.unwrap();
+    git.unstage(&["new.txt"]).await.unwrap();
+    assert_eq!(git.status().await.unwrap().files[0].kind, FileKind::Untracked);
+}
+
+#[tokio::test]
+async fn all_branches_from_an_orphan_branch() {
+    let dir = repo();
+    let git = Git::open(dir.path()).await.unwrap();
+    write(&dir, "a.txt", "a\n");
+    commit_all(&git, "on main").await;
+    sh(dir.path(), &["switch", "-q", "--orphan", "fresh"]);
+    let log = git.log(&LogQuery { all: true, ..Default::default() }).await.unwrap();
+    assert_eq!(log[0].subject, "on main");
+}
+
+#[tokio::test]
+async fn checkout_never_treats_a_name_as_a_file() {
+    let dir = repo();
+    let git = Git::open(dir.path()).await.unwrap();
+    write(&dir, "notes", "v1\n");
+    commit_all(&git, "first").await;
+    write(&dir, "notes", "unsaved edit\n");
+    // "notes" is a file, not a branch: nothing may be thrown away.
+    assert!(git.checkout("notes").await.is_err());
+    assert_eq!(read(&dir, "notes"), "unsaved edit\n");
+    // A bare commit id still works (detached HEAD).
+    let oid = sh(dir.path(), &["rev-parse", "HEAD"]).trim().to_string();
+    git.checkout(&oid).await.unwrap();
+    assert_eq!(git.status().await.unwrap().branch.head, None);
 }
 
 #[tokio::test]

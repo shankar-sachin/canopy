@@ -61,6 +61,22 @@ pub fn parse_reflog(out: &str) -> Result<Vec<ReflogEntry>, GitError> {
         .collect()
 }
 
+/// Where HEAD was before the latest action in `reflog` (newest first), for
+/// undo. A rebase writes one entry per step (`rebase (start)`, `(pick)`,
+/// ..., `(finish)`), so a finished rebase counts as one action: the answer
+/// is the entry before its `(start)`. `None` when there's nothing to go back to.
+pub fn before_last_action(reflog: &[ReflogEntry]) -> Option<&ReflogEntry> {
+    let last = reflog.first()?;
+    // "rebase (finish): ...", "rebase -i (finish): ...", "pull --rebase (finish): ..."
+    if let Some((op, _)) = last.subject.split_once(" (finish)") {
+        let start = format!("{op} (start)");
+        if let Some(i) = reflog.iter().position(|e| e.subject.starts_with(&start)) {
+            return reflog.get(i + 1);
+        }
+    }
+    reflog.get(1)
+}
+
 fn records(out: &str) -> impl Iterator<Item = &str> {
     out.split(RS).map(|r| r.trim_start_matches('\n')).filter(|r| !r.is_empty())
 }
@@ -86,6 +102,35 @@ mod tests {
     fn subject_may_contain_commas() {
         let out = "a\x1fa\x1f\x1fX\x1fx@x\x1f1\x1f\x1ffix a, b, and c\x1e";
         assert_eq!(parse_commits(out).unwrap()[0].subject, "fix a, b, and c");
+    }
+
+    #[test]
+    fn undo_goes_back_before_a_whole_rebase() {
+        let e = |oid: &str, subject: &str| ReflogEntry {
+            oid: oid.into(),
+            selector: String::new(),
+            subject: subject.into(),
+            time: 0,
+        };
+        let rebase = [
+            e("d", "rebase (finish): returning to refs/heads/feature"),
+            e("d", "rebase (pick): second"),
+            e("c", "rebase (pick): first"),
+            e("m", "rebase (start): checkout main"),
+            e("f", "commit: second"),
+            e("g", "commit: first"),
+        ];
+        assert_eq!(before_last_action(&rebase).unwrap().oid, "f");
+        let pull = [
+            e("d", "pull --rebase (finish): returning to refs/heads/main"),
+            e("c", "pull --rebase (pick): mine"),
+            e("u", "pull --rebase (start): checkout u"),
+            e("a", "commit: mine"),
+        ];
+        assert_eq!(before_last_action(&pull).unwrap().oid, "a");
+        assert_eq!(before_last_action(&rebase[4..]).unwrap().oid, "g");
+        assert!(before_last_action(&rebase[5..]).is_none());
+        assert!(before_last_action(&[]).is_none());
     }
 
     #[test]
