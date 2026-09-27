@@ -202,6 +202,7 @@ fn main() {
             github::gh_pr,
             github::gh_home,
             github::gh_issues,
+            github::gh_notifications,
             github::gh_issue,
             github::gh_runs,
             github::gh_run_jobs,

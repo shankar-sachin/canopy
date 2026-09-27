@@ -37,6 +37,8 @@ pub struct GithubState {
     pub branch_pr: Option<Option<PullRequest>>,
     /// Home card: PRs waiting for the viewer's review.
     pub review_requests: Option<usize>,
+    /// Unread notifications in every repository (header and Home card).
+    pub unread: Option<usize>,
     /// Issues tab: showing issues or notifications.
     pub issues_view: IssuesView,
     pub notifications: Vec<Notification>,
@@ -330,8 +332,10 @@ pub fn load_home(app: &mut App) {
             Some(b) => gh.pr_for_branch(b).await.ok().flatten(),
             None => None,
         };
-        let reviews = gh.pr_list(PrFilter::ReviewRequested, 50).await.ok().map(|v| v.len());
-        Msg::GhHome { branch, pr: pr.map(Box::new), reviews }
+        let (reviews, unread) = tokio::join!(gh.pr_list(PrFilter::ReviewRequested, 50), gh.notifications(false, false));
+        let (reviews, unread) =
+            (reviews.ok().map(|v| v.len()), unread.ok().map(|v| v.iter().filter(|n| n.unread).count()));
+        Msg::GhHome { branch, pr: pr.map(Box::new), reviews, unread }
     });
 }
 

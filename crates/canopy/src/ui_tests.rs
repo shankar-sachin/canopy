@@ -1763,6 +1763,35 @@ async fn notifications_view() {
 }
 
 #[tokio::test]
+async fn unread_count_and_alt_n_from_anywhere() {
+    let dir = demo_repo();
+    let bin = TempDir::new().unwrap();
+    let gh = fake_gh(bin.path(), true);
+    let mut app = github_app(dir.path(), &gh).await;
+    // The header counts unread notifications in every repo, with the key.
+    let s = render(&mut app, 150, 30);
+    if std::env::var("CANOPY_PRINT").is_ok() {
+        println!("{s}");
+    }
+    let header = s.lines().find(|l| l.contains("canopy")).unwrap_or_default();
+    assert!(header.contains("● 2 unread"), "{header}");
+    let key = crate::keymap::pretty_key("alt-n");
+    assert!(header.contains(&key), "{header}");
+    assert!(s.contains("2 unread notification(s)"), "{s}");
+
+    // alt-n from History jumps to the unread inbox for every repository.
+    press(&mut app, KeyCode::Char('3')).await;
+    crate::input::handle_key(&mut app, KeyEvent::new(KeyCode::Char('n'), KeyModifiers::ALT));
+    app.settle().await;
+    assert_eq!(app.screen, Screen::Issues);
+    assert_eq!(app.github.issues_view, crate::github::IssuesView::Notifications);
+    let s = render(&mut app, 150, 30);
+    assert!(s.contains("Add CSV parser") && s.contains("2 unread"), "{s}");
+    let calls = gh_calls(bin.path());
+    assert!(calls.iter().any(|c| c.starts_with("api --method GET notifications -f all=false")), "{calls:?}");
+}
+
+#[tokio::test]
 async fn releases_view() {
     let dir = demo_repo();
     let bin = TempDir::new().unwrap();

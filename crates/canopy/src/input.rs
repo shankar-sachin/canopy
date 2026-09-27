@@ -206,6 +206,20 @@ pub fn do_action(app: &mut App, action: Action) {
                 }
             }
         },
+        ShowNotifications => {
+            // Unread, from every repository: the same inbox the header counts.
+            let gh = &mut app.github;
+            gh.issues_view = crate::github::IssuesView::Notifications;
+            let changed = !gh.notif_everywhere || gh.notif_include_read;
+            gh.notif_everywhere = true;
+            gh.notif_include_read = false;
+            app.set_selected(Screen::Issues, 0);
+            *app.list(Screen::Issues).offset_mut() = 0;
+            goto(app, Screen::Issues);
+            if changed || app.github.notif_loaded {
+                crate::github::load_notifications(app);
+            }
+        }
         Search => {
             let cur = app.filters.get(&app.screen).cloned().unwrap_or_default();
             app.modal =
