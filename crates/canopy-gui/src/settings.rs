@@ -29,6 +29,12 @@ pub struct Settings {
     pub editor: String,
     /// The "New to git?" card on Home was dismissed.
     pub seen_intro: bool,
+    /// macOS has asked whether Canopy may open Terminal windows.
+    pub automation_asked: bool,
+    /// Now and then, suggest the terminal app (when it isn't installed).
+    pub terminal_tip: bool,
+    /// Unix time the terminal app was last suggested.
+    pub last_terminal_tip: i64,
 }
 
 impl Default for Settings {
@@ -43,6 +49,9 @@ impl Default for Settings {
             ai_assistant: "auto".into(),
             editor: "system".into(),
             seen_intro: false,
+            automation_asked: false,
+            terminal_tip: true,
+            last_terminal_tip: 0,
         }
     }
 }
@@ -288,6 +297,47 @@ pub async fn environment() -> Environment {
     }
 }
 
+// ------------------------------------------------------------------ automation
+
+/// Get macOS to ask, early, whether Canopy may control Terminal (Fix with AI
+/// and terminal editors need it). macOS only asks when an app actually sends
+/// Terminal an Apple Event, so send a harmless one, and only if Terminal is
+/// already running (so this never opens it). Returns "asked" once macOS has
+/// an answer, "later" when Terminal isn't running, "denied", or "skipped"
+/// off macOS.
+#[tauri::command]
+pub async fn ask_automation() -> &'static str {
+    if !cfg!(target_os = "macos") {
+        return "skipped";
+    }
+    let script = r#"if application "Terminal" is running then
+    tell application "Terminal" to count windows
+    return "asked"
+end if
+return "later""#;
+    let out = tokio::process::Command::new("osascript")
+        .args(["-e", script])
+        .stdin(std::process::Stdio::null())
+        .output()
+        .await;
+    automation_answer(out.ok().map(|o| {
+        (
+            o.status.success(),
+            String::from_utf8_lossy(&o.stdout).into_owned(),
+            String::from_utf8_lossy(&o.stderr).into_owned(),
+        )
+    }))
+}
+
+fn automation_answer(out: Option<(bool, String, String)>) -> &'static str {
+    match out {
+        Some((true, stdout, _)) if stdout.trim() == "asked" => "asked",
+        Some((true, _, _)) => "later",
+        Some((false, _, stderr)) if stderr.contains("-1743") => "denied",
+        _ => "later",
+    }
+}
+
 // ------------------------------------------------------------------ profile
 
 /// Who's using Canopy: the GitHub account (from gh) and the git name.
@@ -463,6 +513,15 @@ mod tests {
         assert_eq!(update_command(Install::Homebrew), Some("brew upgrade --cask canopy-desktop"));
         assert_eq!(update_command(Install::Winget), Some("winget upgrade shankars.canopy-desktop"));
         assert_eq!(update_command(Install::Manual), None);
+    }
+
+    #[test]
+    fn automation_answers() {
+        assert_eq!(automation_answer(Some((true, "asked\n".into(), String::new()))), "asked");
+        assert_eq!(automation_answer(Some((true, "later\n".into(), String::new()))), "later");
+        let denied = "execution error: Not authorized to send Apple events to Terminal. (-1743)".to_string();
+        assert_eq!(automation_answer(Some((false, String::new(), denied))), "denied");
+        assert_eq!(automation_answer(None), "later");
     }
 
     #[test]

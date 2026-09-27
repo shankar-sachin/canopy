@@ -41,6 +41,10 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       - run: cargo build --release --locked --target ${{ matrix.target }} -p canopy-git-tui
+        env:
+          # Windows: link the C runtime in, so canopy.exe runs on a clean
+          # machine without the Visual C++ redistributable (winget checks this).
+          RUSTFLAGS: ${{ runner.os == 'Windows' && '-C target-feature=+crt-static' || '' }}
       - name: Package (macOS, Linux)
         if: runner.os != 'Windows'
         run: |

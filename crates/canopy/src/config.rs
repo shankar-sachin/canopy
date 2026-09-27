@@ -33,8 +33,6 @@ pub struct Config {
     pub keys: BTreeMap<String, KeySpec>,
     /// Number of commits loaded per log page.
     pub log_page_size: usize,
-    /// Now and then, mention Canopy Desktop when Canopy starts.
-    pub desktop_tip: bool,
     /// "Fix with AI" (A on a failed run): auto, claude, codex, off, or a
     /// command line with {prompt} where the prompt goes.
     pub ai: String,
@@ -81,7 +79,6 @@ impl Default for Config {
             compact: false,
             splash: true,
             log_page_size: 300,
-            desktop_tip: true,
             ai: "auto".into(),
             ai_open: "tab".into(),
             editor: None,
@@ -134,7 +131,6 @@ teach_mode = true           # show the git command behind every action
 confirm_destructive = true
 compact = false             # true: tighter layout, no gaps between panels
 splash = true               # the tree animation when Canopy starts
-desktop_tip = true          # now and then, mention Canopy Desktop at startup
 ai = "auto"                 # Fix with AI (A on a failed run): auto | claude | codex | off | "my-ai {prompt}"
 ai_open = "tab"             # where it opens: tab | window | here
 # editor = "code --wait"    # for e; unset uses $VISUAL / $EDITOR / vi

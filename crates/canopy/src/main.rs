@@ -83,6 +83,18 @@ async fn main() -> anyhow::Result<()> {
         print!("{}", Config::EXAMPLE);
         return Ok(());
     }
+    // Started without a terminal (a script, an installer's check): say what
+    // Canopy is instead of failing to draw.
+    {
+        use std::io::IsTerminal;
+        if !std::io::stdout().is_terminal() || !std::io::stdin().is_terminal() {
+            println!(
+                "canopy {}: git and GitHub in your terminal. Run `canopy` in a terminal, inside a repository (`canopy --help` for options).",
+                env!("CARGO_PKG_VERSION")
+            );
+            return Ok(());
+        }
+    }
     if std::process::Command::new("git").arg("--version").output().is_err() {
         anyhow::bail!("git was not found on your PATH. Install it first (e.g. `brew install git`).");
     }
@@ -120,19 +132,6 @@ async fn main() -> anyhow::Result<()> {
         setup::ask(&mut app);
     } else if first_run {
         app.modal = modal::Modal::Welcome;
-    } else if app.config.desktop_tip && app.toast.is_none() {
-        // Now and then, mention the desktop app (off with desktop_tip = false).
-        let stamp = config::Config::path().and_then(|p| p.parent().map(|d| d.join("desktop-tip")));
-        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
-        if stamp.is_some_and(|s| input::desktop_tip_due(&s, now)) {
-            let key = app.keymap.key_for(&[keymap::Ctx::Global], keymap::Action::GetDesktop).map(keymap::pretty_key);
-            let how = key.map_or("search \"desktop\" in the palette".to_string(), |k| format!("press {k}"));
-            app.toast_for(
-                app::Level::Info,
-                format!("Prefer a window? Canopy Desktop is the friendly app (preview): {how}"),
-                12,
-            );
-        }
     }
 
     let mut terminal = terminal::init();

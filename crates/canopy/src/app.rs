@@ -592,7 +592,17 @@ impl App {
         }
         #[allow(unreachable_code)]
         let open_in = OpenIn::from_setting(&self.config.ai_open);
-        match launch(&l.root, &l.argv, open_in, true) {
+        let launched = match launch(&l.root, &l.argv, open_in, true) {
+            // macOS said no to a new window: run it here instead, and say how
+            // to allow it next time.
+            Launched::Blocked(app) => {
+                self.toast_for(Level::Error, canopy_gh::assist::blocked_help(app), 12);
+                Launched::RunHere(l.argv.clone())
+            }
+            other => other,
+        };
+        match launched {
+            Launched::Blocked(_) => {}
             Launched::Opened(place) => {
                 self.toast_for(Level::Success, format!("{}  Opened {} in {place}", l.headline, l.assistant), 10);
             }

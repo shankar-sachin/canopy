@@ -230,6 +230,7 @@ pub fn open_with_editor(file: &Path, setting: &str) -> Res<String> {
         let dir = file.parent().unwrap_or(Path::new("."));
         match canopy_gh::assist::launch(dir, &argv, canopy_gh::assist::OpenIn::Window, false) {
             canopy_gh::assist::Launched::Opened(w) if !w.starts_with("nothing") => Ok(format!("{name} in {w}")),
+            canopy_gh::assist::Launched::Blocked(app) => Err(canopy_gh::assist::blocked_help(app)),
             _ => Err("Couldn't open a terminal for the editor".into()),
         }
     } else {

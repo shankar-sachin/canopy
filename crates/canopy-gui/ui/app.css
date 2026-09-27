@@ -255,6 +255,7 @@ button { font: inherit; color: inherit; }
   max-width: 420px; padding: 10px 14px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border-2);
   box-shadow: var(--shadow); font-size: 13px; animation: toast-in .18s ease-out;
 }
+.toast > .btn { display: block; margin-top: 8px; }
 .toast.error { border-color: color-mix(in srgb, var(--red) 60%, transparent); }
 .toast.error b { color: var(--red); }
 .toast code { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; white-space: pre-wrap; }
