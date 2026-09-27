@@ -71,6 +71,78 @@ addEventListener("resize", fitAll);
 if (document.fonts) document.fonts.ready.then(fitAll);
 fitAll();
 
+// ---------- Which system, and which releases ----------
+
+/// The visitor's system: "mac", "windows", "linux", or "" (a phone or
+/// tablet, or something else). iPads say they're Macs, so check for touch.
+function visitorOS() {
+  // ?os=mac|windows|linux shows the page as another system would see it.
+  const forced = new URLSearchParams(location.search).get("os");
+  if (forced === "mac" || forced === "windows" || forced === "linux") return forced;
+  const ua = navigator.userAgent.toLowerCase();
+  const p = ((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "").toLowerCase();
+  if (/iphone|ipad|ipod|android/.test(ua)) return "";
+  if (p.startsWith("mac") || ua.includes("mac os x")) return navigator.maxTouchPoints > 1 ? "" : "mac";
+  if (p.startsWith("win") || ua.includes("windows")) return "windows";
+  if (p.includes("linux") || ua.includes("linux") || ua.includes("x11")) return "linux";
+  return "";
+}
+
+/// Canopy's releases from GitHub (newest first), kept for an hour so moving
+/// between pages doesn't ask again. Each: { tag, date, url, assets: [{ name, url, size }] }.
+let releasesPromise = null;
+function canopyReleases() {
+  if (releasesPromise) return releasesPromise;
+  releasesPromise = (async () => {
+    try {
+      const cached = JSON.parse(sessionStorage.getItem("canopy-releases") || "null");
+      if (cached && Date.now() - cached.at < 3600e3) return cached.list;
+    } catch (e) {}
+    const r = await fetch("https://api.github.com/repos/shankar-sachin/canopy/releases?per_page=100");
+    if (!r.ok) throw new Error("GitHub answered " + r.status);
+    const list = (await r.json())
+      .filter((x) => !x.draft)
+      .map((x) => ({
+        tag: x.tag_name,
+        date: x.published_at,
+        pre: x.prerelease,
+        url: x.html_url,
+        assets: x.assets.map((a) => ({ name: a.name, url: a.browser_download_url, size: a.size })),
+      }));
+    try { sessionStorage.setItem("canopy-releases", JSON.stringify({ at: Date.now(), list })); } catch (e) {}
+    return list;
+  })();
+  releasesPromise.catch(() => { releasesPromise = null; });
+  return releasesPromise;
+}
+
+// Home page: the install command for this visitor's system.
+const heroCmd = document.getElementById("brew-cmd");
+const heroNote = document.getElementById("hero-os");
+if (heroCmd && heroNote) {
+  const os = visitorOS();
+  if (os === "windows") {
+    heroCmd.textContent = "winget install shankars.canopy-desktop";
+    heroNote.textContent = "For Windows 11, with winget.";
+  } else if (os === "linux") {
+    heroNote.textContent = "For Debian and Ubuntu (x86_64).";
+    heroCmd.textContent = "curl -LO https://github.com/shankar-sachin/canopy/releases/latest/…";
+    canopyReleases().then((list) => {
+      const rel = list.find((r) => !r.pre && r.assets.some((a) => a.name.endsWith("-amd64.deb")));
+      const deb = rel && rel.assets.find((a) => a.name.endsWith("-amd64.deb"));
+      if (!deb) throw new Error("no .deb");
+      heroCmd.textContent = `curl -LO ${deb.url} && sudo apt install ./${deb.name}`;
+    }).catch(() => {
+      heroCmd.textContent = "https://github.com/shankar-sachin/canopy/releases/latest";
+      heroNote.textContent = "For Linux: get the .deb or AppImage from the latest release.";
+    });
+  } else if (os === "mac") {
+    heroNote.textContent = "For macOS, with Homebrew.";
+  } else {
+    heroNote.textContent = "Canopy runs on macOS, Windows and Linux.";
+  }
+}
+
 // Copy buttons: data-copy-text, or data-copy="<element id>". One delegated
 // handler, with a fallback for browsers that refuse the Clipboard API.
 function copyText(text) {

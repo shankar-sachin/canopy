@@ -68,6 +68,7 @@
   }
   .install .prompt { color: var(--green); user-select: none; }
   .install code { overflow-x: auto; white-space: nowrap; min-width: 0; }
+  .hero .install { max-width: min(100%, 720px); }
   .copy {
     flex: none; display: inline-grid; place-items: center; width: 32px; height: 30px; padding: 0;
     border: 1px solid var(--border-2); background: var(--surface-2); color: var(--muted);
@@ -427,3 +428,34 @@
   }
   /* Long inline code (paths, commands) wraps instead of pushing past the edge. */
   .prose :not(pre) > code, .wprose :not(pre) > code { overflow-wrap: anywhere; }
+
+  /* ---------- downloads ---------- */
+  .dl { padding-bottom: 64px; }
+  .dl-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; margin: 8px 0 28px; }
+  .dl-bar .surface-switch { margin: 0; }
+  .dl-version { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
+  .dl-version select { font: 500 14px var(--sans); color: var(--text); background: var(--surface); border: 1px solid var(--border-2); border-radius: 8px; padding: 7px 10px; }
+  .dl-meta { color: var(--faint); font-size: 14px; }
+  .dl-latest { display: inline-block; font: 700 11px var(--mono); color: var(--on-accent); background: var(--green); border-radius: 999px; padding: 2px 8px; margin-right: 4px; }
+  .dl-grid { display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 980px) { .dl-grid { grid-template-columns: 1fr; } }
+  .dl-os { border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; background: var(--surface); min-width: 0; }
+  .dl-os.mine { border-color: color-mix(in srgb, var(--green) 55%, var(--border)); }
+  .dl-os-h { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .dl-os-h h2 { font-size: 22px; margin: 0; }
+  .dl-mine { font: 600 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--green); border: 1px solid color-mix(in srgb, var(--green) 45%, transparent); border-radius: 999px; padding: 2px 8px; }
+  .dl-cmd { margin: 0 0 14px; }
+  .dl-cmd .install { display: flex; width: 100%; font-size: 13px; padding: 9px 9px 9px 14px; box-shadow: none; }
+  .dl-cmd .install code { flex: 1; }
+  .dl-note { color: var(--muted); font-size: 13.5px; margin: 8px 0 0; }
+  .dl-files { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 8px; }
+  .dl-files li { display: flex; align-items: center; gap: 10px; }
+  .dl-file { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border: 1px solid var(--border-2); border-radius: 10px; color: var(--text); background: var(--bg-2); min-width: 0; }
+  .dl-file:hover { border-color: var(--green); }
+  .dl-file span { color: var(--faint); font-size: 13px; }
+  .dl-sum { font: 12px var(--mono); color: var(--faint); }
+  .dl-empty { color: var(--muted); padding: 24px 0; }
+  .dl-mac-note { margin-top: 18px; }
+  .dl-other { margin-top: 22px; color: var(--muted); }
+  .dl-other ul { margin: 10px 0 0; }
+  .dl-foot { margin-top: 36px; color: var(--faint); font-size: 14px; }
