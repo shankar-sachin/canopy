@@ -504,7 +504,7 @@ fn welcome(f: &mut Frame, area: Rect, t: &Theme) {
     let beside = [
         Line::default(),
         Line::styled("Welcome to Canopy", t.accent()),
-        Line::styled("A git dashboard for your terminal.", t.muted()),
+        Line::styled("Git and GitHub, everything from the keyboard.", t.muted()),
         Line::default(),
     ];
     let mut lines: Vec<Line> = crate::ui::logo::lines(1)

@@ -9,7 +9,7 @@ cask "canopy-desktop" do
 
   url "https://github.com/shankar-sachin/canopy/releases/download/v#{version}/canopy-desktop-v#{version}-#{arch}-apple-darwin.dmg"
   name "canopy"
-  desc "Beautiful, powerful git dashboard"
+  desc "Friendly desktop app for git and GitHub"
   homepage "https://shankar-sachin.github.io/canopy/"
 
   app "canopy.app"

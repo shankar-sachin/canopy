@@ -10,6 +10,7 @@ const su = {
   remote: "existing", // create | existing
   busy: false,
   log: [], // commands that ran, shown at the end
+  connectOnly: false, // opened from Home's "Connect to GitHub…" on a repo that exists
 };
 
 function setupPanel() {
@@ -23,8 +24,35 @@ async function startSetup(path) {
   su.protocol = su.info.suggested;
   su.remote = su.info.gh_login ? "create" : "existing";
   su.log = [];
+  su.connectOnly = false;
   $("#welcome").hidden = false;
   $("#shell").hidden = true;
+  showSetup();
+}
+
+// Home's "Connect to GitHub…": the open repository has no remote yet, so
+// start at the Connect step.
+async function connectRemote() {
+  const o = state.overview;
+  if (!o) return;
+  su.info = await invoke("inspect_folder", { path: o.root });
+  su.step = "remote";
+  su.protocol = su.info.suggested;
+  su.remote = su.info.gh_login ? "create" : "existing";
+  su.log = [];
+  su.connectOnly = true;
+  showSetup();
+}
+
+// Leaves the setup panel: back to the welcome screen, or to the repository
+// when we came from Home.
+function leaveSetup() {
+  closeSetup();
+  if (su.connectOnly) return refresh();
+  return showWelcome();
+}
+
+function showSetup() {
   let wrap = $("#setup-wrap");
   if (!wrap) {
     wrap = document.createElement("div");
@@ -46,6 +74,7 @@ function closeSetup() {
 const STEPS = [["ask", "No repository"], ["init", "Set it up"], ["remote", "Connect"]];
 
 function stepper() {
+  if (su.connectOnly) return "";
   const i = STEPS.findIndex(([id]) => id === su.step);
   return `<ol class="stepper">${STEPS.map(([id, l], k) => `<li class="${k < i || su.step === "done" ? "done" : k === i ? "on" : ""}"><span>${k + 1}</span>${l}</li>`).join("")}</ol>`;
 }
@@ -117,10 +146,10 @@ function setupHtml() {
   }
   // done
   return `${close}${stepper()}
-    <h3>✓ ${esc(f.name)} is ready</h3>
+    <h3>✓ ${esc(f.name)} is ${su.connectOnly ? "on GitHub" : "ready"}</h3>
     <p>Here's what ran, so you can do it yourself next time:</p>
     <pre class="log selectable">${esc(su.log.join("\n"))}</pre>
-    <div class="modal-actions"><button class="btn primary" data-su="open">Open it</button></div>`;
+    <div class="modal-actions"><button class="btn primary" data-su="open">${su.connectOnly ? "Done" : "Open it"}</button></div>`;
 }
 
 function drawSetup() {
@@ -160,8 +189,7 @@ async function onSetupClick(e) {
   const f = su.info;
   switch (b.dataset.su) {
     case "cancel":
-      closeSetup();
-      return showWelcome();
+      return leaveSetup();
     case "other":
       closeSetup();
       return chooseRepo();
@@ -222,22 +250,23 @@ async function onSetupClick(e) {
       return drawSetup();
     }
     case "skip":
+      if (su.connectOnly) return leaveSetup();
       su.step = "done";
       return drawSetup();
     case "open":
+      if (su.connectOnly) return leaveSetup();
       closeSetup();
       return openRepo(f.path);
   }
 }
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && $("#setup-wrap") && !su.busy) {
-    closeSetup();
-    showWelcome();
-  }
+  if (e.key === "Escape" && $("#setup-wrap") && !su.busy) leaveSetup();
 });
 
 $("#new-btn").addEventListener("click", async () => {
   const path = await invoke("pick_folder");
   if (path) startSetup(path);
 });
+
+ACTIONS.connect = { label: "Connect to GitHub…", run: connectRemote };

@@ -279,7 +279,7 @@ impl Action {
             RawGit => "run git command",
             ToggleTeach => "toggle teach mode",
             CycleTheme => "cycle theme",
-            GetDesktop => "get Canopy Desktop, the desktop app (preview)",
+            GetDesktop => "get Canopy Desktop, the friendly desktop app (preview)",
             StashPush => "stash changes",
             Up => "up",
             Down => "down",

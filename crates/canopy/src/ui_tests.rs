@@ -1308,7 +1308,11 @@ async fn export_preview_frames() {
     std::fs::write(out.join("tui-github-login.html"), page(&frame_html(&mut app, 118, 30))).unwrap();
     // Home, with the version in the header and the desktop tip.
     press(&mut app, KeyCode::Char('1')).await;
-    app.toast_for(crate::app::Level::Info, "Tired of the terminal? Try Canopy Desktop (preview): press ⌥D", 12);
+    app.toast_for(
+        crate::app::Level::Info,
+        "Prefer a window? Canopy Desktop is the friendly app (preview): press ⌥D",
+        12,
+    );
     std::fs::write(out.join("tui-home-tip.html"), page(&frame_html(&mut app, 118, 30))).unwrap();
     // The Get Canopy Desktop menu.
     crate::input::handle_key(&mut app, KeyEvent::new(KeyCode::Char('d'), KeyModifiers::ALT));

@@ -1,6 +1,6 @@
 [package]
 name = "canopy-git-tui"
-description = "A beautiful, powerful git dashboard for your terminal"
+description = "Canopy for the terminal: git and GitHub, everything from the keyboard"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -169,9 +169,46 @@ function syncPills(b) {
   if (!b.upstream) return `<span class="pill">not published</span>`;
   if (!b.ahead && !b.behind) return `<span class="pill green">✓ in sync</span>`;
   let out = "";
-  if (b.ahead) out += `<span class="pill teal" title="Commits to push">↑ <b>${b.ahead}</b></span>`;
-  if (b.behind) out += `<span class="pill amber" title="Commits to pull">↓ <b>${b.behind}</b></span>`;
+  if (b.ahead) out += `<span class="pill teal" title="${GLOSSARY.ahead}">↑ <b>${b.ahead}</b></span>`;
+  if (b.behind) out += `<span class="pill amber" title="${GLOSSARY.behind}">↓ <b>${b.behind}</b></span>`;
   return out;
+}
+
+// Plain-language meanings, for the tiles and pills on Home.
+const GLOSSARY = {
+  Staged: "Changes you've picked for your next commit.",
+  Changed: "Files you've edited (or added) since the last commit that aren't staged yet.",
+  Conflicts: "Files where two versions changed the same lines. Pick which one to keep in Changes.",
+  Stashes: "Changes you put aside to get a clean working folder. Bring them back from Stash.",
+  Branches: "Separate lines of work. You can switch between them without losing anything.",
+  Remotes: "Copies of this repository somewhere else, like GitHub. You push to them and pull from them.",
+  ahead: "Commits you've made here that aren't on the remote yet. Push to send them.",
+  behind: "Commits on the remote that you don't have yet. Pull to get them.",
+  tracks: "The branch on the remote that this branch pushes to and pulls from.",
+};
+
+// Tiles whose "?" is open (kept across refreshes).
+const shownMeanings = new Set();
+
+/// The shortcut key for Undo, as this computer writes it.
+function undoKey() {
+  return /Mac/.test(navigator.platform) ? "⌘Z" : "Ctrl+Z";
+}
+
+// The "New to git?" card, shown on Home until it's dismissed.
+function introCard() {
+  if (state.settings?.seen_intro !== false) return "";
+  const site = "https://shankar-sachin.github.io/canopy/wiki/";
+  return `<div class="card span-12 intro">
+    <div class="card-h"><h3>New to git? Four ideas</h3><button class="btn icon ghost" type="button" data-intro="dismiss" title="Got it">${icon("x", 14)}</button></div>
+    <ol class="intro-steps">
+      <li><b>Change</b><span>Edit files like you always do. Canopy lists them under <em>Changed</em>.</span></li>
+      <li><b>Stage</b><span>Pick what goes into your next save point. It moves to <em>Staged</em>.</span></li>
+      <li><b>Commit</b><span>Save a snapshot with a short message. You can always get back to it.</span></li>
+      <li><b>Push</b><span>Send your commits to GitHub, as a backup and to share them.</span></li>
+    </ol>
+    <p class="faint small">Made a mistake? Undo (${undoKey()}) takes back the last commit, reset or checkout. More: <a href="#" data-url="${site}git-basics.html">Git in ten minutes</a> · <a href="#" data-url="${site}daily-workflow.html">Your daily workflow</a></p>
+  </div>`;
 }
 
 const STATE_WORDS = { Merging: "Merging", Rebasing: "Rebasing", CherryPicking: "Cherry-picking", Reverting: "Reverting", Bisecting: "Bisecting" };
@@ -201,7 +238,7 @@ function renderHome(o) {
     ? `<ul class="branches">${locals.slice(0, 10).map(branchRow).join("")}</ul>`
     : `<div class="empty">No branches yet.</div>`;
   const stateBadge = o.state !== "Clean" ? `<span class="pill red">${STATE_WORDS[o.state] || o.state}</span>` : "";
-  const upstream = b.upstream ? `<span class="pill">tracks <b>${esc(b.upstream)}</b></span>` : "";
+  const upstream = b.upstream ? `<span class="pill" title="${GLOSSARY.tracks}">tracks <b>${esc(b.upstream)}</b></span>` : "";
 
   return `<div class="grid">
     <div class="card hero span-12">
@@ -215,7 +252,8 @@ function renderHome(o) {
         </div>
       </div>
     </div>
-    <div class="tiles span-12">${tiles.map(([l, n, cls]) => `<div class="tile ${cls}"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("")}</div>
+    ${introCard()}
+    <div class="tiles span-12">${tiles.map(([l, n, cls]) => `<div class="tile ${cls}" title="${GLOSSARY[l]}"><div class="n">${n}</div><div class="l">${l}<button class="what" type="button" data-what="${l}" aria-label="What are ${l.toLowerCase()}?">?</button></div><p class="meaning"${shownMeanings.has(l) ? "" : " hidden"}>${GLOSSARY[l]}</p></div>`).join("")}</div>
     <div class="card span-12">
       <div class="card-h"><h3>Next steps</h3></div>
       <ul class="steps">${steps}</ul>
@@ -319,6 +357,10 @@ function go(page) {
 
 // ---------------------------------------------------------------- running git
 
+// Actions Undo can take back (a hard reset's lost edits can't come back, so
+// it isn't offered there).
+const UNDOABLE_OPS = ["checkout", "checkout-remote", "merge", "cherry-pick", "revert", "reset-soft", "reset-mixed"];
+
 /// Run a command that changes the repo, show what git ran, then refresh.
 /// Resolves to the result, or null if it failed (the error is shown).
 async function run(label, cmd, args) {
@@ -326,7 +368,8 @@ async function run(label, cmd, args) {
   document.body.classList.add("busy");
   try {
     const res = await invoke(cmd, args);
-    toast(label, { detail: state.settings.show_commands ? res?.cmd : "" });
+    const undoable = cmd === "commit" || (cmd === "git_op" && UNDOABLE_OPS.includes(args?.op));
+    toast(undoable ? `${label}. Undo with ${undoKey()} if that wasn't what you meant.` : label, { detail: state.settings.show_commands ? res?.cmd : "" });
     return res;
   } catch (e) {
     toast(label + " failed", { error: true, detail: String(e) });
@@ -554,6 +597,23 @@ async function refresh({ quiet = false } = {}) {
 }
 
 // ---------------------------------------------------------------- events
+
+// Home's guidance: the tiles' "?" and the intro card.
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("#view [data-what],#view [data-intro],#view .intro [data-url]");
+  if (!t) return;
+  e.preventDefault();
+  if (t.dataset.what) {
+    const w = t.dataset.what;
+    if (!shownMeanings.delete(w)) shownMeanings.add(w);
+    t.closest(".tile").querySelector(".meaning").hidden = !shownMeanings.has(w);
+  } else if (t.dataset.url) openUrl(t.dataset.url);
+  else {
+    await saveSettings({ seen_intro: true });
+    render();
+    toast("Hidden. Settings → General can show it again.");
+  }
+});
 
 document.addEventListener("click", (e) => {
   // Only the sidebar links, "next steps" buttons and the recent-repo list;

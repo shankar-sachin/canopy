@@ -1,4 +1,4 @@
-//! Canopy: a git dashboard for the terminal.
+//! Canopy for the terminal: git and GitHub, everything from the keyboard.
 
 mod app;
 mod config;
@@ -27,7 +27,7 @@ use crate::app::{App, Level};
 use crate::config::Config;
 
 #[derive(Parser, Debug)]
-#[command(name = "canopy", version, about = "A beautiful, powerful git dashboard for your terminal")]
+#[command(name = "canopy", version, about = "Canopy for the terminal: git and GitHub, everything from the keyboard")]
 struct Cli {
     /// Repository to open (defaults to the current directory).
     path: Option<PathBuf>,
@@ -127,7 +127,11 @@ async fn main() -> anyhow::Result<()> {
         if stamp.is_some_and(|s| input::desktop_tip_due(&s, now)) {
             let key = app.keymap.key_for(&[keymap::Ctx::Global], keymap::Action::GetDesktop).map(keymap::pretty_key);
             let how = key.map_or("search \"desktop\" in the palette".to_string(), |k| format!("press {k}"));
-            app.toast_for(app::Level::Info, format!("Tired of the terminal? Try Canopy Desktop (preview): {how}"), 12);
+            app.toast_for(
+                app::Level::Info,
+                format!("Prefer a window? Canopy Desktop is the friendly app (preview): {how}"),
+                12,
+            );
         }
     }
 

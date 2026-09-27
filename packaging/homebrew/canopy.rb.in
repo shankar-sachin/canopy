@@ -4,7 +4,7 @@
 # Installs the prebuilt binary from the GitHub release, so nothing is
 # compiled (Homebrew on Linux needs no C compiler or Rust).
 class Canopy < Formula
-  desc "Beautiful, powerful git dashboard for your terminal"
+  desc "Git and GitHub in your terminal, everything from the keyboard"
   homepage "https://shankar-sachin.github.io/canopy/"
   version "@VERSION@"
   license "MIT"

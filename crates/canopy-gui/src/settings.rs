@@ -27,6 +27,8 @@ pub struct Settings {
     /// Text editor: "system" (the default app), an editor id (code,
     /// cursor, zed, subl, nvim, vim, hx, nano, emacs) or a command line.
     pub editor: String,
+    /// The "New to git?" card on Home was dismissed.
+    pub seen_intro: bool,
 }
 
 impl Default for Settings {
@@ -40,6 +42,7 @@ impl Default for Settings {
             last_update_check: 0,
             ai_assistant: "auto".into(),
             editor: "system".into(),
+            seen_intro: false,
         }
     }
 }
@@ -239,6 +242,19 @@ pub struct Environment {
     pub gh_user: Option<String>,
     pub install: Install,
     pub config_file: Option<String>,
+    /// `canopy --version`, if the terminal app is installed.
+    pub terminal_app: Option<String>,
+    /// How to install the terminal app on this system.
+    pub terminal_install: &'static str,
+}
+
+/// The command that installs the terminal app (`canopy`) on `os`.
+pub fn terminal_install_command(os: &str) -> &'static str {
+    match os {
+        "windows" => "winget install shankars.canopy",
+        "macos" => "brew install shankar-sachin/canopy/canopy",
+        _ => "curl -fsSL https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts/install.sh | sh",
+    }
 }
 
 async fn first_line(program: &str, args: &[&str]) -> Option<String> {
@@ -254,10 +270,11 @@ async fn first_line(program: &str, args: &[&str]) -> Option<String> {
 
 #[tauri::command]
 pub async fn environment() -> Environment {
-    let (git, gh, gh_user) = tokio::join!(
+    let (git, gh, gh_user, terminal_app) = tokio::join!(
         first_line("git", &["--version"]),
         first_line("gh", &["--version"]),
         first_line("gh", &["api", "user", "--jq", ".login"]),
+        first_line("canopy", &["--version"]),
     );
     Environment {
         version: env!("CARGO_PKG_VERSION").into(),
@@ -266,6 +283,8 @@ pub async fn environment() -> Environment {
         gh_user,
         install: refine_install(detect_install()).await,
         config_file: recent::store_path().map(|p| p.display().to_string()),
+        terminal_app,
+        terminal_install: terminal_install_command(std::env::consts::OS),
     }
 }
 
@@ -444,5 +463,12 @@ mod tests {
         assert_eq!(update_command(Install::Homebrew), Some("brew upgrade --cask canopy-desktop"));
         assert_eq!(update_command(Install::Winget), Some("winget upgrade shankars.canopy-desktop"));
         assert_eq!(update_command(Install::Manual), None);
+    }
+
+    #[test]
+    fn terminal_install_commands() {
+        assert_eq!(terminal_install_command("macos"), "brew install shankar-sachin/canopy/canopy");
+        assert_eq!(terminal_install_command("windows"), "winget install shankars.canopy");
+        assert!(terminal_install_command("linux").contains("scripts/install.sh"));
     }
 }
