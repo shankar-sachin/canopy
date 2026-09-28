@@ -41,7 +41,7 @@
   function cmd(text, note) {
     const id = "dl-cmd-" + copyId++;
     return `<div class="dl-cmd"><div class="install"><span class="prompt">$</span><code id="${id}">${esc(text)}</code>
-      <button class="copy" data-copy="${id}" type="button" aria-label="Copy" title="Copy"><svg class="i-copy" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 5.5V3.6A1.1 1.1 0 0 0 9.4 2.5H3.6a1.1 1.1 0 0 0-1.1 1.1v5.8a1.1 1.1 0 0 0 1.1 1.1h1.9"/></svg></button></div>
+      <button class="copy" data-copy="${id}" type="button" aria-label="Copy" title="Copy">${COPY_ICONS}</button></div>
       ${note ? `<p class="dl-note">${note}</p>` : ""}</div>`;
   }
 

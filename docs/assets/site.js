@@ -116,31 +116,73 @@ function canopyReleases() {
   return releasesPromise;
 }
 
-// Home page: the install command for this visitor's system.
+// Home page: the install command, picked with two switches: which app
+// (Desktop | Terminal) and how (Curl | Homebrew; on Windows, PowerShell |
+// winget). Starts on this visitor's system; the choice is remembered.
 const heroCmd = document.getElementById("brew-cmd");
 const heroNote = document.getElementById("hero-os");
-if (heroCmd && heroNote) {
-  const os = visitorOS();
-  if (os === "windows") {
-    heroCmd.textContent = "winget install shankars.canopy-desktop";
-    heroNote.textContent = "For Windows 11, with winget.";
-  } else if (os === "linux") {
-    heroNote.textContent = "For Debian and Ubuntu (x86_64).";
-    heroCmd.textContent = "curl -LO https://github.com/shankar-sachin/canopy/releases/latest/…";
-    canopyReleases().then((list) => {
-      const rel = list.find((r) => !r.pre && r.assets.some((a) => a.name.endsWith("-amd64.deb")));
-      const deb = rel && rel.assets.find((a) => a.name.endsWith("-amd64.deb"));
-      if (!deb) throw new Error("no .deb");
-      heroCmd.textContent = `curl -LO ${deb.url} && sudo apt install ./${deb.name}`;
-    }).catch(() => {
-      heroCmd.textContent = "https://github.com/shankar-sachin/canopy/releases/latest";
-      heroNote.textContent = "For Linux: get the .deb or AppImage from the latest release.";
-    });
-  } else if (os === "mac") {
-    heroNote.textContent = "For macOS, with Homebrew.";
-  } else {
-    heroNote.textContent = "Canopy runs on macOS, Windows and Linux.";
+const heroSwitches = document.getElementById("install-switches");
+if (heroCmd && heroNote && heroSwitches) {
+  const os = visitorOS() || "mac";
+  const RAW = "https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts";
+  const LATEST = "https://github.com/shankar-sachin/canopy/releases/latest";
+  const win = os === "windows";
+  const viaBtn = (v) => heroSwitches.querySelector(`[data-via="${v}"]`);
+  // On Windows the two ways are PowerShell and winget.
+  if (win) { viaBtn("script").textContent = "PowerShell"; viaBtn("pm").textContent = "winget"; }
+  const saved = (() => { try { return JSON.parse(localStorage.getItem("canopy-install") || "{}"); } catch (e) { return {}; } })();
+  let app = saved.app === "terminal" ? "terminal" : "desktop";
+  // Linux has no Homebrew cask for the desktop app, so it starts on curl there.
+  let via = saved.via === "script" || saved.via === "pm" ? saved.via : os === "linux" ? "script" : "pm";
+
+  // A desktop download from the latest release, by the end of its file name.
+  const asset = (suffix) => canopyReleases().then((list) => {
+    const rel = list.find((r) => !r.pre && r.assets.some((a) => a.name.endsWith(suffix)));
+    const a = rel && rel.assets.find((x) => x.name.endsWith(suffix));
+    if (!a) throw new Error("no " + suffix);
+    return a;
+  });
+
+  // [command, note], or a promise of them (commands that name a download).
+  function choice() {
+    const script = via === "script";
+    if (app === "terminal") {
+      if (win) return script ? [`irm ${RAW}/install.ps1 | iex`, "PowerShell, no admin rights needed."] : ["winget install shankars.canopy", "With winget (it installs git too)."];
+      return script
+        ? [`curl -fsSL ${RAW}/install.sh | sh`, `The install script: it checks the download and puts canopy in ~/.local/bin.`]
+        : ["brew install shankar-sachin/canopy/canopy", `For ${os === "linux" ? "Linux" : "macOS"}, with Homebrew (a prebuilt binary).`];
+    }
+    if (win) {
+      if (!script) return ["winget install shankars.canopy-desktop", "For Windows 11, with winget."];
+      return asset("-x86_64-setup.exe").then((a) => [`irm ${a.url} -OutFile ${a.name}; .\\${a.name}`, "PowerShell: downloads the installer and runs it (x64)."]);
+    }
+    if (os === "linux") {
+      if (!script) return ["# Canopy Desktop isn't on Homebrew for Linux: pick Curl", "Homebrew on Linux has no apps (casks). Curl gets the .deb; Downloads has the AppImage."];
+      return asset("-amd64.deb").then((a) => [`curl -LO ${a.url} && sudo apt install ./${a.name}`, "For Debian and Ubuntu (x86_64)."]);
+    }
+    if (!script) return ["brew install --cask shankar-sachin/canopy/canopy-desktop", "For macOS, with Homebrew."];
+    return asset("-aarch64-apple-darwin.dmg").then((a) => [`curl -LO ${a.url} && open ${a.name}`, "For Macs with Apple silicon. Intel Mac? Use Homebrew, or Downloads."]);
   }
+
+  let shown = 0;
+  function show() {
+    const n = ++shown;
+    for (const b of heroSwitches.querySelectorAll("[data-app]")) b.setAttribute("aria-selected", String(b.dataset.app === app));
+    for (const b of heroSwitches.querySelectorAll("[data-via]")) b.setAttribute("aria-selected", String(b.dataset.via === via));
+    const put = ([cmd, note]) => { if (n === shown) { heroCmd.textContent = cmd; heroNote.textContent = note; } };
+    const c = choice();
+    if (Array.isArray(c)) return put(c);
+    put(["…", "Finding the latest release…"]);
+    c.then(put, () => put([LATEST, "Couldn't reach GitHub: get the installer from the latest release."]));
+  }
+  heroSwitches.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-app], [data-via]");
+    if (!b) return;
+    if (b.dataset.app) app = b.dataset.app; else via = b.dataset.via;
+    try { localStorage.setItem("canopy-install", JSON.stringify({ app, via })); } catch (e) {}
+    show();
+  });
+  show();
 }
 
 // Copy buttons: data-copy-text, or data-copy="<element id>". One delegated
@@ -249,12 +291,18 @@ document.querySelectorAll("nav.top .links a").forEach(a => {
     m.querySelector("button").setAttribute("aria-expanded", "true");
   };
   const hoverable = matchMedia("(hover: hover) and (min-width: 821px)");
+  const closeMenu = m => {
+    m.classList.remove("open");
+    m.querySelector("button").setAttribute("aria-expanded", "false");
+  };
+  // One timer for all menus, and it closes only the menu you left: moving
+  // from Docs to Product must not let Docs' timer close Product.
+  let leaveTimer;
   menus.forEach(m => {
     const btn = m.querySelector("button");
     btn.addEventListener("click", () => (m.classList.contains("open") ? closeAll() : openMenu(m)));
-    let timer;
-    m.addEventListener("mouseenter", () => { if (hoverable.matches) { clearTimeout(timer); openMenu(m); } });
-    m.addEventListener("mouseleave", () => { if (hoverable.matches) timer = setTimeout(() => closeAll(), 140); });
+    m.addEventListener("mouseenter", () => { if (hoverable.matches) { clearTimeout(leaveTimer); openMenu(m); } });
+    m.addEventListener("mouseleave", () => { if (hoverable.matches) { clearTimeout(leaveTimer); leaveTimer = setTimeout(() => closeMenu(m), 140); } });
   });
   document.addEventListener("click", e => { if (!e.target.closest(".menu")) closeAll(); });
 
