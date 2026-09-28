@@ -1,4 +1,4 @@
-// Tests for the desktop app's front end. Run: node --test crates/canopy-gui/ui-tests
+// Tests for the desktop app's front end. Run: node --test crates/canopy-gui/ui-tests/*.test.mjs
 // (scripts/test-ui.sh also syntax-checks every script first).
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";

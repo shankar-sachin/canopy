@@ -21,7 +21,7 @@ for f in crates/canopy-gui/ui/*.js docs/assets/*.js scripts/*.mjs crates/canopy-
 done
 echo "test-ui: $n scripts parse"
 
-node --test crates/canopy-gui/ui-tests/ >"${TMPDIR:-/tmp}/canopy-ui-tests.log" 2>&1 || {
+node --test --test-reporter=spec crates/canopy-gui/ui-tests/*.test.mjs >"${TMPDIR:-/tmp}/canopy-ui-tests.log" 2>&1 || {
   grep -E "^not ok|✖|Error|expected|actual" "${TMPDIR:-/tmp}/canopy-ui-tests.log" | head -40
   echo "VERDICT: UI tests FAILED (full log: ${TMPDIR:-/tmp}/canopy-ui-tests.log)"
   exit 1
