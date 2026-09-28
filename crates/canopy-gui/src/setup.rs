@@ -84,11 +84,16 @@ pub async fn remote_preview(input: String, protocol: Protocol, owner: Option<Str
 /// commit to push).
 #[tauri::command]
 pub async fn connect_remote(url: String, state: State<'_, AppState>) -> Res<Done> {
-    let git = current(&state).await?;
-    let mut cmds = vec![git.add_remote("origin", &url).await.map_err(err)?.cmd];
+    connect(&current(&state).await?, &url).await
+}
+
+/// Point origin at `url` and push. Trying again after a failed push (the
+/// repository wasn't on GitHub yet) updates origin instead of failing with
+/// "remote origin already exists".
+pub async fn connect(git: &Git, url: &str) -> Res<Done> {
+    let mut cmds = vec![git.add_or_update_remote("origin", url).await.map_err(err)?.cmd];
     let status = git.status().await.map_err(err)?;
-    let has_commit = !git.log(&Default::default()).await.unwrap_or_default().is_empty();
-    if let (Some(branch), true) = (status.branch.head, has_commit) {
+    if let (Some(branch), true) = (status.branch.head, git.has_head().await) {
         let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
         match git.push("origin", &branch, true, false, tx).await {
             Ok(o) => cmds.push(o.cmd),
@@ -107,11 +112,55 @@ pub async fn connect_remote(url: String, state: State<'_, AppState>) -> Res<Done
 #[tauri::command]
 pub async fn github_create(name: String, private: bool, state: State<'_, AppState>) -> Res<Done> {
     let git = current(&state).await?;
-    let has_commit = !git.log(&Default::default()).await.unwrap_or_default().is_empty();
+    let has_commit = git.has_head().await;
     let gh = Gh::new(&git.repo.root, None);
     let o = gh.repo_create(name.trim(), private, &git.repo.root, has_commit).await.map_err(|e| match e {
         canopy_gh::GhError::Failed { cmd, stderr } => format!("{cmd}\n{stderr}"),
         e => e.to_string(),
     })?;
     Ok(done(o))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sh(dir: &Path, args: &[&str]) {
+        let ok = std::process::Command::new("git").current_dir(dir).args(args).status().unwrap().success();
+        assert!(ok, "git {args:?}");
+    }
+
+    #[tokio::test]
+    async fn connect_pushes_and_can_be_retried() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let (repo, remote) = (tmp.path().join("repo"), tmp.path().join("remote.git"));
+        std::fs::create_dir_all(&repo).unwrap();
+        std::fs::create_dir_all(&remote).unwrap();
+        sh(&remote, &["init", "-q", "--bare", "-b", "main"]);
+        sh(&repo, &["init", "-q", "-b", "main"]);
+        sh(&repo, &["config", "user.name", "T"]);
+        sh(&repo, &["config", "user.email", "t@t.io"]);
+        sh(&repo, &["config", "commit.gpgsign", "false"]);
+        let git = Git::open(&repo).await.unwrap();
+
+        // No commit yet: origin is added, nothing is pushed.
+        let missing = tmp.path().join("not-there.git");
+        let d = connect(&git, missing.to_str().unwrap()).await.unwrap();
+        assert!(d.cmd.starts_with("git remote add origin"), "{}", d.cmd);
+        assert!(!d.cmd.contains("push"));
+
+        // A commit, and a remote that doesn't exist: the push fails...
+        std::fs::write(repo.join("f.txt"), "x\n").unwrap();
+        sh(&repo, &["add", "."]);
+        sh(&repo, &["commit", "-qm", "first"]);
+        let e = connect(&git, missing.to_str().unwrap()).await.unwrap_err();
+        assert!(e.contains("push didn't go through"), "{e}");
+
+        // ...and trying again with the right address works.
+        let d = connect(&git, remote.to_str().unwrap()).await.unwrap();
+        assert!(d.cmd.contains("git remote set-url origin"), "{}", d.cmd);
+        assert!(d.cmd.contains("git push"), "{}", d.cmd);
+        assert_eq!(git.status().await.unwrap().branch.upstream.as_deref(), Some("origin/main"));
+        assert_eq!(git.remotes().await.unwrap().len(), 1);
+    }
 }

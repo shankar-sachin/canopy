@@ -8,7 +8,7 @@ const hist = {
   search: "",
   sel: null, // selected oid
   details: null, // { header, files } for sel
-  headOid: "", // HEAD when `data` was loaded, to know when to reload
+  refsKey: "", // HEAD and the branches when `data` was loaded, to know when to reload
   loading: 0,
 };
 
@@ -59,7 +59,7 @@ function detailsHtml() {
   if (!c) return `<div class="diff-empty">Select a commit to see what it changed.</div>`;
   const d = hist.details;
   // The header's message lines are indented by 4 spaces after a blank line.
-  const msg = d ? d.header.split("\n").filter((l) => l.startsWith("    ")).map((l) => l.slice(4)).join("\n").trim() : c.subject;
+  const msg = (d && d.header.split("\n").filter((l) => l.startsWith("    ")).map((l) => l.slice(4)).join("\n").trim()) || c.subject;
   const [title, ...body] = msg.split("\n");
   const parents = c.parents.map((p) => `<button class="link mono" data-h="goto" data-oid="${esc(p)}">${esc(p.slice(0, 7))}</button>`).join(" ");
   return `<div class="cdetails">
@@ -85,13 +85,20 @@ function detailsHtml() {
   </div>`;
 }
 
+/// What the list's ref labels depend on: HEAD, and where each branch points.
+/// (Tags aren't in the overview; tagging from here reloads the list itself.)
+function refsKey(o) {
+  const b = o.status.branch;
+  return JSON.stringify([b.oid || "", b.head || "", o.branches.map((x) => [x.name, x.oid, x.is_head])]);
+}
+
 async function loadHistory() {
   const token = ++hist.loading;
   try {
     const data = await invoke("history", { limit: hist.limit, all: hist.all, search: hist.search || null });
     if (token !== hist.loading) return;
     hist.data = data;
-    hist.headOid = state.overview.status.branch.oid || "";
+    hist.refsKey = refsKey(state.overview);
     if (!hist.sel || !data.commits.some((c) => c.oid === hist.sel)) {
       hist.sel = data.commits[0]?.oid || null;
       hist.details = null;
@@ -165,7 +172,7 @@ async function histAction(what, el) {
         { id: "name", label: "Branch name", placeholder: "feature/my-idea" },
         { id: "switch", label: "Switch to it", type: "checkbox", value: true },
       ], ok: "Create branch" });
-      if (f?.name) return run(`Created ${f.name}`, "git_op", { op: "create-branch", args: [f.name, c.oid, f.switch ? "switch" : ""] });
+      if (f?.name) return run(`Created ${f.name}`, "git_op", { op: "create-branch", args: [f.name, c.oid, f.switch ? "switch" : ""] }).then(loadHistory);
       return;
     }
     case "tag": {
@@ -173,7 +180,7 @@ async function histAction(what, el) {
         { id: "name", label: "Tag name", placeholder: "v1.2.0" },
         { id: "message", label: "Message (leave empty for a lightweight tag)", placeholder: "" },
       ], ok: "Create tag" });
-      if (f?.name) return run(`Tagged ${short} as ${f.name}`, "git_op", { op: "create-tag", args: [f.name, c.oid, f.message] });
+      if (f?.name) return run(`Tagged ${short} as ${f.name}`, "git_op", { op: "create-tag", args: [f.name, c.oid, f.message] }).then(loadHistory);
       return;
     }
     case "cherry-pick":
@@ -248,7 +255,7 @@ addPage("history", {
   },
   // Reload only when HEAD or the refs moved.
   update: (o) => {
-    if ((o.status.branch.oid || "") !== hist.headOid) loadHistory();
+    if (refsKey(o) !== hist.refsKey) loadHistory();
   },
   key: (e) => {
     const rows = [...document.querySelectorAll(".hrow")];

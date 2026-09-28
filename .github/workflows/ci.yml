@@ -60,6 +60,17 @@ jobs:
             cargo run -p canopy-desktop -- --smoke "$RUNNER_TEMP/fresh-repo"
           fi
 
+  # The desktop app's JavaScript and the website. Plain Node (on the runner
+  # already), nothing from npm.
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Desktop UI tests (syntax of every script, then ui-tests)
+        run: node --version && scripts/test-ui.sh
+      - name: Website audit (links, anchors, head tags, search index, version)
+        run: node scripts/audit-site.mjs
+
   # Releases ship a Windows on Arm build; make sure it still builds.
   windows-arm64:
     runs-on: windows-latest

@@ -20,7 +20,7 @@ async function loadSettings() {
   const day = 24 * 3600;
   if (state.settings.check_updates && Date.now() / 1000 - (state.settings.last_update_check || 0) > day) {
     setTimeout(async () => {
-      setts.update = await invoke("check_update");
+      setts.update = await invoke("check_update").catch((e) => ({ error: String(e) }));
       showUpdateDot();
       if (setts.update.newer) toast(`Canopy ${setts.update.latest} is out. Open Settings → Updates to get it.`);
     }, 3000);

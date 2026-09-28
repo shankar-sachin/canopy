@@ -30,6 +30,18 @@ pub enum GhError {
     Failed { cmd: String, stderr: String },
     #[error("couldn't read gh's output: {0}")]
     Parse(String),
+    /// A tag or id gh would misread (a tag starting with `-` is an option).
+    #[error("\"{0}\" isn't a valid {1}")]
+    BadName(String, &'static str),
+}
+
+/// A release tag from the user: one starting with `-` would be read as an option.
+fn tag_name(tag: &str) -> Result<&str> {
+    if tag.is_empty() || tag.starts_with('-') {
+        Err(GhError::BadName(tag.to_string(), "tag name"))
+    } else {
+        Ok(tag)
+    }
 }
 
 pub type Result<T> = std::result::Result<T, GhError>;
@@ -285,14 +297,14 @@ impl Gh {
     }
 
     pub async fn release_view(&self, tag: &str) -> Result<Release> {
-        self.json(&["release", "view", tag, "--json", RELEASE_DETAIL_FIELDS]).await
+        self.json(&["release", "view", tag_name(tag)?, "--json", RELEASE_DETAIL_FIELDS]).await
     }
 
     /// Create a release. Empty `notes` asks GitHub to generate them from the
     /// merged PRs since the last release. If `tag` doesn't exist yet, GitHub
     /// creates it on the default branch.
     pub async fn release_create(&self, tag: &str, title: &str, notes: &str, draft: bool) -> Result<Output> {
-        let mut args = vec!["release", "create", tag, "--title", title];
+        let mut args = vec!["release", "create", tag_name(tag)?, "--title", title];
         if notes.trim().is_empty() {
             args.push("--generate-notes");
         } else {
@@ -315,6 +327,10 @@ impl Gh {
     }
 
     pub async fn notification_read(&self, id: &str) -> Result<Output> {
+        // Thread ids are numbers; anything else would change the API path.
+        if id.is_empty() || !id.bytes().all(|b| b.is_ascii_digit()) {
+            return Err(GhError::BadName(id.to_string(), "notification id"));
+        }
         let path = format!("notifications/threads/{id}");
         self.run(&["api", "--method", "PATCH", &path]).await
     }
@@ -382,5 +398,37 @@ impl Gh {
     pub async fn run_rerun_failed(&self, id: u64) -> Result<Output> {
         let id = id.to_string();
         self.run(&["run", "rerun", &id, "--failed"]).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // A gh that isn't there: these checks must fail before anything runs.
+    fn nowhere() -> Gh {
+        Gh::new(Path::new("."), Some(PathBuf::from("/no/such/gh")))
+    }
+
+    #[tokio::test]
+    async fn release_tags_starting_with_a_dash_are_refused() {
+        let gh = nowhere();
+        for tag in ["-x", "--draft", ""] {
+            let err = gh.release_create(tag, "t", "", false).await.unwrap_err();
+            assert!(matches!(err, GhError::BadName(_, "tag name")), "{tag:?}: {err}");
+            assert!(matches!(gh.release_view(tag).await, Err(GhError::BadName(..))));
+        }
+        // A good tag gets as far as running gh.
+        assert!(matches!(gh.release_create("v1.2.3", "t", "", false).await, Err(GhError::NotInstalled)));
+    }
+
+    #[tokio::test]
+    async fn notification_ids_must_be_numbers() {
+        let gh = nowhere();
+        for id in ["../../user", "1/2", "", "12a", "-1"] {
+            let err = gh.notification_read(id).await.unwrap_err();
+            assert!(matches!(err, GhError::BadName(_, "notification id")), "{id:?}: {err}");
+        }
+        assert!(matches!(gh.notification_read("123456").await, Err(GhError::NotInstalled)));
     }
 }

@@ -440,6 +440,10 @@ fn highlight<'a>(text: &str, q: &str, style: Style, t: &Theme) -> Vec<Span<'a>> 
     let mut pos = 0;
     while let Some(i) = lower[pos..].find(q) {
         let (a, b) = (pos + i, pos + i + q.len());
+        // Same total length doesn't promise the same character boundaries.
+        if !text.is_char_boundary(a) || !text.is_char_boundary(b) {
+            break;
+        }
         if a > pos {
             out.push(Span::styled(text[pos..a].to_string(), style));
         }

@@ -3,7 +3,7 @@
 
 use tokio::sync::mpsc;
 
-use crate::cli::{display_cmd, Git, Output, Result};
+use crate::cli::{display_cmd, Git, GitError, Output, Result};
 use crate::model::*;
 use crate::parse::{self, diff::PatchMode};
 
@@ -46,6 +46,17 @@ pub struct CommitOpts {
     pub signoff: bool,
     pub no_verify: bool,
     pub allow_empty: bool,
+}
+
+/// A branch, tag, remote, stash or revision name from the user, checked
+/// before it goes on git's command line: one that starts with `-` would be
+/// read as an option (a branch named `-D` must not delete anything).
+pub fn name(s: &str) -> Result<&str> {
+    if s.starts_with('-') {
+        Err(GitError::BadName(s.to_string()))
+    } else {
+        Ok(s)
+    }
 }
 
 impl Git {
@@ -157,7 +168,7 @@ impl Git {
     }
 
     pub async fn show(&self, rev: &str) -> Result<(String, Vec<FileDiff>)> {
-        let out = self.run(&["show", "--no-ext-diff", "--stat", "--patch", "--format=fuller", rev]).await?;
+        let out = self.run(&["show", "--no-ext-diff", "--stat", "--patch", "--format=fuller", name(rev)?]).await?;
         let body_start = out.stdout.find("\ndiff --git ").map(|i| i + 1);
         let (header, diff) = match body_start {
             Some(i) => out.stdout.split_at(i),
@@ -281,6 +292,7 @@ impl Git {
         // `switch` refuses bare commits without --detach; fall back to checkout.
         // The `--` makes git read `rev` as a revision only: without it, a
         // name that's also a file would throw away that file's edits.
+        let rev = name(rev)?;
         match self.run(&["switch", rev]).await {
             Ok(o) => Ok(o),
             Err(_) => self.run(&["checkout", rev, "--"]).await,
@@ -289,31 +301,32 @@ impl Git {
 
     /// Check out a remote branch as a new local tracking branch.
     pub async fn checkout_remote(&self, remote_branch: &str) -> Result<Output> {
-        self.run(&["switch", "--track", remote_branch]).await
+        self.run(&["switch", "--track", name(remote_branch)?]).await
     }
 
-    pub async fn create_branch(&self, name: &str, start: Option<&str>, switch: bool) -> Result<Output> {
-        let mut args = if switch { vec!["switch", "-c", name] } else { vec!["branch", name] };
+    pub async fn create_branch(&self, branch: &str, start: Option<&str>, switch: bool) -> Result<Output> {
+        let branch = name(branch)?;
+        let mut args = if switch { vec!["switch", "-c", branch] } else { vec!["branch", branch] };
         if let Some(s) = start {
-            args.push(s);
+            args.push(name(s)?);
         }
         self.run(&args).await
     }
 
     pub async fn rename_branch(&self, old: &str, new: &str) -> Result<Output> {
-        self.run(&["branch", "-m", old, new]).await
+        self.run(&["branch", "-m", name(old)?, name(new)?]).await
     }
 
-    pub async fn delete_branch(&self, name: &str, force: bool) -> Result<Output> {
-        self.run(&["branch", if force { "-D" } else { "-d" }, name]).await
+    pub async fn delete_branch(&self, branch: &str, force: bool) -> Result<Output> {
+        self.run(&["branch", if force { "-D" } else { "-d" }, name(branch)?]).await
     }
 
     pub async fn delete_remote_branch(&self, remote: &str, branch: &str) -> Result<Output> {
-        self.run(&["push", remote, "--delete", branch]).await
+        self.run(&["push", name(remote)?, "--delete", name(branch)?]).await
     }
 
     pub async fn set_upstream(&self, upstream: &str) -> Result<Output> {
-        self.run(&["branch", "--set-upstream-to", upstream]).await
+        self.run(&["branch", "--set-upstream-to", name(upstream)?]).await
     }
 
     pub async fn merge(&self, rev: &str, no_ff: bool) -> Result<Output> {
@@ -321,16 +334,17 @@ impl Git {
         if no_ff {
             args.push("--no-ff");
         }
-        args.push(rev);
+        args.push(name(rev)?);
         self.run(&args).await
     }
 
     pub async fn rebase(&self, onto: &str) -> Result<Output> {
-        self.run(&["rebase", onto]).await
+        self.run(&["rebase", name(onto)?]).await
     }
 
     /// Run an interactive rebase with a pre-built todo list, no editor needed.
     pub async fn rebase_interactive(&self, base: &str, todo: &str) -> Result<Output> {
+        let base = name(base)?;
         let dir = std::env::temp_dir().join(format!("canopy-todo-{}", std::process::id()));
         std::fs::write(&dir, todo)?;
         // Git runs the sequence editor through a shell (Git for Windows
@@ -368,7 +382,9 @@ impl Git {
 
     pub async fn cherry_pick(&self, oids: &[&str]) -> Result<Output> {
         let mut args = vec!["cherry-pick"];
-        args.extend_from_slice(oids);
+        for oid in oids {
+            args.push(name(oid)?);
+        }
         self.run(&args).await
     }
 
@@ -377,22 +393,23 @@ impl Git {
     }
 
     pub async fn revert(&self, oid: &str) -> Result<Output> {
-        self.run(&["revert", "--no-edit", oid]).await
+        self.run(&["revert", "--no-edit", name(oid)?]).await
     }
 
     pub async fn reset(&self, rev: &str, mode: ResetMode) -> Result<Output> {
-        self.run(&["reset", mode.flag(), rev]).await
+        self.run(&["reset", mode.flag(), name(rev)?]).await
     }
 
-    pub async fn create_tag(&self, name: &str, rev: &str, message: Option<&str>) -> Result<Output> {
+    pub async fn create_tag(&self, tag: &str, rev: &str, message: Option<&str>) -> Result<Output> {
+        let (tag, rev) = (name(tag)?, name(rev)?);
         match message {
-            Some(m) => self.run(&["tag", "-a", name, "-m", m, rev]).await,
-            None => self.run(&["tag", name, rev]).await,
+            Some(m) => self.run(&["tag", "-a", tag, "-m", m, rev]).await,
+            None => self.run(&["tag", tag, rev]).await,
         }
     }
 
-    pub async fn delete_tag(&self, name: &str) -> Result<Output> {
-        self.run(&["tag", "-d", name]).await
+    pub async fn delete_tag(&self, tag: &str) -> Result<Output> {
+        self.run(&["tag", "-d", name(tag)?]).await
     }
 
     pub async fn stash_push(&self, message: Option<&str>, include_untracked: bool) -> Result<Output> {
@@ -406,43 +423,53 @@ impl Git {
         self.run(&args).await
     }
 
-    pub async fn stash_apply(&self, name: &str) -> Result<Output> {
-        self.run(&["stash", "apply", name]).await
+    pub async fn stash_apply(&self, stash: &str) -> Result<Output> {
+        self.run(&["stash", "apply", name(stash)?]).await
     }
 
-    pub async fn stash_pop(&self, name: &str) -> Result<Output> {
-        self.run(&["stash", "pop", name]).await
+    pub async fn stash_pop(&self, stash: &str) -> Result<Output> {
+        self.run(&["stash", "pop", name(stash)?]).await
     }
 
-    pub async fn stash_drop(&self, name: &str) -> Result<Output> {
-        self.run(&["stash", "drop", name]).await
+    pub async fn stash_drop(&self, stash: &str) -> Result<Output> {
+        self.run(&["stash", "drop", name(stash)?]).await
     }
 
-    pub async fn add_remote(&self, name: &str, url: &str) -> Result<Output> {
-        self.run(&["remote", "add", name, url]).await
+    pub async fn add_remote(&self, remote: &str, url: &str) -> Result<Output> {
+        self.run(&["remote", "add", name(remote)?, name(url)?]).await
     }
 
-    pub async fn remove_remote(&self, name: &str) -> Result<Output> {
-        self.run(&["remote", "remove", name]).await
+    /// Point `remote` at `url`: add it, or change its address if it's there
+    /// already (trying again after a push to a wrong address).
+    pub async fn add_or_update_remote(&self, remote: &str, url: &str) -> Result<Output> {
+        if self.remotes().await?.iter().any(|r| r.name == remote) {
+            self.set_remote_url(remote, url).await
+        } else {
+            self.add_remote(remote, url).await
+        }
+    }
+
+    pub async fn remove_remote(&self, remote: &str) -> Result<Output> {
+        self.run(&["remote", "remove", name(remote)?]).await
     }
 
     pub async fn rename_remote(&self, old: &str, new: &str) -> Result<Output> {
-        self.run(&["remote", "rename", old, new]).await
+        self.run(&["remote", "rename", name(old)?, name(new)?]).await
     }
 
-    pub async fn set_remote_url(&self, name: &str, url: &str) -> Result<Output> {
-        self.run(&["remote", "set-url", name, url]).await
+    pub async fn set_remote_url(&self, remote: &str, url: &str) -> Result<Output> {
+        self.run(&["remote", "set-url", name(remote)?, name(url)?]).await
     }
 
     pub async fn delete_remote_tag(&self, remote: &str, tag: &str) -> Result<Output> {
         let refspec = format!("refs/tags/{tag}");
-        self.run(&["push", remote, "--delete", &refspec]).await
+        self.run(&["push", name(remote)?, "--delete", &refspec]).await
     }
 
     pub async fn fetch(&self, remote: Option<&str>, progress: mpsc::UnboundedSender<String>) -> Result<Output> {
         let mut args = vec!["fetch", "--progress", "--prune"];
         match remote {
-            Some(r) => args.push(r),
+            Some(r) => args.push(name(r)?),
             None => args.push("--all"),
         }
         self.run_streaming(&args, progress).await
@@ -469,12 +496,12 @@ impl Git {
         if force_with_lease {
             args.push("--force-with-lease");
         }
-        args.extend([remote, branch]);
+        args.extend([name(remote)?, name(branch)?]);
         self.run_streaming(&args, progress).await
     }
 
     pub async fn push_tag(&self, remote: &str, tag: &str) -> Result<Output> {
-        self.run(&["push", remote, tag]).await
+        self.run(&["push", name(remote)?, name(tag)?]).await
     }
 
     /// Mark a conflicted file resolved by taking one side.
@@ -486,7 +513,7 @@ impl Git {
 
     /// Start bisecting between a known-bad and a known-good revision.
     pub async fn bisect_start(&self, bad: &str, good: &str) -> Result<Output> {
-        self.run(&["bisect", "start", bad, good]).await
+        self.run(&["bisect", "start", name(bad)?, name(good)?]).await
     }
 
     /// Mark the checked-out commit: `good`, `bad`, or `skip`.
@@ -526,6 +553,7 @@ impl Git {
     /// Add a worktree at `path` for `branch`, creating the branch from HEAD
     /// if it doesn't exist yet.
     pub async fn add_worktree(&self, path: &str, branch: &str, create: bool) -> Result<Output> {
+        let (branch, path) = (name(branch)?, name(path)?);
         if create {
             self.run(&["worktree", "add", "-b", branch, path]).await
         } else {
@@ -535,9 +563,9 @@ impl Git {
 
     pub async fn remove_worktree(&self, path: &str, force: bool) -> Result<Output> {
         if force {
-            self.run(&["worktree", "remove", "--force", path]).await
+            self.run(&["worktree", "remove", "--force", name(path)?]).await
         } else {
-            self.run(&["worktree", "remove", path]).await
+            self.run(&["worktree", "remove", name(path)?]).await
         }
     }
 
@@ -549,7 +577,7 @@ impl Git {
     pub async fn blame(&self, path: &str, rev: Option<&str>) -> Result<crate::parse::blame::Blame> {
         let mut args = vec!["blame", "--porcelain"];
         if let Some(r) = rev {
-            args.push(r);
+            args.push(name(r)?);
         }
         args.extend(["--", path]);
         let out = self.run(&args).await?;

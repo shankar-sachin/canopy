@@ -285,8 +285,13 @@ document.querySelectorAll("nav.top .links a").forEach(a => {
   // ----------------------------------------------------------- search
   let dialog, input, list, items = [], sel = 0;
   const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-  const hl = (text, terms) => terms.reduce((out, t) =>
-    out.replace(new RegExp(`(${t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "ig"), "<mark>$1</mark>"), esc(text));
+  // Highlight on the raw text, then escape each piece: matching inside the
+  // escaped HTML would break "&lt;" when you search for "lt".
+  const hl = (text, terms) => {
+    if (!terms.length) return esc(text);
+    const re = new RegExp(`(${terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "ig");
+    return text.split(re).map((part, i) => (i % 2 ? `<mark>${esc(part)}</mark>` : esc(part))).join("");
+  };
 
   function loadIndex() {
     return new Promise(resolve => {
@@ -378,7 +383,7 @@ document.querySelectorAll("nav.top .links a").forEach(a => {
   bar.querySelector(".search-btn")?.addEventListener("click", open);
   addEventListener("keydown", e => {
     const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "");
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); dialog && !dialog.hidden ? close() : open(); }
+    if ((e.metaKey || e.ctrlKey) && (e.key || "").toLowerCase() === "k") { e.preventDefault(); dialog && !dialog.hidden ? close() : open(); }
     else if (e.key === "/" && !typing && (!dialog || dialog.hidden)) { e.preventDefault(); open(); }
     else if (e.key === "Escape") { if (dialog && !dialog.hidden) close(); closeAll(); }
   });

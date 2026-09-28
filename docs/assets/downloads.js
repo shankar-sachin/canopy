@@ -154,8 +154,10 @@
   canopyReleases()
     .then((list) => {
       releases = list;
+      // "Latest" is the newest full release, as on GitHub (not a pre-release).
+      const newest = list.find((r) => !r.pre);
       pick.innerHTML = list
-        .map((r, i) => `<option value="${esc(r.tag)}">${esc(r.tag)}${i === 0 ? " (latest)" : ""}${r.pre ? " (pre-release)" : ""}</option>`)
+        .map((r) => `<option value="${esc(r.tag)}">${esc(r.tag)}${r === newest ? " (latest)" : ""}${r.pre ? " (pre-release)" : ""}</option>`)
         .join("");
       const want = params.get("version");
       if (want && list.some((r) => r.tag === want)) pick.value = want;

@@ -248,7 +248,7 @@ function renderHome(o) {
   const branches = locals.length
     ? `<ul class="branches">${locals.slice(0, 10).map(branchRow).join("")}</ul>`
     : `<div class="empty">No branches yet.</div>`;
-  const stateBadge = o.state !== "Clean" ? `<span class="pill red">${STATE_WORDS[o.state] || o.state}</span>` : "";
+  const stateBadge = o.state !== "Clean" ? `<span class="pill red">${esc(STATE_WORDS[o.state] || o.state)}</span>` : "";
   const upstream = b.upstream ? `<span class="pill" title="${GLOSSARY.tracks}">tracks <b>${esc(b.upstream)}</b></span>` : "";
 
   return `<div class="grid">

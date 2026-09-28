@@ -120,14 +120,17 @@ impl DiffView {
 
     pub fn jump_hunk(&mut self, forward: bool) {
         let is_hunk = |r: &Row| matches!(r, Row::Hunk(..));
+        // Land on the first changed line of the hunk.
+        let land = |i: usize| (i..self.rows.len()).find(|&j| self.is_change(self.rows[j])).unwrap_or(i);
         let found = if forward {
-            self.rows.iter().enumerate().skip(self.cursor + 1).find(|(_, r)| is_hunk(r))
+            self.rows.iter().enumerate().skip(self.cursor + 1).find(|(_, r)| is_hunk(r)).map(|(i, _)| land(i))
         } else {
-            self.rows.iter().enumerate().take(self.cursor).rev().find(|(_, r)| is_hunk(r))
+            // Going back from a hunk's first change (where a jump lands) goes
+            // to the hunk before it, not to the same spot.
+            (0..self.cursor).rev().filter(|&i| is_hunk(&self.rows[i])).map(land).find(|&to| to < self.cursor)
         };
-        if let Some((i, _)) = found {
-            // Land on the first changed line of the hunk.
-            self.cursor = (i..self.rows.len()).find(|&j| self.is_change(self.rows[j])).unwrap_or(i);
+        if let Some(to) = found {
+            self.cursor = to;
         }
     }
 
@@ -142,7 +145,13 @@ impl DiffView {
     pub fn selected_lines(&self) -> Vec<(usize, usize, Vec<usize>)> {
         let (a, b) = self.selection();
         let mut groups: Vec<(usize, usize, Vec<usize>)> = Vec::new();
-        for r in &self.rows[a..=b.min(self.rows.len().saturating_sub(1))] {
+        // An empty diff, or a cursor left past the end after the diff got
+        // shorter, selects nothing (instead of an out-of-range slice).
+        let Some(last) = self.rows.len().checked_sub(1) else { return groups };
+        if a > last {
+            return groups;
+        }
+        for r in &self.rows[a..=b.min(last)] {
             if let Row::Line(fi, hi, li) = *r {
                 if !self.is_change(*r) {
                     continue;
@@ -463,4 +472,124 @@ pub fn apply_selection(app: &mut App, whole_hunk: bool) {
             stderr: String::new(),
         }))
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const PATCH: &str = "diff --git a/f.txt b/f.txt
+--- a/f.txt
++++ b/f.txt
+@@ -1,3 +1,3 @@
+ one
+-two
++TWO
+ three
+@@ -10,2 +10,3 @@
+ ten
++new
+ eleven
+diff --git a/g.txt b/g.txt
+deleted file mode 100644
+--- a/g.txt
++++ /dev/null
+@@ -1 +0,0 @@
+-gone
+";
+
+    fn view(mode: Option<PatchMode>) -> DiffView {
+        let files = canopy_git::parse::diff::parse(PATCH);
+        DiffView::new("k".into(), "t".into(), vec!["meta".into()], files, mode)
+    }
+
+    #[test]
+    fn rows_and_counts() {
+        let v = view(None);
+        // meta, then per file: file, hunk, lines.
+        assert_eq!(v.rows[0], Row::Meta(0));
+        assert_eq!(v.rows[1], Row::File(0));
+        assert_eq!(v.rows[2], Row::Hunk(0, 0));
+        assert_eq!(v.rows.len(), 1 + (1 + 1 + 4 + 1 + 3) + (1 + 1 + 1));
+        assert_eq!(v.added_removed(), (2, 2));
+        // Without staging the cursor starts at the top.
+        assert_eq!(v.cursor, 0);
+        assert_eq!(v.current_file(), Some("f.txt"));
+    }
+
+    #[test]
+    fn staging_starts_on_the_first_change_and_hunks_jump_to_changes() {
+        let mut v = view(Some(PatchMode::Stage));
+        assert_eq!(v.rows[v.cursor], Row::Line(0, 0, 1));
+        v.jump_hunk(true);
+        assert_eq!(v.rows[v.cursor], Row::Line(0, 1, 1));
+        v.jump_hunk(true);
+        assert_eq!(v.rows[v.cursor], Row::Line(1, 0, 0));
+        assert_eq!(v.current_file(), Some("g.txt"));
+        // No hunk after the last one: stay put.
+        v.jump_hunk(true);
+        assert_eq!(v.rows[v.cursor], Row::Line(1, 0, 0));
+        v.jump_hunk(false);
+        assert_eq!(v.current_hunk(), Some((0, 1)));
+    }
+
+    #[test]
+    fn cursor_moves_stay_in_range() {
+        let mut v = view(None);
+        v.move_cursor(-5);
+        assert_eq!(v.cursor, 0);
+        v.move_cursor(1000);
+        assert_eq!(v.cursor, v.rows.len() - 1);
+        v.cursor = 999;
+        v.snap_cursor();
+        assert_eq!(v.cursor, v.rows.len() - 1);
+    }
+
+    #[test]
+    fn selected_lines_group_by_hunk_bottom_first() {
+        let mut v = view(Some(PatchMode::Stage));
+        // From the first change down to the added line in the second hunk.
+        v.anchor = Some(v.cursor);
+        v.cursor = v.rows.iter().position(|r| *r == Row::Line(0, 1, 1)).unwrap();
+        // Context lines in the range are left out.
+        assert_eq!(v.selected_lines(), vec![(0, 1, vec![1]), (0, 0, vec![1, 2])]);
+        // Just the cursor, on a context line: nothing to stage.
+        v.anchor = None;
+        v.cursor = v.rows.iter().position(|r| *r == Row::Line(0, 0, 0)).unwrap();
+        assert!(v.selected_lines().is_empty());
+    }
+
+    #[test]
+    fn selected_lines_never_slice_out_of_range() {
+        let mut empty = DiffView::new("k".into(), "t".into(), vec![], vec![], Some(PatchMode::Stage));
+        assert!(empty.selected_lines().is_empty());
+        empty.anchor = Some(3);
+        assert!(empty.selected_lines().is_empty());
+        // The diff got shorter under a cursor and anchor near the old end.
+        let mut v = view(Some(PatchMode::Stage));
+        v.cursor = 500;
+        v.anchor = Some(400);
+        assert!(v.selected_lines().is_empty());
+        v.anchor = Some(0);
+        assert_eq!(v.selected_lines().len(), 3);
+    }
+
+    #[test]
+    fn line_targets_and_review_notes() {
+        let mut v = view(Some(PatchMode::Stage));
+        // The removed "two" is line 2 on the old side.
+        assert_eq!(v.line_target(), Some((0, 2, false)));
+        v.cursor = v.rows.iter().position(|r| *r == Row::Line(0, 0, 2)).unwrap();
+        assert_eq!(v.line_target(), Some((0, 2, true)));
+        v.cursor = 0;
+        assert_eq!(v.line_target(), None);
+
+        let before = v.rows.len();
+        v.attach_notes(vec![Note { file: 0, line: 11, right: true, text: vec!["ada · 1h".into(), "why?".into()] }]);
+        assert_eq!(v.rows.len(), before + 2);
+        let at = v.rows.iter().position(|r| *r == Row::Note(0, 0)).unwrap();
+        assert_eq!(v.rows[at - 1], Row::Line(0, 1, 1));
+        v.cursor = at;
+        assert_eq!(v.current_file(), Some("f.txt"));
+    }
 }

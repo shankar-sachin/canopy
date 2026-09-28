@@ -99,10 +99,16 @@ const openUrl = (url) => invoke("open_url", { url }).catch((e) => toast(String(e
 async function ghReady() {
   const root = state.overview?.root;
   if (gh.statusFor !== root) {
+    // Another repository: nothing from the last one may show here (its PR #3
+    // is not this one's #3).
     gh.statusFor = root;
     gh.status = null;
     gh.home = null;
-    gh.prs.list = gh.issues.list = gh.runs.list = gh.notifs.list = null;
+    gh.homeAt = 0;
+    gh.failure = undefined;
+    for (const ns of ["prs", "issues"]) Object.assign(gh[ns], { list: null, sel: null, detail: null });
+    Object.assign(gh.runs, { list: null, sel: null, jobs: null, log: null });
+    gh.notifs.list = null;
     gh.notifs.countAt = 0;
   }
   if (!gh.status) gh.status = await invoke("gh_status").catch(() => ({ state: "not_installed" }));
@@ -146,7 +152,9 @@ function stateBadge(item, kind) {
 }
 
 function labelChips(labels) {
-  return labels.map((l) => `<span class="label" style="--c:#${esc(l.color || "888888")}">${esc(l.name)}</span>`).join("");
+  // GitHub's label colors are six hex digits; anything else could break out of the style.
+  const color = (c) => (/^[0-9a-f]{6}$/i.test(c || "") ? c : "888888");
+  return labels.map((l) => `<span class="label" style="--c:#${color(l.color)}">${esc(l.name)}</span>`).join("");
 }
 
 function textBlock(text) {
@@ -766,6 +774,7 @@ document.addEventListener("click", (e) => {
   }
   if (pr) {
     gh.prs.filter = "open";
+    gh.prs.list = null;
     gh.prs.sel = Number(pr.dataset.ghPr);
     gh.prs.detail = null;
     go("prs");
