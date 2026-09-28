@@ -12,6 +12,7 @@ anyhow.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 serde = { version = "1.0.229", features = ["derive"], optional = true }
+notify = "8.2.0"
 
 [features]
 # Serialize/Deserialize on the models, for the desktop app.

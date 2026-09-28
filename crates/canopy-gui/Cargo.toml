@@ -14,6 +14,7 @@ tauri-build = { version = "2.7.0", features = [] }
 canopy-git = { path = "../canopy-git", features = ["serde"] }
 canopy-gh = { path = "../canopy-gh" }
 canopy-config = { path = "../canopy-config" }
+canopy-highlight = { path = "../canopy-highlight" }
 anyhow.workspace = true
 tokio.workspace = true
 tauri = { version = "2.12.0", features = [] }

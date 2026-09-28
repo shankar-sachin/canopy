@@ -353,6 +353,15 @@ body.busy .btn-group .btn, body.busy [data-ch] { pointer-events: none; opacity: 
 html[data-theme="light"] .dl.add .code, html[data-theme="light"] .dl.add .sign { color: var(--green-2); }
 .dl.del { background: color-mix(in srgb, var(--red) 11%, transparent); }
 .dl.del .sign, .dl.del .code { color: var(--red); }
+/* Syntax highlighting (see highlight.rs): plain code in the normal color,
+   the line's tint says added or removed, tokens take the theme's colors. */
+.dl .code .hl { color: var(--text); }
+.tk-comment { color: var(--faint); font-style: italic; }
+.tk-keyword, .tk-tag { color: var(--violet); }
+.tk-string { color: var(--teal); }
+.tk-number, .tk-constant, .tk-attr { color: var(--amber); }
+.tk-function { color: var(--green); }
+.tk-type { color: var(--green-2); }
 .dl.nonl { color: var(--faint); font-style: italic; }
 .dl.pick { cursor: pointer; }
 .dl.pick:hover { box-shadow: inset 3px 0 0 var(--border-2); }

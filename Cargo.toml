@@ -1,12 +1,12 @@
 [workspace]
 resolver = "2"
-members = ["crates/canopy", "crates/canopy-git", "crates/canopy-gh", "crates/canopy-gui", "crates/canopy-config"]
+members = ["crates/canopy", "crates/canopy-git", "crates/canopy-gh", "crates/canopy-gui", "crates/canopy-config", "crates/canopy-highlight"]
 # Plain `cargo build` / `cargo run` stay on the terminal app; the desktop app
 # builds with `-p canopy-desktop` (or `--workspace`).
-default-members = ["crates/canopy", "crates/canopy-git", "crates/canopy-gh", "crates/canopy-config"]
+default-members = ["crates/canopy", "crates/canopy-git", "crates/canopy-gh", "crates/canopy-config", "crates/canopy-highlight"]
 
 [workspace.package]
-version = "1.0.12"
+version = "1.0.13"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/shankar-sachin/canopy"

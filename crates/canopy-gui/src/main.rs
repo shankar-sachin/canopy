@@ -10,6 +10,7 @@
 mod actions;
 mod github;
 mod graph;
+mod highlight;
 mod history;
 mod overview;
 mod recent;
@@ -27,6 +28,8 @@ use recent::RecentRepo;
 #[derive(Default)]
 pub(crate) struct AppState {
     git: Mutex<Option<Git>>,
+    /// Watches the open repository; tells the page when something changed.
+    watcher: std::sync::Mutex<Option<canopy_git::watch::RepoWatcher>>,
     /// A repo path given on the command line, opened at startup.
     initial: Option<String>,
     /// `--smoke`: render Home, report what the page shows, and quit.
@@ -34,6 +37,22 @@ pub(crate) struct AppState {
 }
 
 pub(crate) type Res<T> = Result<T, String>;
+
+/// Make `git` the open repository (None closes it), and watch it: the page
+/// gets a `repo-changed` event (with the root) when files or git's state
+/// change outside the app, and refreshes. Its timed refresh still runs.
+pub(crate) async fn set_repo(app: &tauri::AppHandle, state: &AppState, git: Option<Git>) {
+    use tauri::Emitter;
+    let watcher = git.as_ref().and_then(|g| {
+        let (app, root) = (app.clone(), g.repo.root.display().to_string());
+        canopy_git::watch::watch(&g.repo, move |_| {
+            let _ = app.emit("repo-changed", root.clone());
+        })
+        .ok()
+    });
+    *state.watcher.lock().unwrap_or_else(|e| e.into_inner()) = watcher;
+    *state.git.lock().await = git;
+}
 
 pub(crate) async fn current(state: &AppState) -> Res<Git> {
     state.git.lock().await.clone().ok_or_else(|| "No repository is open".to_string())
@@ -85,20 +104,20 @@ async fn pick_folder(app: tauri::AppHandle) -> Option<String> {
 }
 
 #[tauri::command]
-async fn open_repo(path: String, state: State<'_, AppState>) -> Res<Overview> {
+async fn open_repo(path: String, app: tauri::AppHandle, state: State<'_, AppState>) -> Res<Overview> {
     // The page offers to create one when it sees this prefix.
     let git = Git::open(&path).await.map_err(|_| format!("NOT_A_REPO:{path}"))?;
     let o = overview::load(&git).await.map_err(|e| e.to_string())?;
     if let Some(f) = recent::store_path() {
         let _ = recent::add(&f, &o.root);
     }
-    *state.git.lock().await = Some(git);
+    set_repo(&app, &state, Some(git)).await;
     Ok(o)
 }
 
 #[tauri::command]
-async fn close_repo(state: State<'_, AppState>) -> Res<()> {
-    *state.git.lock().await = None;
+async fn close_repo(app: tauri::AppHandle, state: State<'_, AppState>) -> Res<()> {
+    set_repo(&app, &state, None).await;
     Ok(())
 }
 

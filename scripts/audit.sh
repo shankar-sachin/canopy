@@ -34,7 +34,7 @@ step "4/6 versions"
 version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
 echo "Cargo.toml: $version"
 # Every workspace crate in Cargo.lock carries the same version.
-for c in canopy-git-tui canopy-git canopy-gh canopy-config canopy-desktop; do
+for c in canopy-git-tui canopy-git canopy-gh canopy-config canopy-highlight canopy-desktop; do
   got=$(awk -v n="$c" '$0 == "name = \"" n "\"" { getline; gsub(/version = |"/, ""); print; exit }' Cargo.lock)
   [ "$got" = "$version" ] || fail "Cargo.lock has $c $got, not $version (run cargo build)"
 done

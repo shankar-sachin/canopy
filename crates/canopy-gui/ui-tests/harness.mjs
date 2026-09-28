@@ -53,6 +53,9 @@ const DEFAULT_RESPONSES = { gh_status: { state: "not_installed" }, ai_status: { 
 export function loadUi({ platform = "MacIntel", responses = {} } = {}) {
   responses = { ...DEFAULT_RESPONSES, ...responses };
   const calls = [];
+  const listeners = {};
+  const timers = [];
+  let timerIds = 0;
   const store = new Map();
   const byId = new Map();
   const document = {
@@ -81,16 +84,16 @@ export function loadUi({ platform = "MacIntel", responses = {} } = {}) {
     console,
     document,
     navigator: { platform, clipboard: { writeText: async () => {} } },
-    window: { addEventListener() {}, __TAURI__: { core: { invoke }, event: { listen() {} } } },
+    window: { addEventListener() {}, __TAURI__: { core: { invoke }, event: { listen: (name, fn) => { (listeners[name] ||= []).push(fn); } } } },
     localStorage: {
       getItem: (k) => (store.has(k) ? store.get(k) : null),
       setItem: (k, v) => store.set(k, String(v)),
       removeItem: (k) => store.delete(k),
     },
     getComputedStyle: () => ({ getPropertyValue: () => "" }),
-    // Timers never fire: nothing in a test should wait on a toast.
-    setTimeout: () => 0,
-    clearTimeout() {},
+    // Timers wait for flushTimers(), so a test decides when they fire.
+    setTimeout: (fn) => { const id = ++timerIds; timers.push({ fn, id }); return id; },
+    clearTimeout: (id) => { const i = timers.findIndex((t) => t.id === id); if (i >= 0) timers.splice(i, 1); },
     setInterval: () => 0,
     clearInterval() {},
     MouseEvent: class {},
@@ -109,7 +112,13 @@ export function loadUi({ platform = "MacIntel", responses = {} } = {}) {
     if (v && typeof v === "object" && typeof v.then !== "function") return JSON.parse(JSON.stringify(v));
     return v;
   };
-  return { ctx, run, calls, el: (sel) => document.querySelector(sel) };
+  // Fire an event from the Rust side, like app.emit(name, payload).
+  const emit = (name, payload) => (listeners[name] || []).forEach((fn) => fn({ payload }));
+  const flushTimers = async () => {
+    while (timers.length) timers.shift().fn();
+    await new Promise((r) => setImmediate(r));
+  };
+  return { ctx, run, calls, emit, flushTimers, el: (sel) => document.querySelector(sel) };
 }
 
 /// A small repository overview, shaped like the Rust side's `Overview`.

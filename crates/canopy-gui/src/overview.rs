@@ -319,7 +319,8 @@ mod tests {
             for staged in [false, true] {
                 let d =
                     if untracked { git.diff_untracked(&f.path).await } else { git.diff_file(&f.path, staged, 3).await };
-                diffs.insert(format!("{}|{staged}|{untracked}", f.path), serde_json::to_value(d.unwrap()).unwrap());
+                let shown = crate::highlight::show(d.unwrap());
+                diffs.insert(format!("{}|{staged}|{untracked}", f.path), serde_json::to_value(shown).unwrap());
             }
         }
         // History of every branch, the newest commit's details, tags and stashes.
@@ -329,7 +330,7 @@ mod tests {
         let details = match commits.first() {
             Some(c) => {
                 let (header, files) = git.show(&c.oid).await.unwrap();
-                serde_json::json!({ "header": header, "files": files })
+                serde_json::json!({ "header": header, "files": crate::highlight::show(files) })
             }
             None => serde_json::Value::Null,
         };

@@ -396,3 +396,53 @@ test("undo is offered after the actions the Rust side can undo", () => {
   const history = readFileSync(join(SRC, "history.rs"), "utf8");
   for (const op of ops) assert.match(history, new RegExp(`"${op}" =>`), `${op} isn't a git_op`);
 });
+
+// ------------------------------------------------------------ live refresh
+
+test("a change the watcher reports refreshes the open repository once", async () => {
+  const o = sampleOverview();
+  const { run, calls, emit, flushTimers } = loadUi({ responses: { overview: o } });
+  run(`state.overview = ${JSON.stringify(o)}`);
+  // Another repository's change, then three quick ones for this one.
+  emit("repo-changed", "/somewhere/else");
+  emit("repo-changed", o.root);
+  emit("repo-changed", o.root);
+  emit("repo-changed", o.root);
+  await flushTimers();
+  assert.equal(calls.filter((c) => c.cmd === "overview").length, 1);
+  // Nothing is open: nothing to refresh.
+  run("state.overview = null");
+  emit("repo-changed", o.root);
+  await flushTimers();
+  assert.equal(calls.filter((c) => c.cmd === "overview").length, 1);
+});
+
+test("a change during a running action waits for it (the action refreshes after)", async () => {
+  const o = sampleOverview();
+  const { run, calls, emit, flushTimers } = loadUi({ responses: { overview: o } });
+  run(`state.overview = ${JSON.stringify(o)}; state.busy = true`);
+  emit("repo-changed", o.root);
+  await flushTimers();
+  assert.equal(calls.filter((c) => c.cmd === "overview").length, 0);
+});
+
+test("highlighted pieces become colored spans; lines without them stay plain", () => {
+  const { run } = loadUi();
+  const file = {
+    new_path: "m.rs", old_path: "m.rs", binary: false,
+    hunks: [{ header: "@@ -1 +1 @@", lines: [
+      { kind: "Added", content: 'let s = "<b>";', old_no: null, new_no: 1 },
+      { kind: "Added", content: "plain <i>", old_no: null, new_no: 2 },
+    ] }],
+    hl: [[[["keyword", "let"], ["", " s = "], ["string", '"<b>"'], ["", ";"]], []]],
+  };
+  const hl = run(`codeHtml(${JSON.stringify(file)}, 0, 0)`);
+  assert.equal(hl, '<span class="hl"><span class="tk-keyword">let</span> s = <span class="tk-string">&quot;&lt;b&gt;&quot;</span>;</span>');
+  assert.equal(run(`codeHtml(${JSON.stringify(file)}, 0, 1)`), "plain &lt;i&gt;");
+  // No hl at all (an older answer, or an unknown language).
+  delete file.hl;
+  assert.equal(run(`codeHtml(${JSON.stringify(file)}, 0, 0)`), "let s = &quot;&lt;b&gt;&quot;;");
+  // The read-only diff uses it too.
+  file.hl = [[[["keyword", "let"]], []]];
+  assert.match(run(`readonlyDiff([${JSON.stringify(file)}])`), /tk-keyword/);
+});
