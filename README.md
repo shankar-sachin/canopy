@@ -2,6 +2,17 @@
 
 <h1 align="center">Canopy</h1>
 
+<p align="center">
+  <a href="https://github.com/shankar-sachin/canopy/actions/workflows/ci.yml"><img src="https://github.com/shankar-sachin/canopy/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="https://github.com/shankar-sachin/canopy/releases/latest"><img src="https://img.shields.io/github/v/release/shankar-sachin/canopy?sort=semver&label=release" alt="Latest release"></a>
+  <a href="https://github.com/shankar-sachin/canopy/releases"><img src="https://img.shields.io/github/downloads/shankar-sachin/canopy/total?label=downloads" alt="Downloads"></a>
+  <a href="https://github.com/shankar-sachin/homebrew-canopy"><img src="https://img.shields.io/badge/homebrew-shankar--sachin%2Fcanopy-orange?logo=homebrew&logoColor=white" alt="Homebrew tap"></a>
+  <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-blue" alt="macOS, Windows and Linux">
+  <img src="https://img.shields.io/badge/built%20with-Rust-dea584?logo=rust&logoColor=white" alt="Built with Rust">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/shankar-sachin/canopy" alt="MIT license"></a>
+  <a href="https://shankar-sachin.github.io/canopy/"><img src="https://img.shields.io/badge/website-canopy-2ea043" alt="Website"></a>
+</p>
+
 **Git, at a glance.** One Canopy, two ways to use it:
 
 - **Canopy Desktop: start here.** A friendly app for macOS, Windows and Linux. It shows
@@ -15,8 +26,7 @@ Both run the real `git` and GitHub CLI on your machine and share themes and sett
 
 **Website:** [shankar-sachin.github.io/canopy](https://shankar-sachin.github.io/canopy/), with a feature tour, the GitHub guide, and the full key reference.
 
-<!-- Generate with: vhs demo.tape -->
-![Canopy demo](demo.gif)
+![Canopy Desktop: Home, with branch and sync status, next steps, the GitHub card, recent commits and branches](docs/assets/desktop/home.png)
 
 ## Install
 
@@ -222,6 +232,11 @@ CANOPY_PRINT=1 cargo test -p canopy-git-tui ui_tests -- --nocapture   # print re
 Release: bump `version` in `Cargo.toml` in a PR, merge it, then run
 `scripts/release.sh` on main. CI builds the binaries, attaches them to the
 release, and updates the Homebrew tap.
+
+## Security
+
+Found a security problem? Please report it privately, not in an issue: see
+[SECURITY.md](SECURITY.md).
 
 ## License
 
