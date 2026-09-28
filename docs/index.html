@@ -43,6 +43,16 @@
     <a class="pill" href="#two-ways"><b>1.0.8</b> One Canopy, two ways to use it →</a>
     <h1>Git, <span class="grad">at a glance.</span></h1>
     <p class="lede">Canopy shows your whole repository in one place and tells you what to do next. Start with the friendly desktop app. When you want every git and GitHub action one key away, there's Canopy for the terminal.</p>
+    <div class="install-switches" id="install-switches">
+      <div class="surface-switch" role="tablist" aria-label="Which app">
+        <button type="button" role="tab" data-app="desktop" aria-selected="true">Desktop</button>
+        <button type="button" role="tab" data-app="terminal" aria-selected="false">Terminal</button>
+      </div>
+      <div class="surface-switch" role="tablist" aria-label="How to install">
+        <button type="button" role="tab" data-via="script" aria-selected="false">Curl</button>
+        <button type="button" role="tab" data-via="pm" aria-selected="true">Homebrew</button>
+      </div>
+    </div>
     <div class="install">
       <span class="prompt">$</span>
       <code id="brew-cmd">brew install --cask shankar-sachin/canopy/canopy-desktop</code>
