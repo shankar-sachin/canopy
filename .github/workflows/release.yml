@@ -214,5 +214,7 @@ jobs:
                 ../packaging/homebrew/canopy-desktop.rb.in > Casks/canopy-desktop.rb
             git add Casks/canopy-desktop.rb
           fi
+          # A re-run after the tap is already up to date has nothing to commit.
+          if git diff --cached --quiet; then echo "tap already at ${{ github.ref_name }}"; exit 0; fi
           git commit -m "canopy ${{ github.ref_name }}"
           git push
