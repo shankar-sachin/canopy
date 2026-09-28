@@ -337,10 +337,23 @@ pub fn list_custom(dir: &Path) -> Vec<(PathBuf, ThemeFile)> {
     out
 }
 
-/// Save `theme` as `<dir>/<slug>.json`; returns the path.
+/// Save `theme` as `<dir>/<slug>.json`; returns the path. Saving a theme
+/// again replaces its file, but a different theme whose name has the same
+/// slug ("Café" and "Cafe") gets its own file (`cafe-2.json`) instead of
+/// overwriting the other one.
 pub fn save(dir: &Path, theme: &ThemeFile) -> std::io::Result<PathBuf> {
     std::fs::create_dir_all(dir)?;
-    let path = dir.join(format!("{}.json", slug(&theme.name)));
+    let base = slug(&theme.name);
+    let same_theme = |p: &Path| {
+        std::fs::read_to_string(p)
+            .ok()
+            .and_then(|j| serde_json::from_str::<ThemeFile>(&j).ok())
+            .is_some_and(|t| t.name.trim().eq_ignore_ascii_case(theme.name.trim()))
+    };
+    let path = (1..)
+        .map(|i| dir.join(if i == 1 { format!("{base}.json") } else { format!("{base}-{i}.json") }))
+        .find(|p| !p.exists() || same_theme(p))
+        .expect("an unused file name");
     std::fs::write(&path, theme.to_json())?;
     Ok(path)
 }
@@ -357,12 +370,11 @@ pub fn find(name: &str, dir: Option<&Path>) -> Option<Palette> {
 /// A custom theme's file as saved (its base and only the colors it
 /// changes), by name or file name.
 pub fn custom_file(name: &str, dir: &Path) -> Option<ThemeFile> {
-    list_custom(dir)
-        .into_iter()
-        .find(|(path, t)| {
-            t.name.eq_ignore_ascii_case(name) || path.file_stem().is_some_and(|s| s == slug(name).as_str())
-        })
-        .map(|(_, t)| t)
+    let list = list_custom(dir);
+    // A theme's own name wins over another theme's file name.
+    let by_name = list.iter().position(|(_, t)| t.name.trim().eq_ignore_ascii_case(name.trim()));
+    let by_file = || list.iter().position(|(path, _)| path.file_stem().is_some_and(|s| s == slug(name).as_str()));
+    by_name.or_else(by_file).map(|i| list[i].1.clone())
 }
 
 #[cfg(test)]
@@ -423,5 +435,27 @@ mod tests {
         assert_eq!(find("nord", None).unwrap().name, "nord");
         assert!(find("nope", Some(dir.path())).is_none());
         assert_eq!(slug("  My Theme!! v2 "), "my-theme-v2");
+    }
+
+    #[test]
+    fn saving_never_overwrites_a_different_theme() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let theme = |name: &str, accent: &str| ThemeFile {
+            name: name.into(),
+            base: "canopy".into(),
+            colors: BTreeMap::from([("accent".into(), accent.into())]),
+        };
+        let a = save(dir.path(), &theme("My Theme", "#111111")).unwrap();
+        // Same slug, different theme: a file of its own.
+        let b = save(dir.path(), &theme("My-Theme", "#222222")).unwrap();
+        assert_eq!(a.file_name().unwrap(), "my-theme.json");
+        assert_eq!(b.file_name().unwrap(), "my-theme-2.json");
+        // Saving a theme again (an edit, any case) replaces its own file.
+        assert_eq!(save(dir.path(), &theme("MY THEME", "#333333")).unwrap(), a);
+        assert_eq!(save(dir.path(), &theme("My-Theme", "#444444")).unwrap(), b);
+        assert_eq!(list_custom(dir.path()).len(), 2);
+        assert_eq!(find("My-Theme", Some(dir.path())).unwrap().get("accent"), [0x44; 3]);
+        assert_eq!(find("my theme", Some(dir.path())).unwrap().get("accent"), [0x33; 3]);
+        assert_eq!(slug("!!!"), "theme");
     }
 }

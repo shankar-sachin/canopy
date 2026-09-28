@@ -17,6 +17,9 @@ pub enum GitError {
     NotARepo(PathBuf),
     #[error("could not parse git output: {0}")]
     Parse(String),
+    /// A name or revision starting with `-`, which git would read as an option.
+    #[error("\"{0}\" can't start with a dash: git would read it as an option")]
+    BadName(String),
 }
 
 pub type Result<T> = std::result::Result<T, GitError>;

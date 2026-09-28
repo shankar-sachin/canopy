@@ -45,10 +45,24 @@
   </div>
 </header>
 <main class="wrap doc">
-  <aside class="toc"><b>On this page</b><a href="#v1-0-11">v1.0.11</a><a href="#v1-0-10">v1.0.10</a><a href="#v1-0-9">v1.0.9</a><a href="#v1-0-8">v1.0.8</a><a href="#v1-0-7">v1.0.7</a><a href="#v1-0-6">v1.0.6</a><a href="#v1-0-5">v1.0.5</a><a href="#v1-0-4">v1.0.4</a><a href="#v1-0-3">v1.0.3</a><a href="#v1-0-2">v1.0.2</a><a href="#v1-0-1">v1.0.1</a><a href="#v1-0-0">v1.0.0</a><a href="#v0-4-0">v0.4.0</a><a href="#v0-3-0">v0.3.0</a><a href="#v0-2-0">v0.2.0</a><a href="#v0-1-0">v0.1.0</a><a href="#next">What's next</a></aside>
+  <aside class="toc"><b>On this page</b><a href="#v1-0-12">v1.0.12</a><a href="#v1-0-11">v1.0.11</a><a href="#v1-0-10">v1.0.10</a><a href="#v1-0-9">v1.0.9</a><a href="#v1-0-8">v1.0.8</a><a href="#v1-0-7">v1.0.7</a><a href="#v1-0-6">v1.0.6</a><a href="#v1-0-5">v1.0.5</a><a href="#v1-0-4">v1.0.4</a><a href="#v1-0-3">v1.0.3</a><a href="#v1-0-2">v1.0.2</a><a href="#v1-0-1">v1.0.1</a><a href="#v1-0-0">v1.0.0</a><a href="#v0-4-0">v0.4.0</a><a href="#v0-3-0">v0.3.0</a><a href="#v0-2-0">v0.2.0</a><a href="#v0-1-0">v0.1.0</a><a href="#next">What's next</a></aside>
   <article class="prose">
 
-<div class="release" id="v1-0-11"><h2>v1.0.11 <span class="tag-new">Latest</span></h2><div class="date">September 2026</div>
+<div class="release" id="v1-0-12"><h2>v1.0.12 <span class="tag-new">Latest</span></h2><div class="date">September 2026</div>
+<p><b>A full audit</b> of both apps and the website, with many more tests.</p>
+<ul>
+  <li>Both apps refuse a branch, tag, remote or stash name that starts with a dash (like <code>-D</code>), which git would read as an option instead of a name. Dashes inside a name are fine.</li>
+  <li>Desktop: after you switch repositories, the GitHub pages no longer show the last repository&#39;s pull request or issue, and Home&#39;s GitHub card and failure banner are for the right repository straight away.</li>
+  <li>Desktop: a branch or tag you create from History shows up in the list right away, and History updates when a branch moves.</li>
+  <li>Desktop: if <b>Connect and push</b> fails (say the repository isn&#39;t on GitHub yet), trying again works instead of saying the remote already exists. The setup steps also keep what you typed after an error.</li>
+  <li>Terminal app: going back a hunk (<code>N</code> or <code>[</code>) works from a hunk&#39;s first change, where going forward puts you. Before, it stayed put.</li>
+  <li>Terminal app: selecting lines in an empty diff, or one that just got shorter, can&#39;t crash Canopy.</li>
+  <li>Themes: two custom themes whose names differ only in punctuation (<em>My Theme</em> and <em>My-Theme</em>) no longer overwrite each other, and choosing one by name picks the right one.</li>
+  <li>Website: search results for words like <em>lt</em> or <em>amp</em> display correctly, and Downloads marks the newest full release (not a pre-release) as the latest.</li>
+  <li>Under the hood: tests for the desktop app&#39;s pages, a website audit (links, anchors, page titles, the search index), and <code>scripts/audit.sh</code>, which runs them all before each release.</li>
+</ul></div>
+
+<div class="release" id="v1-0-11"><h2>v1.0.11</h2><div class="date">September 2026</div>
 <p><b>Bug fixes</b> across both apps, from a scan of the whole codebase.</p>
 <ul>
   <li>Checking out a name that is also a file (say a branch called <code>notes</code> when there&#39;s a file <code>notes</code>) could throw away your unsaved edits to that file. Now git only ever reads it as a branch or commit, in both apps.</li>

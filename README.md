@@ -180,6 +180,7 @@ crates/canopy-gui     Canopy Desktop (Tauri; plain HTML/CSS/JS front end)
 - [x] Canopy Desktop for macOS, Windows and Linux (v1.0.2–1.0.3)
 - [x] Start a new repository, Fix with AI, your own themes (v1.0.4–1.0.7)
 - [x] Desktop to start, the terminal for power: plain-language help in the desktop app (v1.0.8)
+- [x] Notifications in both apps, bug fixes and a full audit with many more tests (v1.0.10–1.0.12)
 - [ ] Syntax-highlighted diffs
 - [x] Conflict editor with per-conflict ours/theirs
 - [x] File history and blame
@@ -199,7 +200,9 @@ cargo test -p canopy-git-tui export_site_screens -- --ignored
 ## Develop
 
 ```sh
-scripts/check.sh      # fmt + clippy + every test, with a one-line verdict (what CI runs)
+scripts/check.sh      # fmt + clippy + every Rust test, with a one-line verdict
+scripts/test-ui.sh    # the desktop app's JavaScript: syntax, then its tests (Node, no npm)
+scripts/audit.sh      # everything: check.sh, test-ui.sh, the website audit, versions
 scripts/screens.sh    # regenerate the website's screenshots and key tables
 CANOPY_PRINT=1 cargo test -p canopy-git-tui ui_tests -- --nocapture   # print rendered frames
 ```
@@ -208,9 +211,13 @@ CANOPY_PRINT=1 cargo test -p canopy-git-tui ui_tests -- --nocapture   # print re
 | --- | --- |
 | `scripts/install.sh` | Install a release on macOS/Linux (`… \| sh -s -- v1.0.0` for a version, `--uninstall` to remove) |
 | `scripts/install.ps1` | The same for Windows (`-Version`, `-Uninstall`) |
-| `scripts/check.sh` | Formatting, clippy with warnings as errors, and all tests |
+| `scripts/check.sh` | Formatting, clippy with warnings as errors, and all Rust tests |
+| `scripts/test-ui.sh` | Syntax-check every script, then run the desktop UI tests in `crates/canopy-gui/ui-tests` (Node 20+) |
+| `scripts/audit-site.mjs` | Audit the website: links and anchors, page titles and descriptions, alt text, the search index, the changelog's version |
+| `scripts/audit.sh` | The full audit before a release: all of the above, plus version and shell-script checks (`--quick` skips the Rust step) |
+| `scripts/test-map.sh` | Where the tests are: counts per crate, untested files and git operations |
 | `scripts/screens.sh` | Re-render the docs screenshots, keys and theme tables from the real TUI |
-| `scripts/release.sh` | Tag the version in `Cargo.toml`, publish the release as you, wait for the builds, and check the Homebrew tap |
+| `scripts/release.sh` | Run the audit, tag the version in `Cargo.toml`, publish the release as you, wait for the builds, and check the Homebrew tap |
 
 Release: bump `version` in `Cargo.toml` in a PR, merge it, then run
 `scripts/release.sh` on main. CI builds the binaries, attaches them to the

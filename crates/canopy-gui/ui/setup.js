@@ -11,7 +11,24 @@ const su = {
   busy: false,
   log: [], // commands that ran, shown at the end
   connectOnly: false, // opened from Home's "Connect to GitHub…" on a repo that exists
+  form: {}, // what you typed or picked, so a redraw (busy, an error) keeps it
 };
+
+/// Remember the setup form's fields before a redraw replaces them.
+function keepForm() {
+  for (const el of document.querySelectorAll("#setup-panel input, #setup-panel select")) {
+    if (el.type === "radio") { if (el.checked) su.form[el.name] = el.value; }
+    else if (el.id) su.form[el.id] = el.type === "checkbox" ? el.checked : el.value;
+  }
+}
+
+/// Put the remembered values back after a redraw.
+function restoreForm() {
+  for (const el of document.querySelectorAll("#setup-panel input, #setup-panel select")) {
+    if (el.type === "radio") { if (el.name in su.form) el.checked = su.form[el.name] === el.value; }
+    else if (el.id in su.form) el.type === "checkbox" ? (el.checked = su.form[el.id]) : (el.value = su.form[el.id]);
+  }
+}
 
 function setupPanel() {
   return $("#setup-panel");
@@ -24,6 +41,7 @@ async function startSetup(path) {
   su.protocol = su.info.suggested;
   su.remote = su.info.gh_login ? "create" : "existing";
   su.log = [];
+  su.form = {};
   su.connectOnly = false;
   $("#welcome").hidden = false;
   $("#shell").hidden = true;
@@ -40,6 +58,7 @@ async function connectRemote() {
   su.protocol = su.info.suggested;
   su.remote = su.info.gh_login ? "create" : "existing";
   su.log = [];
+  su.form = {};
   su.connectOnly = true;
   showSetup();
 }
@@ -155,7 +174,9 @@ function setupHtml() {
 function drawSetup() {
   const panel = setupPanel();
   if (!panel) return;
+  keepForm();
   panel.innerHTML = setupHtml();
+  restoreForm();
   if (su.step === "remote") previewUrl();
   panel.querySelector("input:not([type=checkbox]):not([type=radio])")?.focus();
 }

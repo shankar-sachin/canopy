@@ -4,7 +4,7 @@
 #   scripts/release.sh            # release the version in Cargo.toml
 #
 # 1. Checks you're on an up-to-date, clean main and that vX.Y.Z is new.
-# 2. Runs scripts/check.sh.
+# 2. Runs scripts/audit.sh (check.sh, the JavaScript tests, the website).
 # 3. Pushes an annotated tag and creates the GitHub release with your gh login.
 # 4. Waits for the Release workflow (builds + Homebrew tap) and verifies the
 #    tap's checksums.
@@ -26,7 +26,7 @@ git fetch -q origin main --tags
 [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || die "main isn't in sync with origin (git pull)"
 git rev-parse -q --verify "refs/tags/$tag" >/dev/null && die "$tag already exists; bump the version in Cargo.toml"
 
-scripts/check.sh
+scripts/audit.sh
 
 printf 'Release %s? [y/N] ' "$tag"
 read -r answer

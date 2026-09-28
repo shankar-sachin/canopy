@@ -491,3 +491,341 @@ async fn submodules_status_and_update() {
     let plain = repo();
     assert!(Git::open(plain.path()).await.unwrap().submodules().await.unwrap().is_empty());
 }
+
+/// Names come from people typing them; one that starts with a dash must
+/// never reach git, where it would be read as an option.
+#[tokio::test]
+async fn names_starting_with_a_dash_are_refused() {
+    use canopy_git::GitError;
+    let dir = repo();
+    let git = Git::open(dir.path()).await.unwrap();
+    write(&dir, "f.txt", "1\n");
+    commit_all(&git, "one").await;
+    git.create_branch("keep", None, false).await.unwrap();
+
+    let bad = |r: Result<canopy_git::Output, GitError>| matches!(r, Err(GitError::BadName(_)));
+    assert!(bad(git.create_branch("-D", Some("keep"), false).await));
+    assert!(bad(git.create_branch("--force", None, true).await));
+    assert!(bad(git.create_branch("ok", Some("--orphan"), false).await));
+    assert!(bad(git.rename_branch("keep", "-f").await));
+    assert!(bad(git.delete_branch("--all", true).await));
+    assert!(bad(git.checkout("-f").await));
+    assert!(bad(git.merge("--abort", false).await));
+    assert!(bad(git.rebase("--root").await));
+    assert!(bad(git.reset("--hard", ResetMode::Soft).await));
+    assert!(bad(git.revert("--quit").await));
+    assert!(bad(git.cherry_pick(&["HEAD", "--quit"]).await));
+    assert!(bad(git.create_tag("-d", "HEAD", None).await));
+    assert!(bad(git.create_tag("v1", "-f", None).await));
+    assert!(bad(git.delete_tag("-l").await));
+    assert!(bad(git.stash_drop("--quiet").await));
+    assert!(bad(git.add_remote("--mirror", "x").await));
+    assert!(bad(git.add_remote("origin", "--upload-pack=touch pwned").await));
+    assert!(bad(git.push_tag("--all", "v1").await));
+    assert!(bad(git.add_worktree("--force", "wt", true).await));
+    let err = git.create_branch("-D", None, false).await.unwrap_err().to_string();
+    assert!(err.contains("\"-D\"") && err.contains("option"), "{err}");
+
+    // Nothing happened: the branch is still there, and HEAD didn't move.
+    let names: Vec<_> = git.branches().await.unwrap().into_iter().map(|b| b.name).collect();
+    assert_eq!(names, ["keep", "main"]);
+    assert!(!dir.path().join("pwned").exists());
+    // Dashes inside a name are fine.
+    git.create_branch("fix-the-thing", None, false).await.unwrap();
+}
+
+#[tokio::test]
+async fn rename_and_delete_branches() {
+    let dir = repo();
+    let git = Git::open(dir.path()).await.unwrap();
+    write(&dir, "f.txt", "1\n");
+    commit_all(&git, "one").await;
+    git.create_branch("topic", None, true).await.unwrap();
+    write(&dir, "f.txt", "2\n");
+    commit_all(&git, "unmerged work").await;
+    git.checkout("main").await.unwrap();
+
+    git.rename_branch("topic", "feature/topic").await.unwrap();
+    let names: Vec<_> = git.branches().await.unwrap().into_iter().map(|b| b.name).collect();
+    assert!(names.contains(&"feature/topic".to_string()) && !names.contains(&"topic".to_string()));
+
+    // A safe delete refuses unmerged work; a forced one goes through.
+    assert!(git.delete_branch("feature/topic", false).await.is_err());
+    git.delete_branch("feature/topic", true).await.unwrap();
+    assert_eq!(git.branches().await.unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn cherry_pick_revert_and_fixup() {
+    let dir = repo();
+    let git = Git::open(dir.path()).await.unwrap();
+    write(&dir, "f.txt", "base\n");
+    commit_all(&git, "base").await;
+    git.create_branch("side", None, true).await.unwrap();
+    write(&dir, "g.txt", "from side\n");
+    commit_all(&git, "add g").await;
+    let side = git.log(&LogQuery::default()).await.unwrap()[0].oid.clone();
+    git.checkout("main").await.unwrap();
+
+    let out = git.cherry_pick(&[&side]).await.unwrap();
+    assert!(out.cmd.starts_with("git cherry-pick"), "{}", out.cmd);
+    assert_eq!(read(&dir, "g.txt"), "from side\n");
+
+    let head = git.log(&LogQuery::default()).await.unwrap()[0].oid.clone();
+    git.revert(&head).await.unwrap();
+    assert!(!dir.path().join("g.txt").exists());
+    let log = git.log(&LogQuery::default()).await.unwrap();
+    assert!(log[0].subject.starts_with("Revert \"add g\""), "{}", log[0].subject);
+
+    write(&dir, "f.txt", "fixed\n");
+    git.stage_all().await.unwrap();
+    git.commit_fixup(&log[1].oid).await.unwrap();
+    let log = git.log(&LogQuery::default()).await.unwrap();
+    assert_eq!(log[0].subject, "fixup! add g");
+}
+
+#[tokio::test]
+async fn cherry_pick_conflict_then_abort() {
+    let dir = repo();
+    let git = Git::open(dir.path()).await.unwrap();
+    write(&dir, "f.txt", "base\n");
+    commit_all(&git, "base").await;
+    git.create_branch("side", None, true).await.unwrap();
+    write(&dir, "f.txt", "side\n");
+    commit_all(&git, "side").await;
+    let side = git.log(&LogQuery::default()).await.unwrap()[0].oid.clone();
+    git.checkout("main").await.unwrap();
+    write(&dir, "f.txt", "main\n");
+    commit_all(&git, "main").await;
+
+    assert!(git.cherry_pick(&[&side]).await.is_err());
+    assert_eq!(git.state(), RepoState::CherryPicking);
+    git.cherry_pick_abort().await.unwrap();
+    assert_eq!(git.state(), RepoState::Clean);
+    assert_eq!(read(&dir, "f.txt"), "main\n");
+}
+
+#[tokio::test]
+async fn rebase_conflict_continue_skip_and_abort() {
+    let dir = repo();
+    let git = Git::open(dir.path()).await.unwrap();
+    write(&dir, "f.txt", "base\n");
+    commit_all(&git, "base").await;
+    git.create_branch("topic", None, true).await.unwrap();
+    write(&dir, "f.txt", "topic\n");
+    commit_all(&git, "topic edit").await;
+    write(&dir, "t.txt", "only on topic\n");
+    commit_all(&git, "topic file").await;
+    git.checkout("main").await.unwrap();
+    write(&dir, "f.txt", "main\n");
+    commit_all(&git, "main edit").await;
+    git.checkout("topic").await.unwrap();
+
+    // Abort puts the branch back.
+    assert!(git.rebase("main").await.is_err());
+    assert_eq!(git.state(), RepoState::Rebasing);
+    git.rebase_abort().await.unwrap();
+    assert_eq!(git.state(), RepoState::Clean);
+    assert_eq!(read(&dir, "f.txt"), "topic\n");
+
+    // Resolve and continue: both topic commits end up on top of main.
+    assert!(git.rebase("main").await.is_err());
+    git.checkout_side("f.txt", false).await.unwrap();
+    git.rebase_continue().await.unwrap();
+    assert_eq!(git.state(), RepoState::Clean);
+    let subjects: Vec<_> = git.log(&LogQuery::default()).await.unwrap().into_iter().map(|c| c.subject).collect();
+    assert_eq!(subjects, ["topic file", "topic edit", "main edit", "base"]);
+
+    // Skip drops the conflicting commit.
+    git.reset("main~1", ResetMode::Hard).await.unwrap();
+    write(&dir, "f.txt", "again\n");
+    commit_all(&git, "clashes with main").await;
+    assert!(git.rebase("main").await.is_err());
+    git.rebase_skip().await.unwrap();
+    assert_eq!(git.state(), RepoState::Clean);
+    assert_eq!(read(&dir, "f.txt"), "main\n");
+}
+
+#[tokio::test]
+async fn merge_abort_puts_everything_back() {
+    let dir = repo();
+    let git = Git::open(dir.path()).await.unwrap();
+    write(&dir, "f.txt", "base\n");
+    commit_all(&git, "base").await;
+    git.create_branch("b", None, true).await.unwrap();
+    write(&dir, "f.txt", "b\n");
+    commit_all(&git, "b").await;
+    git.checkout("main").await.unwrap();
+    write(&dir, "f.txt", "main\n");
+    commit_all(&git, "main").await;
+    assert!(git.merge("b", true).await.is_err());
+    git.merge_abort().await.unwrap();
+    assert_eq!(git.state(), RepoState::Clean);
+    assert!(git.status().await.unwrap().is_clean());
+}
+
+#[tokio::test]
+async fn discard_clean_and_unstage_all() {
+    let dir = repo();
+    let git = Git::open(dir.path()).await.unwrap();
+    assert!(!git.has_head().await);
+    write(&dir, "f.txt", "1\n");
+    commit_all(&git, "one").await;
+    assert!(git.has_head().await);
+
+    write(&dir, "f.txt", "edited\n");
+    write(&dir, "new.txt", "new\n");
+    std::fs::create_dir(dir.path().join("build")).unwrap();
+    write(&dir, "build/out.o", "x");
+    git.stage_all().await.unwrap();
+    assert_eq!(git.status().await.unwrap().files.iter().filter(|f| f.is_staged()).count(), 3);
+    git.unstage_all().await.unwrap();
+    assert_eq!(git.status().await.unwrap().files.iter().filter(|f| f.is_staged()).count(), 0);
+
+    git.discard(&["f.txt"]).await.unwrap();
+    assert_eq!(read(&dir, "f.txt"), "1\n");
+    git.clean(&["new.txt", "build"]).await.unwrap();
+    assert!(!dir.path().join("new.txt").exists() && !dir.path().join("build").exists());
+    assert!(git.status().await.unwrap().is_clean());
+}
+
+#[tokio::test]
+async fn show_diff_refs_and_config() {
+    let dir = repo();
+    let git = Git::open(dir.path()).await.unwrap();
+    write(&dir, "f.txt", "1\n");
+    commit_all(&git, "one").await;
+    git.create_branch("next", None, true).await.unwrap();
+    write(&dir, "f.txt", "2\n");
+    write(&dir, "g.txt", "g\n");
+    commit_all(&git, "two\n\nwith a body").await;
+
+    let (header, files) = git.show("HEAD").await.unwrap();
+    assert!(header.contains("    two") && header.contains("    with a body"), "{header}");
+    assert_eq!(files.len(), 2);
+    let changed = git.diff_refs("main", "next").await.unwrap();
+    let mut paths: Vec<_> = changed.iter().map(|f| f.new_path.clone()).collect();
+    paths.sort();
+    assert_eq!(paths, ["f.txt", "g.txt"]);
+
+    assert_eq!(git.config_get("user.name").await.as_deref(), Some("Test"));
+    assert_eq!(git.config_get("canopy.nothing-here").await, None);
+}
+
+#[tokio::test]
+async fn stash_apply_keeps_it_and_drop_removes_it() {
+    let dir = repo();
+    let git = Git::open(dir.path()).await.unwrap();
+    write(&dir, "f.txt", "1\n");
+    commit_all(&git, "one").await;
+    write(&dir, "f.txt", "wip\n");
+    write(&dir, "new.txt", "untracked\n");
+    git.stash_push(None, true).await.unwrap();
+    assert!(!dir.path().join("new.txt").exists());
+    assert_eq!(read(&dir, "f.txt"), "1\n");
+
+    git.stash_apply("stash@{0}").await.unwrap();
+    assert_eq!(read(&dir, "new.txt"), "untracked\n");
+    assert_eq!(git.stashes().await.unwrap().len(), 1);
+    git.stash_drop("stash@{0}").await.unwrap();
+    assert!(git.stashes().await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn remote_branches_track_pull_and_delete() {
+    let remote = TempDir::new().unwrap();
+    sh(remote.path(), &["init", "-q", "--bare", "-b", "main"]);
+    let url = remote.path().to_str().unwrap();
+    let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+
+    // One clone pushes main and a feature branch.
+    let a = repo();
+    let ga = Git::open(a.path()).await.unwrap();
+    write(&a, "f.txt", "1\n");
+    commit_all(&ga, "one").await;
+    ga.add_remote("origin", url).await.unwrap();
+    ga.push("origin", "main", true, false, tx.clone()).await.unwrap();
+    ga.create_branch("feature", None, true).await.unwrap();
+    write(&a, "f.txt", "feature\n");
+    commit_all(&ga, "feature").await;
+    ga.push("origin", "feature", false, false, tx.clone()).await.unwrap();
+
+    // Another checks the feature out as a tracking branch.
+    let b = repo();
+    let gb = Git::open(b.path()).await.unwrap();
+    gb.add_remote("origin", url).await.unwrap();
+    gb.fetch(Some("origin"), tx.clone()).await.unwrap();
+    gb.checkout_remote("origin/feature").await.unwrap();
+    let st = gb.status().await.unwrap();
+    assert_eq!(st.branch.head.as_deref(), Some("feature"));
+    assert_eq!(st.branch.upstream.as_deref(), Some("origin/feature"));
+
+    // New work on the remote comes in with a pull.
+    write(&a, "f.txt", "more\n");
+    commit_all(&ga, "more").await;
+    ga.push("origin", "feature", false, false, tx.clone()).await.unwrap();
+    gb.pull(false, tx.clone()).await.unwrap();
+    assert_eq!(read(&b, "f.txt"), "more\n");
+
+    // set_upstream points a local branch at a remote one.
+    gb.create_branch("mine", Some("origin/main"), true).await.unwrap();
+    gb.set_upstream("origin/main").await.unwrap();
+    assert_eq!(gb.status().await.unwrap().branch.upstream.as_deref(), Some("origin/main"));
+
+    gb.delete_remote_branch("origin", "feature").await.unwrap();
+    assert!(!sh(remote.path(), &["branch"]).contains("feature"));
+}
+
+#[tokio::test]
+async fn init_adds_starter_files_without_overwriting() {
+    use canopy_git::init::{init, valid_branch, Ignore, InitOptions};
+    // No commit: the files are there, untracked, on the chosen branch.
+    let dir = TempDir::new().unwrap();
+    let path = dir.path().join("my-app");
+    std::fs::create_dir(&path).unwrap();
+    std::fs::write(path.join("README.md"), "mine\n").unwrap();
+    let opts = InitOptions {
+        branch: "trunk".into(),
+        readme: true,
+        gitignore: Ignore::Rust,
+        mit_license: false,
+        commit: false,
+    };
+    let (git, cmds) = init(&path, &opts).await.unwrap();
+    assert_eq!(cmds[0], "git init -b trunk");
+    assert!(cmds.contains(&"# created .gitignore".to_string()));
+    // README.md was already there, so it's kept as it was.
+    assert!(!cmds.contains(&"# created README.md".to_string()));
+    assert_eq!(std::fs::read_to_string(path.join("README.md")).unwrap(), "mine\n");
+    assert!(std::fs::read_to_string(path.join(".gitignore")).unwrap().contains("/target"));
+    assert_eq!(git.status().await.unwrap().branch.head.as_deref(), Some("trunk"));
+    assert!(!git.has_head().await);
+
+    // With a first commit (and a license naming the author).
+    let path = dir.path().join("second");
+    std::fs::create_dir(&path).unwrap();
+    sh(&path, &["init", "-q", "-b", "main"]);
+    sh(&path, &["config", "user.name", "Ada Lovelace"]);
+    sh(&path, &["config", "user.email", "ada@example.com"]);
+    sh(&path, &["config", "commit.gpgsign", "false"]);
+    let opts = InitOptions { mit_license: true, ..Default::default() };
+    let (git, cmds) = init(&path, &opts).await.unwrap();
+    assert!(cmds.iter().any(|c| c.starts_with("git commit")), "{cmds:?}");
+    let log = git.log(&LogQuery::default()).await.unwrap();
+    assert_eq!(log[0].subject, "Initial commit");
+    assert_eq!(std::fs::read_to_string(path.join("README.md")).unwrap(), "# second\n");
+    assert!(std::fs::read_to_string(path.join("LICENSE")).unwrap().contains("Ada Lovelace"));
+    assert!(git.status().await.unwrap().is_clean());
+
+    // A bad branch name stops before anything is created.
+    let path = dir.path().join("third");
+    let bad = InitOptions { branch: "-x".into(), ..Default::default() };
+    assert!(init(&path, &bad).await.is_err());
+    assert!(!path.exists());
+    for b in ["-x", "a..b", "a b", "x.lock", "/x", "x/", "a@{b", ""] {
+        assert!(!valid_branch(b), "{b:?}");
+    }
+    for b in ["main", "feature/x-1", "v1.2", "ümlaut"] {
+        assert!(valid_branch(b), "{b:?}");
+    }
+}

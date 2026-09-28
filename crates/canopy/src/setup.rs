@@ -283,7 +283,7 @@ fn connect(app: &mut App, protocol: Protocol) {
     };
     let (branch, push) = (s.branch.clone(), s.committed);
     app.run_op(format!("Connect {url}"), Then::Refresh, async move {
-        let added = git.add_remote("origin", &url).await?;
+        let added = git.add_or_update_remote("origin", &url).await?;
         if !push {
             return Ok(added);
         }
