@@ -141,7 +141,7 @@ function diffHtml() {
         const cls = { Added: "add", Removed: "del", Context: "ctx", NoNewline: "nonl" }[l.kind];
         const sign = { Added: "+", Removed: "−", Context: " ", NoNewline: "" }[l.kind];
         body += `<div class="dl ${cls}${ch.lines.has(key) ? " sel" : ""}${change ? " pick" : ""}" data-line="${key}">
-          <span class="no">${l.old_no ?? ""}</span><span class="no">${l.new_no ?? ""}</span><span class="sign">${sign}</span><span class="code">${esc(l.content) || " "}</span></div>`;
+          <span class="no">${l.old_no ?? ""}</span><span class="no">${l.new_no ?? ""}</span><span class="sign">${sign}</span><span class="code">${codeHtml(file, hi, li)}</span></div>`;
       });
       body += `</div>`;
     });

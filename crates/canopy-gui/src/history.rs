@@ -1,7 +1,7 @@
 //! History, branches, tags, stashes and undo.
 
 use canopy_git::ops::{LogQuery, ResetMode};
-use canopy_git::{Commit, FileDiff, ReflogEntry, Stash, Tag};
+use canopy_git::{Commit, ReflogEntry, Stash, Tag};
 use serde::Serialize;
 use tauri::State;
 
@@ -43,14 +43,14 @@ pub async fn history(limit: usize, all: bool, search: Option<String>, state: Sta
 pub struct CommitDetails {
     /// `git show --format=fuller` header: author, dates, full message.
     pub header: String,
-    pub files: Vec<FileDiff>,
+    pub files: Vec<crate::highlight::Shown>,
 }
 
 #[tauri::command]
 pub async fn commit_details(rev: String, state: State<'_, AppState>) -> Res<CommitDetails> {
     let git = current(&state).await?;
     let (header, files) = git.show(&rev).await.map_err(err)?;
-    Ok(CommitDetails { header, files })
+    Ok(CommitDetails { header, files: crate::highlight::show(files) })
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -67,7 +67,7 @@ pub async fn refs(state: State<'_, AppState>) -> Res<Refs> {
 }
 
 #[tauri::command]
-pub async fn stash_diff(name: String, state: State<'_, AppState>) -> Res<Vec<FileDiff>> {
+pub async fn stash_diff(name: String, state: State<'_, AppState>) -> Res<Vec<crate::highlight::Shown>> {
     let git = current(&state).await?;
     let o = git.run(&["stash", "show", "-p", "--include-untracked", "--no-ext-diff", &name]).await;
     // Older gits don't know --include-untracked for `stash show`.
@@ -75,7 +75,7 @@ pub async fn stash_diff(name: String, state: State<'_, AppState>) -> Res<Vec<Fil
         Ok(o) => o,
         Err(_) => git.run(&["stash", "show", "-p", "--no-ext-diff", &name]).await.map_err(err)?,
     };
-    Ok(canopy_git::parse::diff::parse(&o.stdout))
+    Ok(crate::highlight::show(canopy_git::parse::diff::parse(&o.stdout)))
 }
 
 /// One command for the many small git actions the History, Branches and

@@ -45,10 +45,19 @@
   </div>
 </header>
 <main class="wrap doc">
-  <aside class="toc"><b>On this page</b><a href="#v1-0-12">v1.0.12</a><a href="#v1-0-11">v1.0.11</a><a href="#v1-0-10">v1.0.10</a><a href="#v1-0-9">v1.0.9</a><a href="#v1-0-8">v1.0.8</a><a href="#v1-0-7">v1.0.7</a><a href="#v1-0-6">v1.0.6</a><a href="#v1-0-5">v1.0.5</a><a href="#v1-0-4">v1.0.4</a><a href="#v1-0-3">v1.0.3</a><a href="#v1-0-2">v1.0.2</a><a href="#v1-0-1">v1.0.1</a><a href="#v1-0-0">v1.0.0</a><a href="#v0-4-0">v0.4.0</a><a href="#v0-3-0">v0.3.0</a><a href="#v0-2-0">v0.2.0</a><a href="#v0-1-0">v0.1.0</a><a href="#next">What's next</a></aside>
+  <aside class="toc"><b>On this page</b><a href="#v1-0-13">v1.0.13</a><a href="#v1-0-12">v1.0.12</a><a href="#v1-0-11">v1.0.11</a><a href="#v1-0-10">v1.0.10</a><a href="#v1-0-9">v1.0.9</a><a href="#v1-0-8">v1.0.8</a><a href="#v1-0-7">v1.0.7</a><a href="#v1-0-6">v1.0.6</a><a href="#v1-0-5">v1.0.5</a><a href="#v1-0-4">v1.0.4</a><a href="#v1-0-3">v1.0.3</a><a href="#v1-0-2">v1.0.2</a><a href="#v1-0-1">v1.0.1</a><a href="#v1-0-0">v1.0.0</a><a href="#v0-4-0">v0.4.0</a><a href="#v0-3-0">v0.3.0</a><a href="#v0-2-0">v0.2.0</a><a href="#v0-1-0">v0.1.0</a><a href="#next">What's next</a></aside>
   <article class="prose">
 
-<div class="release" id="v1-0-12"><h2>v1.0.12 <span class="tag-new">Latest</span></h2><div class="date">September 2026</div>
+<div class="release" id="v1-0-13"><h2>v1.0.13 <span class="tag-new">Latest</span></h2><div class="date">September 2026</div>
+<p><b>Syntax-highlighted diffs and live refresh</b> in both apps.</p>
+<ul>
+  <li><b>Diffs are colored by language</b>: keywords, strings, comments, numbers, function and type names, in your theme&#39;s colors, in Changes, History, Stash and pull requests. Both sides of a change are read in order, so a multi-line string or comment stays right. Rust, Python, JavaScript, Go, C and C++, Java, HTML, CSS, Markdown, shell scripts and many more. In the terminal app, <code>syntax = false</code> in the config turns it off.</li>
+  <li><b>Live refresh.</b> Save a file in your editor, or commit or switch branches in another terminal, and Canopy updates right away instead of on its next check. Files git ignores (build output, <code>node_modules</code>) don&#39;t count. In the terminal app, <code>watch = false</code> goes back to checking every few seconds.</li>
+  <li>Terminal app: editing a file that was already changed now updates its diff too (before, only a change in the file list did).</li>
+  <li>README: a new demo recording of the terminal app, made in a throwaway repository by <code>scripts/demo-repo.sh</code> and <code>demo.tape</code>.</li>
+</ul></div>
+
+<div class="release" id="v1-0-12"><h2>v1.0.12</h2><div class="date">September 2026</div>
 <p><b>A full audit</b> of both apps and the website, with many more tests.</p>
 <ul>
   <li>Both apps refuse a branch, tag, remote or stash name that starts with a dash (like <code>-D</code>), which git would read as an option instead of a name. Dashes inside a name are fine.</li>

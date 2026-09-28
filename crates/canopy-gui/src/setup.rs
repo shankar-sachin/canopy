@@ -57,7 +57,12 @@ pub async fn inspect_folder(path: String) -> FolderInfo {
 
 /// Create the repository, and make it the open one.
 #[tauri::command]
-pub async fn init_repo(path: String, options: InitOptions, state: State<'_, AppState>) -> Res<Done> {
+pub async fn init_repo(
+    path: String,
+    options: InitOptions,
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Res<Done> {
     let (git, cmds) = init::init(Path::new(&path), &options).await.map_err(|e| match e {
         canopy_git::GitError::Failed { stderr, .. } if stderr.contains("Please tell me who you are") => {
             "git doesn't know your name and email yet, so it can't commit. Set them in a terminal:\n\
@@ -70,7 +75,7 @@ pub async fn init_repo(path: String, options: InitOptions, state: State<'_, AppS
     if let Some(f) = crate::recent::store_path() {
         let _ = crate::recent::add(&f, &git.repo.root.display().to_string());
     }
-    *state.git.lock().await = Some(git);
+    crate::set_repo(&app, &state, Some(git)).await;
     Ok(Done { cmd: cmds.join("\n"), output: String::new() })
 }
 

@@ -35,10 +35,15 @@ fn refs(v: &[String]) -> Vec<&str> {
 }
 
 #[tauri::command]
-pub async fn file_diff(path: String, staged: bool, untracked: bool, state: State<'_, AppState>) -> Res<Vec<FileDiff>> {
+pub async fn file_diff(
+    path: String,
+    staged: bool,
+    untracked: bool,
+    state: State<'_, AppState>,
+) -> Res<Vec<crate::highlight::Shown>> {
     let git = current(&state).await?;
     let res = if untracked { git.diff_untracked(&path).await } else { git.diff_file(&path, staged, 3).await };
-    res.map_err(err)
+    res.map(crate::highlight::show).map_err(err)
 }
 
 #[tauri::command]

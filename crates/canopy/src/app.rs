@@ -50,6 +50,8 @@ pub enum Msg {
     Mouse(MouseEventKind),
     Resize,
     Loaded(Result<Box<Snapshot>, String>),
+    /// The watcher saw a change in the repository at this root.
+    RepoChanged(PathBuf),
     StatusOnly(Status, RepoState),
     Diff {
         gen: u64,
@@ -227,6 +229,13 @@ pub struct App {
     inflight: Arc<AtomicUsize>,
     pub needs_redraw_full: bool,
     last_status_poll: Instant,
+    /// Watches the open repository for changes made outside Canopy.
+    watcher: Option<canopy_git::watch::RepoWatcher>,
+    /// A change was seen while busy or in a dialog: refresh when that ends.
+    fs_dirty: bool,
+    /// Reload the open diff after the next load even if the status is the
+    /// same (a file that was already modified was edited again).
+    reload_diff: bool,
     last_runs_poll: Instant,
 }
 
@@ -272,6 +281,9 @@ impl App {
             inflight: Arc::new(AtomicUsize::new(0)),
             needs_redraw_full: false,
             last_status_poll: Instant::now(),
+            watcher: None,
+            fs_dirty: false,
+            reload_diff: false,
             last_runs_poll: Instant::now(),
             log_loading: false,
             log_path: None,
@@ -571,6 +583,17 @@ impl App {
         self.refresh();
     }
 
+    /// Refresh after a change the watcher saw, unless something is running
+    /// or a dialog is open (it waits for them).
+    fn refresh_if_changed(&mut self) {
+        if self.fs_dirty && self.busy.is_none() && matches!(self.modal, Modal::None) {
+            self.fs_dirty = false;
+            self.reload_diff = true;
+            self.last_status_poll = Instant::now();
+            self.refresh();
+        }
+    }
+
     fn poll_status(&mut self) {
         let Some(git) = self.git.clone() else { return };
         self.spawn(async move {
@@ -631,7 +654,22 @@ impl App {
         self.screen = Screen::Home;
         self.focus = Focus::List;
         self.refresh();
+        self.watch_repo();
         crate::github::detect(self);
+    }
+
+    /// Start watching the open repository (replacing the last watcher).
+    /// Without a watcher, the 3-second status poll still notices changes.
+    pub fn watch_repo(&mut self) {
+        self.watcher = None;
+        self.fs_dirty = false;
+        let (Some(git), true) = (&self.git, self.config.watch) else { return };
+        let tx = self.tx.clone();
+        let root = git.repo.root.clone();
+        self.watcher = canopy_git::watch::watch(&git.repo, move |_| {
+            let _ = tx.send(Msg::RepoChanged(root.clone()));
+        })
+        .ok();
     }
 
     pub fn scan_workspace(&mut self) {
@@ -660,7 +698,11 @@ impl App {
                 self.clamp_selections();
                 if let Some(oid) = self.jump_after_load.take() {
                     crate::input::jump_to_commit(self, &oid);
-                } else if status_changed || self.diff.is_none() || self.screen != Screen::Status {
+                } else if std::mem::take(&mut self.reload_diff)
+                    || status_changed
+                    || self.diff.is_none()
+                    || self.screen != Screen::Status
+                {
                     crate::views::diff::load_for_selection(self);
                 }
                 if self.data.state != Some(RepoState::Bisecting) {
@@ -683,6 +725,14 @@ impl App {
                     }
                     Ok(_) => {}
                     Err(e) => self.toast(Level::Error, e),
+                }
+            }
+            // A file or git's state changed outside Canopy. Refresh now, or
+            // once the running action or open dialog is done.
+            Msg::RepoChanged(root) => {
+                if self.git.as_ref().is_some_and(|g| g.repo.root == root) {
+                    self.fs_dirty = true;
+                    self.refresh_if_changed();
                 }
             }
             Msg::StatusOnly(status, state) => {
@@ -1031,6 +1081,7 @@ impl App {
         spawn_input_thread(self.tx.clone(), self.paused.clone());
         if self.git.is_some() {
             self.refresh();
+            self.watch_repo();
             crate::github::detect(&mut self);
         }
         self.scan_workspace();
@@ -1071,6 +1122,7 @@ impl App {
                             self.toast = None;
                         }
                     }
+                    self.refresh_if_changed();
                     if self.busy.is_none()
                         && matches!(self.modal, Modal::None)
                         && self.last_status_poll.elapsed() > Duration::from_secs(3)

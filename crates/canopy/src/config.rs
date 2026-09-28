@@ -23,6 +23,10 @@ pub struct Config {
     pub custom_commands: Vec<CustomCommand>,
     /// Play the short tree animation when Canopy starts.
     pub splash: bool,
+    /// Refresh the moment files or git change (off: check every few seconds).
+    pub watch: bool,
+    /// Color code in diffs by language (keywords, strings, comments...).
+    pub syntax: bool,
     /// Tighter layout: less padding and no gaps between panels.
     pub compact: bool,
     /// Show modifier keys as ⌃ ⌥ ⇧ (default on macOS) instead of ctrl-/alt-.
@@ -78,6 +82,8 @@ impl Default for Config {
             mac_key_symbols: None,
             compact: false,
             splash: true,
+            watch: true,
+            syntax: true,
             log_page_size: 300,
             ai: "auto".into(),
             ai_open: "tab".into(),
@@ -131,6 +137,8 @@ teach_mode = true           # show the git command behind every action
 confirm_destructive = true
 compact = false             # true: tighter layout, no gaps between panels
 splash = true               # the tree animation when Canopy starts
+watch = true                # refresh as soon as files change (false: every few seconds)
+syntax = true               # color code in diffs by language
 ai = "auto"                 # Fix with AI (A on a failed run): auto | claude | codex | off | "my-ai {prompt}"
 ai_open = "tab"             # where it opens: tab | window | here
 # editor = "code --wait"    # for e; unset uses $VISUAL / $EDITOR / vi

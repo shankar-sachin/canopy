@@ -48,11 +48,14 @@ pub struct DiffView {
     pub rev: Option<String>,
     /// Review comments shown under their lines (PR diffs).
     pub notes: Vec<Note>,
+    /// Syntax highlighting per file, hunk and line (empty: none).
+    pub hl: Vec<Vec<Vec<canopy_highlight::Spans>>>,
 }
 
 impl DiffView {
     pub fn new(key: String, title: String, meta: Vec<String>, files: Vec<FileDiff>, mode: Option<PatchMode>) -> Self {
         let rows = build_rows(meta.len(), &files, &[]);
+        let hl = highlight(&files);
         let mut v = DiffView {
             key,
             title,
@@ -66,6 +69,7 @@ impl DiffView {
             side_by_side: false,
             rev: None,
             notes: Vec::new(),
+            hl,
         };
         if v.mode.is_some() {
             // Start on the first change so `space` does something useful.
@@ -204,6 +208,40 @@ impl DiffView {
 
 /// Rows for meta lines, then each file, hunk and line, with any review
 /// comments inserted right after the line they belong to.
+/// Syntax highlighting for every line, reading each hunk's old and new
+/// sides in order. Files in an unknown language get none.
+fn highlight(files: &[FileDiff]) -> Vec<Vec<Vec<canopy_highlight::Spans>>> {
+    use canopy_highlight::Side;
+    files
+        .iter()
+        .map(|f| {
+            let path = if f.new_path.is_empty() { &f.old_path } else { &f.new_path };
+            if f.binary || !canopy_highlight::supports(path) {
+                return Vec::new();
+            }
+            f.hunks
+                .iter()
+                .map(|h| {
+                    let lines: Vec<(Side, &str)> = h
+                        .lines
+                        .iter()
+                        .map(|l| {
+                            let side = match l.kind {
+                                DiffLineKind::Added => Side::New,
+                                DiffLineKind::Removed => Side::Old,
+                                _ => Side::Both,
+                            };
+                            // The "\ No newline" marker isn't code.
+                            (side, if l.kind == DiffLineKind::NoNewline { "" } else { l.content.as_str() })
+                        })
+                        .collect();
+                    canopy_highlight::diff_lines(path, &lines)
+                })
+                .collect()
+        })
+        .collect()
+}
+
 fn build_rows(meta: usize, files: &[FileDiff], notes: &[Note]) -> Vec<Row> {
     let mut rows: Vec<Row> = (0..meta).map(Row::Meta).collect();
     for (fi, f) in files.iter().enumerate() {

@@ -22,6 +22,7 @@ toml = "1.1.6"
 directories = "6.0.0"
 canopy-gh = { path = "../canopy-gh" }
 canopy-config = { path = "../canopy-config" }
+canopy-highlight = { path = "../canopy-highlight" }
 
 [dev-dependencies]
 tempfile.workspace = true

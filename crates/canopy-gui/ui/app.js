@@ -464,6 +464,15 @@ function prompt({ title, text = "", fields, ok = "OK", kind = "primary" }) {
   });
 }
 
+/// A diff line's code as HTML: highlighted pieces when the Rust side sent
+/// them (file.hl, per hunk and line: [[kind, text], ...]), else plain.
+function codeHtml(file, hi, li) {
+  const pieces = file.hl?.[hi]?.[li];
+  if (!pieces?.length) return esc(file.hunks[hi].lines[li].content) || " ";
+  const html = pieces.map(([k, t]) => (k ? `<span class="tk-${k}">${esc(t)}</span>` : esc(t))).join("");
+  return html ? `<span class="hl">${html}</span>` : " ";
+}
+
 /// Read-only diffs (commit details, stashes): one block per file.
 function readonlyDiff(files) {
   if (!files.length) return `<div class="diff-empty">No file changes.</div>`;
@@ -475,11 +484,11 @@ function readonlyDiff(files) {
       const body = f.binary
         ? `<div class="diff-empty">Binary file</div>`
         : f.hunks
-            .map((h) => `<div class="hunk-h"><span class="mono">${esc(h.header)}</span></div>` + h.lines
-              .map((l) => {
+            .map((h, hi) => `<div class="hunk-h"><span class="mono">${esc(h.header)}</span></div>` + h.lines
+              .map((l, li) => {
                 const cls = { Added: "add", Removed: "del", Context: "ctx", NoNewline: "nonl" }[l.kind];
                 const sign = { Added: "+", Removed: "−", Context: " ", NoNewline: "" }[l.kind];
-                return `<div class="dl ${cls}"><span class="no">${l.old_no ?? ""}</span><span class="no">${l.new_no ?? ""}</span><span class="sign">${sign}</span><span class="code">${esc(l.content) || " "}</span></div>`;
+                return `<div class="dl ${cls}"><span class="no">${l.old_no ?? ""}</span><span class="no">${l.new_no ?? ""}</span><span class="sign">${sign}</span><span class="code">${codeHtml(f, hi, li)}</span></div>`;
               })
               .join(""))
             .join("");
@@ -669,8 +678,15 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// Pick up changes made elsewhere (an editor, a terminal).
+// Pick up changes made elsewhere (an editor, a terminal): right away when
+// the Rust side's watcher sees them, on focus, and on the timer below.
 window.addEventListener("focus", () => refresh({ quiet: true }));
+let changedTimer = null;
+window.__TAURI__.event?.listen("repo-changed", (e) => {
+  if (!state.overview || e.payload !== state.overview.root) return;
+  clearTimeout(changedTimer);
+  changedTimer = setTimeout(() => refresh({ quiet: true }), 100);
+});
 let refreshTimer = null;
 function scheduleRefresh() {
   clearInterval(refreshTimer);

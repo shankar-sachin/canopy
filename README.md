@@ -83,6 +83,9 @@ Windows Terminal is recommended. Full steps are on the
 
 ## Use the terminal app
 
+<!-- Recorded with vhs from demo.tape (in a throwaway demo repository): vhs demo.tape -->
+![Canopy for the terminal: a syntax-highlighted diff, staging and committing, History and the command palette](demo.gif)
+
 ```sh
 canopy                 # open the repo you're in
 canopy ~/code/project  # open a specific repo
@@ -191,7 +194,7 @@ crates/canopy-gui     Canopy Desktop (Tauri; plain HTML/CSS/JS front end)
 - [x] Start a new repository, Fix with AI, your own themes (v1.0.4–1.0.7)
 - [x] Desktop to start, the terminal for power: plain-language help in the desktop app (v1.0.8)
 - [x] Notifications in both apps, bug fixes and a full audit with many more tests (v1.0.10–1.0.12)
-- [ ] Syntax-highlighted diffs
+- [x] Syntax-highlighted diffs and live refresh (v1.0.13)
 - [x] Conflict editor with per-conflict ours/theirs
 - [x] File history and blame
 - [x] Worktrees

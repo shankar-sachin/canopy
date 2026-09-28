@@ -9,6 +9,7 @@ pub mod init;
 pub mod model;
 pub mod ops;
 pub mod parse;
+pub mod watch;
 
 pub use cli::{Git, GitError, Output};
 pub use model::*;
