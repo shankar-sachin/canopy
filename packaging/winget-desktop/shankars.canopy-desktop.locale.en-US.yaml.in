@@ -13,7 +13,7 @@ License: MIT
 LicenseUrl: https://github.com/shankar-sachin/canopy/blob/main/LICENSE
 ShortDescription: Git, at a glance. A friendly desktop app for git and GitHub (release preview).
 Description: |-
-  Canopy Desktop is the place to start with git. It shows your whole repository in
+  canopy desktop is the place to start with git. It shows your whole repository in
   one window: what changed, what's staged, where your branch stands, and what to
   do next, with a button for each step. It explains every term in plain words,
   asks before anything destructive, and undoes the last commit, reset or checkout.

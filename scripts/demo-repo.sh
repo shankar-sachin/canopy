@@ -13,7 +13,13 @@ git init -q -b main
 git config user.name "Ada Lovelace"
 git config user.email ada@example.com
 git config commit.gpgsign false
-commit() { GIT_AUTHOR_NAME="$1" GIT_AUTHOR_EMAIL="$2" git commit -q -m "$3"; }
+# commit <hours ago> <name> <email> <message>: dated in the past, so the apps
+# show "3d ago" rather than "just now".
+now=$(date +%s)
+commit() {
+  when="$((now - $1 * 3600)) +0000"
+  GIT_AUTHOR_DATE="$when" GIT_COMMITTER_DATE="$when" GIT_AUTHOR_NAME="$2" GIT_AUTHOR_EMAIL="$3" git commit -q -m "$4"
+}
 
 cat > README.md <<'EOF'
 # acme-app
@@ -38,10 +44,10 @@ fn main() {
     println!("{} different words", counts.len());
 }
 EOF
-git add . && commit "Ada Lovelace" ada@example.com "Count words in a file"
+git add . && commit 76 "Ada Lovelace" ada@example.com "Count words in a file"
 
 printf '/target\n' > .gitignore
-git add . && commit "Grace Hopper" grace@example.com "Ignore build output"
+git add . && commit 51 "Grace Hopper" grace@example.com "Ignore build output"
 git tag v0.1.0
 
 git switch -q -c feature/top-words
@@ -55,7 +61,7 @@ fn top_words(counts: &HashMap<String, usize>, n: usize) -> Vec<(&String, &usize)
     all
 }
 EOF
-git add . && commit "Grace Hopper" grace@example.com "Add top_words"
+git add . && commit 26 "Grace Hopper" grace@example.com "Add top_words"
 git switch -q main
 
 # Uncommitted: a better word count, not staged yet.

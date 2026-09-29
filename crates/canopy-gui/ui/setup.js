@@ -106,7 +106,7 @@ function setupHtml() {
       <h3>There's no git repository here yet</h3>
       <p class="mono path selectable">${esc(f.path)}</p>
       <p>A repository is a folder that git tracks: it remembers every version you commit, so you can see what changed, undo mistakes and share your work (for example on GitHub).</p>
-      <p class="faint">${f.files ? `The ${plural(f.files, "file")} already in this folder stay as they are and can go into your first commit.` : "The folder is empty; Canopy can add a README to start with."}</p>
+      <p class="faint">${f.files ? `The ${plural(f.files, "file")} already in this folder stay as they are and can go into your first commit.` : "The folder is empty; canopy can add a README to start with."}</p>
       <div class="modal-actions">
         <button class="btn ghost" data-su="other">Choose another folder</button>
         <button class="btn primary" data-su="to-init">Create a repository here</button>

@@ -2,3 +2,4 @@
 *.snap.new
 .DS_Store
 /crates/canopy-gui/gen
+/.claude/

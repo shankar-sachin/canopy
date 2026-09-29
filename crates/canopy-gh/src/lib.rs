@@ -1,4 +1,4 @@
-//! GitHub backend for Canopy, built on the `gh` CLI.
+//! GitHub backend for canopy, built on the `gh` CLI.
 //!
 //! Like `canopy-git`, every call shells out to a real binary (`gh`) and
 //! parses its machine-readable output (`--json`). Nothing is ever installed:

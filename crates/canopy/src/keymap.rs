@@ -367,11 +367,11 @@ impl Action {
             RenameRemote => "rename remote",
             EditRemoteUrl => "change remote URL",
             FetchRemote => "fetch this remote",
-            OpenWorktree => "open worktree in Canopy",
+            OpenWorktree => "open worktree in canopy",
             NewWorktree => "new worktree for a branch",
             RemoveWorktree => "remove worktree",
             PruneWorktrees => "prune missing worktrees",
-            OpenSubmodule => "open submodule in Canopy",
+            OpenSubmodule => "open submodule in canopy",
             UpdateSubmodule => "update submodule to recorded commit",
             UpdateAllSubmodules => "update all submodules",
             Custom(_) => "custom command",
@@ -825,7 +825,7 @@ impl Action {
     /// e.g. `ToggleStage` -> `toggle_stage`, `Goto(Log)` -> `goto_history`.
     pub fn name(self) -> String {
         if let Action::Goto(s) = self {
-            return format!("goto_{}", s.title().to_lowercase());
+            return format!("goto_{}", s.title().to_lowercase().replace(' ', "_"));
         }
         let debug = format!("{self:?}");
         let mut out = String::new();
@@ -1073,6 +1073,7 @@ mod tests {
     fn action_names() {
         assert_eq!(Action::ToggleStage.name(), "toggle_stage");
         assert_eq!(Action::Goto(Screen::Log).name(), "goto_history");
+        assert_eq!(Action::Goto(Screen::Pulls).name(), "goto_pull_requests");
         assert_eq!(Action::Quit.name(), "quit");
         // Names must be unique so config entries are unambiguous.
         let mut by_name: HashMap<String, Action> = HashMap::new();

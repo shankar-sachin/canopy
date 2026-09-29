@@ -7,4 +7,6 @@
 set -eu
 cd "$(dirname "$0")/.."
 cargo test -q -p canopy-git-tui export_site_screens -- --ignored
+# The generated tables land in the wiki pages; put their heading links back.
+node scripts/wiki.mjs
 git status --short docs

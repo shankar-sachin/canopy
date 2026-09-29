@@ -326,7 +326,7 @@ fn worktree_view(app: &App, w: &canopy_git::parse::worktree::Worktree) -> DiffVi
     }
     meta.push(String::new());
     if current {
-        meta.push("This is the worktree Canopy has open.".into());
+        meta.push("This is the worktree canopy has open.".into());
     }
     if let Some(r) = &w.locked {
         meta.push(format!("Locked{}", if r.is_empty() { String::new() } else { format!(": {r}") }));

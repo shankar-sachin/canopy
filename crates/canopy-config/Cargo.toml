@@ -1,6 +1,6 @@
 [package]
 name = "canopy-config"
-description = "Settings and themes shared by the Canopy terminal app and Canopy Desktop"
+description = "Settings and themes shared by canopy console and canopy desktop"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

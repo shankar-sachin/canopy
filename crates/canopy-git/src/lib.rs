@@ -1,4 +1,4 @@
-//! Git backend for Canopy.
+//! Git backend for canopy.
 //!
 //! Every operation shells out to the real `git` binary and parses its
 //! machine-readable output. Each operation also carries the equivalent shell

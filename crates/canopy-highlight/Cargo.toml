@@ -1,6 +1,6 @@
 [package]
 name = "canopy-highlight"
-description = "Syntax highlighting for Canopy's diffs"
+description = "Syntax highlighting for canopy's diffs"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

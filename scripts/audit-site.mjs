@@ -14,7 +14,9 @@
 // newest version on the site is the one in Cargo.toml.
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, normalize, relative, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { LEGACY, PAGES, RECIPE_SECTIONS, SHAPED_FILES, SHAPED_GROUPS, guidePages } from "./wiki-pages.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DOCS = join(ROOT, "docs");
@@ -127,8 +129,58 @@ if (existsSync(indexFile)) {
     if (!entry.title) err(indexFile, `${entry.url} has no title in the index`);
   }
   for (const page of pages) {
-    if (!listed.has(page)) warn(indexFile, `${relative(DOCS, page)} isn't in the search index`);
+    if (!listed.has(page) && !html.get(page).includes("moved · canopy wiki")) warn(indexFile, `${relative(DOCS, page)} isn't in the search index`);
   }
+}
+
+// The wiki: every guide and recipe has the standard sections, long pages have
+// headings, the previous/next links follow each guide's reading order, and the
+// generated pages and search index are up to date.
+{
+  const wikiDir = join(DOCS, "wiki");
+  const shaped = (p) => p.guide && (SHAPED_GROUPS.includes(p.group) || SHAPED_FILES.includes(p.file.split("/").pop()));
+  for (const p of PAGES) {
+    const file = join(wikiDir, p.file);
+    if (!html.has(file)) { err(file, "is in scripts/wiki-pages.mjs but doesn't exist"); continue; }
+    const s = strip(html.get(file));
+    const body = s.match(/<article[\s\S]*<\/article>/)?.[0] ?? s;
+    const h2s = [...body.matchAll(/<h2 id="([^"]+)"/g)].map((m) => m[1]);
+    if (shaped(p)) {
+      const at = RECIPE_SECTIONS.map((id) => h2s.indexOf(id));
+      for (const [k, id] of RECIPE_SECTIONS.entries()) if (at[k] < 0) err(file, `missing the "${id}" section (<h2 id="${id}">)`);
+      if (!at.includes(-1) && at.some((v, k) => k && v < at[k - 1])) err(file, `sections ${RECIPE_SECTIONS.join(", ")} are out of order`);
+    }
+    const words = body.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
+    if (words > 400 && h2s.length < 2) err(file, `${words} words but only ${h2s.length} h2 headings`);
+    if (/TODO/.test(body)) err(file, "still has a TODO");
+    if (p.guide) {
+      const order = guidePages(p.guide);
+      const i = order.indexOf(p);
+      const pager = s.match(/<nav class="pager"[\s\S]*?<\/nav>/)?.[0] ?? "";
+      const links = [...pager.matchAll(/href="([^"]+)"/g)].map((m) => normalize(join(dirname(file), m[1])));
+      const want = [order[i - 1], order[i + 1]].filter(Boolean).map((q) => join(wikiDir, q.file));
+      if (links.join() !== want.join()) err(file, `previous/next links are ${links.map((l) => relative(wikiDir, l)).join(", ") || "missing"}, want ${want.map((l) => relative(wikiDir, l)).join(", ")}`);
+    }
+    // canopy console pages never mention the desktop app's buttons as keys, and vice versa.
+    if (p.guide === "desktop" && /<kbd>(?!<)/.test(body)) err(file, "has a plain <kbd> (desktop shortcuts are <kbd class=\"d\">)");
+    if (p.guide === "console" && /<kbd class="d">/.test(body)) err(file, "has a desktop <kbd class=\"d\"> shortcut in a console page");
+    if (/canopy for the terminal|terminal app|\bthe TUI\b/i.test(body.replace(/<[^>]+>/g, " "))) err(file, "says \"canopy for the terminal\" / \"terminal app\" (it's \"canopy console\" now)");
+  }
+  const known = new Set([...PAGES.map((p) => p.file), ...Object.keys(LEGACY)]);
+  for (const page of pages) {
+    if (page.startsWith(wikiDir) && !known.has(relative(wikiDir, page))) err(page, "isn't in scripts/wiki-pages.mjs (no sidebar, pager or search entry)");
+  }
+  const r = spawnSync(process.execPath, [join(ROOT, "scripts", "wiki.mjs"), "--check"], { encoding: "utf8" });
+  if (r.status !== 0) err(wikiDir, `node scripts/wiki.mjs --check failed: ${(r.stdout + r.stderr).trim().split("\n")[0]}`);
+}
+
+// The brand is lowercase in prose ("canopy", not "Canopy").
+for (const [page, raw] of html) {
+  const text = strip(raw).replace(/<(script|style)[\s\S]*?<\/\1>/g, "").replace(/<[^>]+>/g, " ");
+  const m = text.match(/.{0,30}\bCanopy\b.{0,20}/);
+  if (m) err(page, `capital-C "Canopy": "${m[0].trim()}"`);
+  const old = text.match(/.{0,30}(canopy for the terminal|canopy terminal|terminal app).{0,20}/i);
+  if (old && !page.endsWith("changelog.html")) err(page, `old name for canopy console: "${old[0].trim()}"`);
 }
 
 // The newest release on the site matches the version being built.

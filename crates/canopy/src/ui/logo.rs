@@ -1,4 +1,4 @@
-//! The Canopy tree, drawn with block characters.
+//! The canopy tree, drawn with block characters.
 //!
 //! Each character cell holds two pixels stacked vertically (`▀`/`▄` with
 //! foreground and background colors), so pixels come out roughly square.
@@ -7,7 +7,7 @@ use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
 
 /// The tree, one character per pixel: `h` highlight, `g` leaf, `m` shade,
-/// `t` trunk, `.` empty. Same art as the website's "Block Canopy" mark.
+/// `t` trunk, `.` empty. Same art as the website's "Block canopy" mark.
 const PIXELS: [&str; 8] =
     ["..hhhhh..", ".hhggggh.", "ggggggggg", "ggggmgggg", ".mmmmmmm.", "...ttt...", "....t....", "..ttttt.."];
 

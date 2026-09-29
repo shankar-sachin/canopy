@@ -73,7 +73,7 @@
 
   function fileLinks(files, rel, os) {
     if (!files.length) {
-      const first = product === "desktop" && os === "windows" ? " Canopy Desktop for Windows arrived in v1.0.3." : "";
+      const first = product === "desktop" && os === "windows" ? " canopy desktop for Windows arrived in v1.0.3." : "";
       return `<p class="dl-note">No files for this system in ${esc(rel.tag)}.${first}</p>`;
     }
     return `<ul class="dl-files">${files
@@ -104,7 +104,7 @@
     for (const list of Object.values(files)) list.sort((x, y) => x.order - y.order);
     const order = ["mac", "windows", "linux"].sort((a, b) => (b === here) - (a === here));
     if (!Object.keys(files).length) {
-      const what = product === "desktop" ? "Canopy Desktop arrived in v1.0.2 (Windows in v1.0.3)" : "This release has no terminal app files";
+      const what = product === "desktop" ? "canopy desktop arrived in v1.0.2 (Windows in v1.0.3)" : "This release has no terminal app files";
       body.innerHTML = `<p class="dl-empty">${what}. Pick a newer version above.</p>`;
     } else {
       body.innerHTML = `<div class="dl-grid">${order

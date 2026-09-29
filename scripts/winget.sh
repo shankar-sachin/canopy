@@ -4,7 +4,7 @@
 #   scripts/winget.sh             # render for the version in Cargo.toml
 #   scripts/winget.sh 1.0.1       # render for a given version
 #   scripts/winget.sh --submit    # render, then open a PR on microsoft/winget-pkgs
-#   scripts/winget.sh --desktop   # the same for Canopy Desktop (shankars.canopy-desktop)
+#   scripts/winget.sh --desktop   # the same for canopy desktop (shankars.canopy-desktop)
 #
 # Rendering reads the Windows zips' checksums from the GitHub release, so run
 # it after the Release workflow has attached the builds. Output goes to
@@ -90,4 +90,4 @@ for f in "$out"/*.yaml; do
     -f "message=$title" -f "branch=$branch" -f "content=$(base64 < "$f" | tr -d '\n')" >/dev/null
 done
 gh pr create --repo microsoft/winget-pkgs --head "$me:$branch" --title "$title" \
-  --body "Canopy $tag ($id): a git dashboard, x64 and arm64. Manifests generated from https://github.com/shankar-sachin/canopy/tree/main/$templates."
+  --body "canopy $tag ($id): a git dashboard, x64 and arm64. Manifests generated from https://github.com/shankar-sachin/canopy/tree/main/$templates."

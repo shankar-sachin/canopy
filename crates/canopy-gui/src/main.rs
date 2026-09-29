@@ -1,4 +1,4 @@
-//! Canopy Desktop: the Canopy dashboard in a window.
+//! canopy desktop: the canopy dashboard in a window.
 //!
 //! The UI is plain HTML/CSS/JS in `ui/`. It calls the commands below with
 //! `window.__TAURI__.core.invoke`; they wrap `canopy-git` exactly like the
@@ -259,5 +259,5 @@ fn main() {
             setup::github_create,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Canopy");
+        .expect("error while running canopy");
 }

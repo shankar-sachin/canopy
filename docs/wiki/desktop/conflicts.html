@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resolve a merge conflict · canopy desktop wiki</title>
+<meta name="description" content="When a merge, rebase or cherry-pick stops because both sides changed the same lines.">
+<meta property="og:title" content="Resolve a merge conflict · canopy desktop wiki">
+<meta property="og:image" content="https://shankar-sachin.github.io/canopy/assets/og.png">
+<meta name="theme-color" content="#0b100c">
+<script>try{const t=localStorage.getItem("canopy-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;}catch(e){}</script>
+<link rel="icon" href="../../assets/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- Box-drawing and symbol glyphs for the terminal screenshots (not in the default subsets). -->
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap&text=%E2%94%80%E2%94%81%E2%94%82%E2%94%83%E2%94%84%E2%94%85%E2%94%86%E2%94%87%E2%94%88%E2%94%89%E2%94%8A%E2%94%8B%E2%94%8C%E2%94%8D%E2%94%8E%E2%94%8F%E2%94%90%E2%94%91%E2%94%92%E2%94%93%E2%94%94%E2%94%95%E2%94%96%E2%94%97%E2%94%98%E2%94%99%E2%94%9A%E2%94%9B%E2%94%9C%E2%94%9D%E2%94%9E%E2%94%9F%E2%94%A0%E2%94%A1%E2%94%A2%E2%94%A3%E2%94%A4%E2%94%A5%E2%94%A6%E2%94%A7%E2%94%A8%E2%94%A9%E2%94%AA%E2%94%AB%E2%94%AC%E2%94%AD%E2%94%AE%E2%94%AF%E2%94%B0%E2%94%B1%E2%94%B2%E2%94%B3%E2%94%B4%E2%94%B5%E2%94%B6%E2%94%B7%E2%94%B8%E2%94%B9%E2%94%BA%E2%94%BB%E2%94%BC%E2%94%BD%E2%94%BE%E2%94%BF%E2%95%80%E2%95%81%E2%95%82%E2%95%83%E2%95%84%E2%95%85%E2%95%86%E2%95%87%E2%95%88%E2%95%89%E2%95%8A%E2%95%8B%E2%95%8C%E2%95%8D%E2%95%8E%E2%95%8F%E2%95%90%E2%95%91%E2%95%92%E2%95%93%E2%95%94%E2%95%95%E2%95%96%E2%95%97%E2%95%98%E2%95%99%E2%95%9A%E2%95%9B%E2%95%9C%E2%95%9D%E2%95%9E%E2%95%9F%E2%95%A0%E2%95%A1%E2%95%A2%E2%95%A3%E2%95%A4%E2%95%A5%E2%95%A6%E2%95%A7%E2%95%A8%E2%95%A9%E2%95%AA%E2%95%AB%E2%95%AC%E2%95%AD%E2%95%AE%E2%95%AF%E2%95%B0%E2%95%B1%E2%95%B2%E2%95%B3%E2%95%B4%E2%95%B5%E2%95%B6%E2%95%B7%E2%95%B8%E2%95%B9%E2%95%BA%E2%95%BB%E2%95%BC%E2%95%BD%E2%95%BE%E2%95%BF%E2%96%80%E2%96%81%E2%96%82%E2%96%83%E2%96%84%E2%96%85%E2%96%86%E2%96%87%E2%96%88%E2%96%89%E2%96%8A%E2%96%8B%E2%96%8C%E2%96%8D%E2%96%8E%E2%96%8F%E2%96%90%E2%96%91%E2%96%92%E2%96%93%E2%96%94%E2%96%95%E2%96%96%E2%96%97%E2%96%98%E2%96%99%E2%96%9A%E2%96%9B%E2%96%9C%E2%96%9D%E2%96%9E%E2%96%9F%C2%B7%E2%80%A6%E2%9C%93%E2%9C%97%E2%97%8F%E2%97%8B%E2%80%A2%E2%86%91%E2%86%93%E2%86%90%E2%86%92%E2%86%B5%E2%80%B9%E2%80%BA%E2%80%94%E2%8C%83%E2%8C%A5%E2%87%A7" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/site.css">
+<link rel="stylesheet" href="../../assets/wiki.css">
+</head>
+<body class="wiki">
+<a class="skip" href="#content">Skip to content</a>
+<header class="topbar" data-root="../../">
+  <div class="topbar-in">
+    <a class="brand" href="../../index.html"><img class="mark" src="../../assets/logo.svg" alt="" width="28" height="28"><span>canopy</span></a>
+    <nav class="menus" id="menus" aria-label="Main"><div class="menu"><button type="button" aria-expanded="false" aria-controls="menu-0">Product<svg class="caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="dropdown" id="menu-0"><a href="../../desktop.html"><b>canopy desktop</b><span>Start here: Mac, Windows and Linux</span></a><a href="../../features.html"><b>canopy console</b><span>Everything, from the keyboard in a terminal</span></a><a href="../../download.html"><b>Downloads</b><span>Every installer, every version</span></a><a href="../../github.html"><b>GitHub</b><span>Pull requests, issues and CI</span></a><a href="../../changelog.html"><b>Changelog</b><span>What's new in each release</span></a></div></div><div class="menu active"><button type="button" aria-expanded="false" aria-controls="menu-1">Docs<svg class="caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="dropdown" id="menu-1"><a href="../../get-started.html"><b>Get started</b><span>Install and first run</span></a><a href="../../wiki/index.html" aria-current="page"><b>Wiki</b><span>Two guides, and the git basics</span></a><a href="../../wiki/desktop/index.html"><b>canopy desktop guide</b><span>Every page and recipe, with screenshots</span></a><a href="../../wiki/console/index.html"><b>canopy console guide</b><span>Every screen and recipe, by key</span></a><a href="../../keys.html"><b>Console keys</b><span>Every key, generated from the app</span></a><a href="../../wiki/console/config.html"><b>Console configuration</b><span>Every setting in config.toml</span></a></div></div><div class="menu"><button type="button" aria-expanded="false" aria-controls="menu-2">Learn<svg class="caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="dropdown" id="menu-2"><a href="../../wiki/git-basics.html"><b>Git in ten minutes</b><span>The ideas that make git click</span></a><a href="../../wiki/desktop/daily-workflow.html"><b>Daily workflow: desktop</b><span>Edit, stage, commit, push, PR</span></a><a href="../../wiki/console/daily-workflow.html"><b>Daily workflow: console</b><span>The same loop, from the keyboard</span></a><a href="../../wiki/desktop/undo.html"><b>Undo a mistake: desktop</b><span>Get back anything with Undo</span></a><a href="../../wiki/console/undo.html"><b>Undo a mistake: console</b><span>Get back anything with z and the reflog</span></a></div></div></nav>
+    <div class="top-actions">
+      <button class="search-btn" type="button" aria-haspopup="dialog" aria-label="Search the site">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span class="search-label">Search</span><kbd class="kbd-shortcut" data-mac="⌘ K" data-other="Ctrl K">Ctrl K</kbd>
+      </button>
+      <a class="icon-btn" href="https://github.com/shankar-sachin/canopy" aria-label="canopy on GitHub"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+      <button class="theme-btn" type="button" aria-label="Color theme"><span class="theme-icon" aria-hidden="true"></span><span class="theme-label">System</span></button>
+      <button class="menu-btn" type="button" aria-label="Open menu" aria-controls="menus" aria-expanded="false"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+<div class="wlayout">
+  <aside class="wside" id="wside"><nav class="wside-nav" aria-label="Wiki">
+<div class="wswitch" role="group" aria-label="Choose an app"><a href="index.html" aria-current="true">canopy desktop</a><a href="../console/index.html">canopy console</a></div>
+<details open><summary>Both apps<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="../index.html">Wiki home</a>
+<a href="../git-basics.html">Git in ten minutes</a>
+<a href="../themes.html">Themes</a>
+</div></details>
+<details open><summary>Start here<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="tour.html">A tour of canopy desktop</a>
+</div></details>
+<details open><summary>Guides<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="daily-workflow.html">Your daily workflow</a>
+<a href="commits.html">Write good commits</a>
+<a href="branches.html">Branches, merging and rebasing</a>
+<a href="syncing.html">Sync with a remote</a>
+<a href="github-flow.html">Working with GitHub</a>
+</div></details>
+<details open><summary>Recipes<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="fix-last-commit.html">Fix your last commit</a>
+<a href="undo.html">Undo a mistake</a>
+<a href="conflicts.html" aria-current="page">Resolve a merge conflict</a>
+<a href="stash.html">Put work aside with the stash</a>
+<a href="ignore-files.html">Ignore files with .gitignore</a>
+<a href="tags-releases.html">Tag a version and publish a release</a>
+<a href="review-a-pr.html">Review a pull request</a>
+<a href="fix-ci.html">Fix a failing CI run</a>
+<a href="new-repo.html">Start a new repository</a>
+</div></details>
+<details><summary>Reference<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="keys.html">Keyboard shortcuts</a>
+<a href="settings.html">Settings</a>
+<a href="highlighting.html">Syntax highlighting and live refresh</a>
+<a href="troubleshooting.html">Troubleshooting</a>
+<a href="faq.html">FAQ</a>
+</div></details>
+</nav></aside>
+  <main class="wmain" id="content">
+    <div class="wbanner">This is the <b>canopy desktop</b> guide. Prefer the keyboard? <a href="../console/index.html">Switch to the canopy console guide</a>. Spot something wrong? <a href="https://github.com/shankar-sachin/canopy/edit/main/docs/wiki/desktop/conflicts.html">Suggest an edit</a>.</div>
+    <article class="wprose">
+      <div class="crumbs"><a href="../index.html">Wiki</a><span>/</span><a href="index.html">canopy desktop</a><span>/</span>Recipes</div>
+      <h1>Resolve a merge conflict</h1>
+      <p class="wlede">When a merge, rebase or cherry-pick stops because both sides changed the same lines.</p>
+<!-- BODY -->
+<p>A conflict happens when two branches changed the same lines of the same file and git can't tell which version to keep. It stops in the middle of a merge, rebase, cherry-pick or revert and asks you. Nothing is broken and nothing is lost; you decide, and then git carries on.</p>
+<p>In the conflicted file, git marks the two versions like this:</p>
+<pre class="code">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+the version on your current branch (ours)
+=======
+the version from the other branch (theirs)
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; other-branch</pre>
+<p>Resolving means ending up with the text you want, with all three marker lines gone. The two names matter for the <b>Keep mine (ours)</b> and <b>Take theirs</b> buttons below. In a <b>merge</b>, "ours" is the branch you are on and "theirs" is the one you are merging in. In a <b>rebase</b> they are the other way round: "ours" is the branch you are rebasing onto, and "theirs" is your own commit being replayed.</p>
+
+<h2 id="steps">In canopy desktop<a class="hash" href="#steps" aria-label="Link to this section">#</a></h2>
+<p>When an operation stops on conflicts, <b>Changes</b> shows a banner (<i>A merge is in progress.</i>, or rebase, cherry-pick or revert) and a <b>Conflicts</b> section listing each file. The banner says how many conflicts are left.</p>
+<ol class="steps">
+  <li>Click a conflicted file. The right side explains what happened and offers four buttons.</li>
+  <li>To choose line by line: click <b>Open in editor</b>, keep what you want between the markers, delete the marker lines, save, and click <b>Mark resolved</b>.</li>
+  <li>To choose one whole side: click <b>Keep mine (ours)</b> or <b>Take theirs</b>. That replaces the file with that version and marks it resolved in one step.</li>
+  <li>When the <b>Conflicts</b> list is empty, click <b>Continue merge</b> in the banner (it says rebase, cherry-pick or revert when that is what is in progress). The button is greyed out until every conflict is resolved.</li>
+  <li>To give up, click <b>Abort</b> and confirm. Everything goes back to how it was before the operation started.</li>
+</ol>
+<figure class="shot"><img src="../../assets/desktop/conflict.png" alt="The Changes page during a merge, with a banner saying a merge is in progress, the conflicted file, and the buttons Open in editor, Keep mine, Take theirs and Mark resolved" width="1280" height="800" loading="lazy"><figcaption>The banner has Abort and Continue merge. The buttons decide what happens to the selected file.</figcaption></figure>
+<div class="note"><b>Mark resolved doesn't check the file.</b> canopy stages whatever is in the file when you click it. Make sure the <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>, <code>=======</code> and <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code> lines are gone first, or they end up in your commit.</div>
+<div class="note"><b>Open in editor</b> uses the editor set in Settings (General). Change it there if the wrong program opens.</div>
+
+<h2 id="git">What git runs<a class="hash" href="#git" aria-label="Link to this section">#</a></h2>
+<p>Choosing a whole side is the first two lines. Marking a file resolved is just the second. Continue and Abort use the command that matches the operation in progress.</p>
+<pre class="code"><span class="p">$ </span>git checkout --ours -- &lt;file&gt;      # or --theirs
+<span class="p">$ </span>git add -- &lt;file&gt;
+<span class="p">$ </span>git -c core.editor=true merge --continue
+<span class="p">$ </span>git merge --abort
+<span class="p">$ </span>git -c core.editor=true rebase --continue
+<span class="p">$ </span>git rebase --abort</pre>
+<p>For a cherry-pick or a revert, canopy runs <code>cherry-pick</code> or <code>revert</code> with <code>--continue</code> or <code>--abort</code> instead. <code>core.editor=true</code> keeps git from stopping to ask for a commit message.</p>
+
+<h2 id="wrong">If something goes wrong<a class="hash" href="#wrong" aria-label="Link to this section">#</a></h2>
+<ul>
+  <li><b>Continue is greyed out.</b> A file is still listed under <b>Conflicts</b>. Resolve it with one of the four buttons and the button turns on.</li>
+  <li><b>Markers ended up in the file.</b> <b>Mark resolved</b> doesn't check for them. Open the file, remove the marker lines, and stage it again from <b>Changes</b>. If you have already continued, fix the file and make a new commit or amend (see <a href="fix-last-commit.html">Fix your last commit</a>).</li>
+  <li><b>Keep mine kept the wrong side.</b> During a rebase, "ours" and "theirs" swap (see the top of this page). Click the other button. The file is already marked resolved, so open it from the <b>Staged</b> list and edit it there, or abort and start again.</li>
+  <li><b>It went badly and you want to start over.</b> Click <b>Abort</b>. Nothing is lost. After the merge is finished, you can still take it back with the undo arrow: see <a href="undo.html">Undo a mistake</a>.</li>
+  <li><b>You'd like fewer conflicts.</b> Pull often and keep branches short. See <a href="branches.html">Branches, merging and rebasing</a>.</li>
+</ul>
+
+<h2 id="related">Related pages<a class="hash" href="#related" aria-label="Link to this section">#</a></h2>
+<ul>
+  <li><a href="branches.html">Branches, merging and rebasing</a></li>
+  <li><a href="syncing.html">Sync with a remote</a></li>
+  <li><a href="undo.html">Undo a mistake</a></li>
+  <li><a href="stash.html">Put work aside with the stash</a></li>
+  <li><a href="../console/conflicts.html">Resolve a merge conflict in canopy console</a> (pick each conflict from the keyboard)</li>
+</ul>
+<!-- /BODY -->
+<nav class="pager" aria-label="Pages"><a href="undo.html"><small>Previous</small>Undo a mistake</a><a href="stash.html" class="next"><small>Next</small>Put work aside with the stash</a></nav>
+    </article>
+  </main>
+  <aside class="wtoc" aria-label="On this page"><b>On this page</b><nav id="toc"></nav></aside>
+</div>
+<script src="../../assets/site.js"></script>
+<script src="../../assets/wiki.js"></script>
+</body>
+</html>

@@ -2,7 +2,7 @@
 //!
 //! Lines are sorted into a few kinds of token (keyword, string, comment...)
 //! rather than given colors, so each app paints them with its own theme:
-//! the terminal app with its palette, the desktop app with CSS variables.
+//! canopy console with its palette, the desktop app with CSS variables.
 //!
 //! A diff shows two versions of a file at once, so each hunk is read twice:
 //! the old side (context and removed lines) and the new side (context and
@@ -85,7 +85,7 @@ fn syntax_for(path: &str) -> Option<&'static SyntaxReference> {
     (s.name != "Plain Text").then_some(s)
 }
 
-/// Whether `path`'s language is one Canopy can highlight.
+/// Whether `path`'s language is one canopy can highlight.
 pub fn supports(path: &str) -> bool {
     syntax_for(path).is_some()
 }

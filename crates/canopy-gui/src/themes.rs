@@ -1,7 +1,7 @@
-//! Themes, the text editor, and settings shared with the terminal app.
+//! Themes, the text editor, and settings shared with canopy console.
 //!
 //! Themes are canopy-config palettes: the built-ins plus JSON files in
-//! `~/.canopy/themes/`, which the terminal app reads too.
+//! `~/.canopy/themes/`, which canopy console reads too.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -105,7 +105,7 @@ async fn save_as(app: &tauri::AppHandle, title: &str, name: &str) -> Option<Path
 /// Import a theme file (from the file picker) into the themes folder.
 #[tauri::command]
 pub async fn import_theme(app: tauri::AppHandle) -> Res<Option<String>> {
-    let Some(path) = pick(&app, "Import a Canopy theme").await else { return Ok(None) };
+    let Some(path) = pick(&app, "Import a canopy theme").await else { return Ok(None) };
     let text = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
     let t = ThemeFile::parse(&text)?;
     theme::save(&dir()?, &t).map_err(|e| e.to_string())?;
@@ -133,7 +133,7 @@ pub async fn export_theme(name: String, app: tauri::AppHandle) -> Res<Option<Str
 pub struct Editor {
     pub id: &'static str,
     pub name: &'static str,
-    /// The command Canopy runs, with the file added at the end.
+    /// The command canopy runs, with the file added at the end.
     pub command: &'static str,
     /// Runs inside a terminal (opens a new terminal window).
     pub terminal: bool,
@@ -256,7 +256,7 @@ pub async fn open_in_editor(path: String, state: tauri::State<'_, crate::AppStat
 // ------------------------------------------------------------------ shared settings
 
 /// Theme names differ a little: the desktop's "system" / "dark" are the
-/// terminal app's "canopy".
+/// canopy console's "canopy".
 fn theme_for_terminal(desktop: &str) -> String {
     match desktop {
         "system" | "dark" | "" => "canopy".into(),
@@ -286,10 +286,10 @@ fn shared_from(s: &Settings) -> Shared {
     }
 }
 
-/// An editor setting as a command line (the terminal app wants a command).
+/// An editor setting as a command line (canopy console wants a command).
 fn editor_command(setting: &str) -> String {
     let base = EDITORS.iter().find(|e| e.id == setting).map(|e| e.command).unwrap_or(setting);
-    // GUI editors need to wait, so the terminal app knows when you're done.
+    // GUI editors need to wait, so canopy console knows when you're done.
     match base {
         "code" | "cursor" | "zed" | "subl" => format!("{base} --wait"),
         other => other.to_string(),
@@ -317,7 +317,7 @@ fn apply(shared: &Shared) -> Res<Settings> {
     crate::settings::set_settings(s)
 }
 
-/// Where the terminal app reads its config (same rules as the app).
+/// Where canopy console reads its config (same rules as the app).
 fn terminal_config() -> Option<PathBuf> {
     match std::env::var_os("CANOPY_CONFIG") {
         Some(p) => Some(PathBuf::from(p)),
@@ -325,16 +325,16 @@ fn terminal_config() -> Option<PathBuf> {
     }
 }
 
-/// Take the terminal app's settings (from its config.toml).
+/// Take canopy console's settings (from its config.toml).
 #[tauri::command]
 pub fn import_from_terminal() -> Res<Settings> {
     let path = terminal_config().ok_or("couldn't find the config folder")?;
     let text = std::fs::read_to_string(&path)
-        .map_err(|_| format!("The terminal app has no config yet ({}).", path.display()))?;
+        .map_err(|_| format!("canopy console has no config yet ({}).", path.display()))?;
     apply(&Shared::from_toml(&text)?)
 }
 
-/// Write these settings into the terminal app's config.toml (only those
+/// Write these settings into canopy console's config.toml (only those
 /// keys change).
 #[tauri::command]
 pub fn send_to_terminal() -> Res<String> {

@@ -5,6 +5,6 @@
 	<!-- Merged into the app's Info.plist by the Tauri bundler. Shown in
 	     macOS's "canopy wants to control Terminal" prompt. -->
 	<key>NSAppleEventsUsageDescription</key>
-	<string>Canopy opens a Terminal window for Fix with AI and for terminal text editors like Vim.</string>
+	<string>canopy opens a Terminal window for Fix with AI and for terminal text editors like Vim.</string>
 </dict>
 </plist>

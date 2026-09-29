@@ -1,6 +1,6 @@
 [package]
 name = "canopy-git"
-description = "Git backend for the Canopy TUI"
+description = "Git backend for the canopy TUI"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

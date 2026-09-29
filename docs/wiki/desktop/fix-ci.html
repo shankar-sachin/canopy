@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fix a failing CI run · canopy desktop wiki</title>
+<meta name="description" content="Find out why CI failed, fix it (or re-run it), and get back to green.">
+<meta property="og:title" content="Fix a failing CI run · canopy desktop wiki">
+<meta property="og:image" content="https://shankar-sachin.github.io/canopy/assets/og.png">
+<meta name="theme-color" content="#0b100c">
+<script>try{const t=localStorage.getItem("canopy-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;}catch(e){}</script>
+<link rel="icon" href="../../assets/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- Box-drawing and symbol glyphs for the terminal screenshots (not in the default subsets). -->
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap&text=%E2%94%80%E2%94%81%E2%94%82%E2%94%83%E2%94%84%E2%94%85%E2%94%86%E2%94%87%E2%94%88%E2%94%89%E2%94%8A%E2%94%8B%E2%94%8C%E2%94%8D%E2%94%8E%E2%94%8F%E2%94%90%E2%94%91%E2%94%92%E2%94%93%E2%94%94%E2%94%95%E2%94%96%E2%94%97%E2%94%98%E2%94%99%E2%94%9A%E2%94%9B%E2%94%9C%E2%94%9D%E2%94%9E%E2%94%9F%E2%94%A0%E2%94%A1%E2%94%A2%E2%94%A3%E2%94%A4%E2%94%A5%E2%94%A6%E2%94%A7%E2%94%A8%E2%94%A9%E2%94%AA%E2%94%AB%E2%94%AC%E2%94%AD%E2%94%AE%E2%94%AF%E2%94%B0%E2%94%B1%E2%94%B2%E2%94%B3%E2%94%B4%E2%94%B5%E2%94%B6%E2%94%B7%E2%94%B8%E2%94%B9%E2%94%BA%E2%94%BB%E2%94%BC%E2%94%BD%E2%94%BE%E2%94%BF%E2%95%80%E2%95%81%E2%95%82%E2%95%83%E2%95%84%E2%95%85%E2%95%86%E2%95%87%E2%95%88%E2%95%89%E2%95%8A%E2%95%8B%E2%95%8C%E2%95%8D%E2%95%8E%E2%95%8F%E2%95%90%E2%95%91%E2%95%92%E2%95%93%E2%95%94%E2%95%95%E2%95%96%E2%95%97%E2%95%98%E2%95%99%E2%95%9A%E2%95%9B%E2%95%9C%E2%95%9D%E2%95%9E%E2%95%9F%E2%95%A0%E2%95%A1%E2%95%A2%E2%95%A3%E2%95%A4%E2%95%A5%E2%95%A6%E2%95%A7%E2%95%A8%E2%95%A9%E2%95%AA%E2%95%AB%E2%95%AC%E2%95%AD%E2%95%AE%E2%95%AF%E2%95%B0%E2%95%B1%E2%95%B2%E2%95%B3%E2%95%B4%E2%95%B5%E2%95%B6%E2%95%B7%E2%95%B8%E2%95%B9%E2%95%BA%E2%95%BB%E2%95%BC%E2%95%BD%E2%95%BE%E2%95%BF%E2%96%80%E2%96%81%E2%96%82%E2%96%83%E2%96%84%E2%96%85%E2%96%86%E2%96%87%E2%96%88%E2%96%89%E2%96%8A%E2%96%8B%E2%96%8C%E2%96%8D%E2%96%8E%E2%96%8F%E2%96%90%E2%96%91%E2%96%92%E2%96%93%E2%96%94%E2%96%95%E2%96%96%E2%96%97%E2%96%98%E2%96%99%E2%96%9A%E2%96%9B%E2%96%9C%E2%96%9D%E2%96%9E%E2%96%9F%C2%B7%E2%80%A6%E2%9C%93%E2%9C%97%E2%97%8F%E2%97%8B%E2%80%A2%E2%86%91%E2%86%93%E2%86%90%E2%86%92%E2%86%B5%E2%80%B9%E2%80%BA%E2%80%94%E2%8C%83%E2%8C%A5%E2%87%A7" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/site.css">
+<link rel="stylesheet" href="../../assets/wiki.css">
+</head>
+<body class="wiki">
+<a class="skip" href="#content">Skip to content</a>
+<header class="topbar" data-root="../../">
+  <div class="topbar-in">
+    <a class="brand" href="../../index.html"><img class="mark" src="../../assets/logo.svg" alt="" width="28" height="28"><span>canopy</span></a>
+    <nav class="menus" id="menus" aria-label="Main"><div class="menu"><button type="button" aria-expanded="false" aria-controls="menu-0">Product<svg class="caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="dropdown" id="menu-0"><a href="../../desktop.html"><b>canopy desktop</b><span>Start here: Mac, Windows and Linux</span></a><a href="../../features.html"><b>canopy console</b><span>Everything, from the keyboard in a terminal</span></a><a href="../../download.html"><b>Downloads</b><span>Every installer, every version</span></a><a href="../../github.html"><b>GitHub</b><span>Pull requests, issues and CI</span></a><a href="../../changelog.html"><b>Changelog</b><span>What's new in each release</span></a></div></div><div class="menu active"><button type="button" aria-expanded="false" aria-controls="menu-1">Docs<svg class="caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="dropdown" id="menu-1"><a href="../../get-started.html"><b>Get started</b><span>Install and first run</span></a><a href="../../wiki/index.html" aria-current="page"><b>Wiki</b><span>Two guides, and the git basics</span></a><a href="../../wiki/desktop/index.html"><b>canopy desktop guide</b><span>Every page and recipe, with screenshots</span></a><a href="../../wiki/console/index.html"><b>canopy console guide</b><span>Every screen and recipe, by key</span></a><a href="../../keys.html"><b>Console keys</b><span>Every key, generated from the app</span></a><a href="../../wiki/console/config.html"><b>Console configuration</b><span>Every setting in config.toml</span></a></div></div><div class="menu"><button type="button" aria-expanded="false" aria-controls="menu-2">Learn<svg class="caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="dropdown" id="menu-2"><a href="../../wiki/git-basics.html"><b>Git in ten minutes</b><span>The ideas that make git click</span></a><a href="../../wiki/desktop/daily-workflow.html"><b>Daily workflow: desktop</b><span>Edit, stage, commit, push, PR</span></a><a href="../../wiki/console/daily-workflow.html"><b>Daily workflow: console</b><span>The same loop, from the keyboard</span></a><a href="../../wiki/desktop/undo.html"><b>Undo a mistake: desktop</b><span>Get back anything with Undo</span></a><a href="../../wiki/console/undo.html"><b>Undo a mistake: console</b><span>Get back anything with z and the reflog</span></a></div></div></nav>
+    <div class="top-actions">
+      <button class="search-btn" type="button" aria-haspopup="dialog" aria-label="Search the site">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span class="search-label">Search</span><kbd class="kbd-shortcut" data-mac="⌘ K" data-other="Ctrl K">Ctrl K</kbd>
+      </button>
+      <a class="icon-btn" href="https://github.com/shankar-sachin/canopy" aria-label="canopy on GitHub"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+      <button class="theme-btn" type="button" aria-label="Color theme"><span class="theme-icon" aria-hidden="true"></span><span class="theme-label">System</span></button>
+      <button class="menu-btn" type="button" aria-label="Open menu" aria-controls="menus" aria-expanded="false"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+<div class="wlayout">
+  <aside class="wside" id="wside"><nav class="wside-nav" aria-label="Wiki">
+<div class="wswitch" role="group" aria-label="Choose an app"><a href="index.html" aria-current="true">canopy desktop</a><a href="../console/index.html">canopy console</a></div>
+<details open><summary>Both apps<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="../index.html">Wiki home</a>
+<a href="../git-basics.html">Git in ten minutes</a>
+<a href="../themes.html">Themes</a>
+</div></details>
+<details open><summary>Start here<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="tour.html">A tour of canopy desktop</a>
+</div></details>
+<details open><summary>Guides<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="daily-workflow.html">Your daily workflow</a>
+<a href="commits.html">Write good commits</a>
+<a href="branches.html">Branches, merging and rebasing</a>
+<a href="syncing.html">Sync with a remote</a>
+<a href="github-flow.html">Working with GitHub</a>
+</div></details>
+<details open><summary>Recipes<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="fix-last-commit.html">Fix your last commit</a>
+<a href="undo.html">Undo a mistake</a>
+<a href="conflicts.html">Resolve a merge conflict</a>
+<a href="stash.html">Put work aside with the stash</a>
+<a href="ignore-files.html">Ignore files with .gitignore</a>
+<a href="tags-releases.html">Tag a version and publish a release</a>
+<a href="review-a-pr.html">Review a pull request</a>
+<a href="fix-ci.html" aria-current="page">Fix a failing CI run</a>
+<a href="new-repo.html">Start a new repository</a>
+</div></details>
+<details><summary>Reference<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="keys.html">Keyboard shortcuts</a>
+<a href="settings.html">Settings</a>
+<a href="highlighting.html">Syntax highlighting and live refresh</a>
+<a href="troubleshooting.html">Troubleshooting</a>
+<a href="faq.html">FAQ</a>
+</div></details>
+</nav></aside>
+  <main class="wmain" id="content">
+    <div class="wbanner">This is the <b>canopy desktop</b> guide. Prefer the keyboard? <a href="../console/index.html">Switch to the canopy console guide</a>. Spot something wrong? <a href="https://github.com/shankar-sachin/canopy/edit/main/docs/wiki/desktop/fix-ci.html">Suggest an edit</a>.</div>
+    <article class="wprose">
+      <div class="crumbs"><a href="../index.html">Wiki</a><span>/</span><a href="index.html">canopy desktop</a><span>/</span>Recipes</div>
+      <h1>Fix a failing CI run</h1>
+      <p class="wlede">Find out why CI failed, fix it (or re-run it), and get back to green.</p>
+<!-- BODY -->
+<p>CI (continuous integration) is the robot on GitHub that builds and tests your code every time you push. When a run fails, the commit gets a red mark, and the cause is buried in a long log.</p>
+<p>canopy desktop watches the latest run for the commit you are on. If it failed, Home shows a banner with the short reason. From there you can read the failed part of the log, re-run the failed jobs, or hand the error to an AI assistant that opens in a terminal window. You need GitHub connected first (see <a href="github-flow.html">Working with GitHub</a>).</p>
+
+<h2 id="steps">In canopy desktop<a class="hash" href="#steps" aria-label="Link to this section">#</a></h2>
+<ol class="steps">
+<li>Open <b>Home</b>. If the latest run for your current commit on this branch failed, a banner says "canopy found an error in your latest commit", with the headline of the error and the workflow name. canopy checks again whenever your branch moves, and every minute.</li>
+<li>Click <b>Details</b> on the banner. A window titled "What went wrong" shows the same text an assistant would get, and the file it is saved in. <b>Copy</b> copies it, <b>Open in editor</b> opens it, and <b>View in GitHub</b> opens the run in your browser.</li>
+<li>To see every run, open <b>Actions</b> in the sidebar. The tabs are <b>This branch</b> and <b>All branches</b>. Each row shows the workflow, the branch, what triggered it and its age.</li>
+<li>Click a run. The jobs are listed with their steps, and failed ones start open. The end of the failed log is shown under "End of the failed log".</li>
+<li>Fix it yourself, or click <b>Fix with</b> your assistant (its name is on the button, for example <b>Fix with Claude Code</b>). canopy saves a prompt file and opens the assistant in a new terminal window. The toast says where it opened.</li>
+<li>Review what the assistant changed on the <b>Changes</b> page. Commit and push the fix (see <a href="commits.html">Write good commits</a>). A new run starts on its own.</li>
+<li>If the failure was a fluke (a network hiccup, a slow test), click <b>Re-run failed jobs</b> on the run's page instead of pushing anything.</li>
+</ol>
+<figure class="shot"><img src="../../assets/desktop/fix-ci.png" alt="The Home page with a failure banner and the buttons Details, View in GitHub and Fix with an AI assistant" width="1280" height="800" loading="lazy"><figcaption>The banner on Home appears when the latest run for your commit has failed.</figcaption></figure>
+<figure class="shot"><img src="../../assets/desktop/runs.png" alt="The Actions page with a list of runs and the details of a failed run with its failed log" width="1280" height="800" loading="lazy"><figcaption>The Actions page. A failed run offers Details, Re-run failed jobs and Fix with your assistant.</figcaption></figure>
+
+<h2 id="git">What git runs<a class="hash" href="#git" aria-label="Link to this section">#</a></h2>
+<p>These commands go through the <code>gh</code> command line tool. <code>&lt;id&gt;</code> is the run's number.</p>
+<pre class="code"><span class="p">$ </span>gh run view &lt;id&gt; --json jobs
+<span class="p">$ </span>gh run view &lt;id&gt; --log-failed
+<span class="p">$ </span>gh run rerun &lt;id&gt; --failed</pre>
+<p>Committing and pushing your fix are ordinary <code>git commit</code> and <code>git push</code> commands, run from the Changes page.</p>
+
+<h2 id="assistant">Choosing the AI assistant<a class="hash" href="#assistant" aria-label="Link to this section">#</a></h2>
+<p>In <b>Settings</b>, the "AI assistant" row has these choices.</p>
+<table class="ref">
+<tr><th>Choice</th><th>What it does</th></tr>
+<tr><td>Auto</td><td>Uses whichever assistant canopy finds on your computer.</td></tr>
+<tr><td>Claude Code, Codex</td><td>Always uses that one.</td></tr>
+<tr><td>Custom command…</td><td>Runs your own command in a "Command" field. Put <code>{prompt}</code> where the prompt should go, for example <code>aider --message {prompt}</code>. Without <code>{prompt}</code>, the prompt is added at the end.</td></tr>
+<tr><td>Off</td><td>No assistant. The Fix button becomes "Set up an AI assistant".</td></tr>
+</table>
+
+<h2 id="given">What the assistant is given<a class="hash" href="#given" aria-label="Link to this section">#</a></h2>
+<p>canopy writes a prompt to <code>.git/canopy/fix-ci.md</code> inside your repository. It holds the failed job and step, GitHub's summary of the failure, and the last 200 lines of the failed log with the noise cleaned out. It ends with the instruction not to commit or push, so you review the change first.</p>
+<div class="note"><b>Your code may leave your computer.</b> The assistant sends what it reads to its own service. The log can contain file names, paths and messages from your project. Read <b>Details</b> before you click <b>Fix with</b> if that matters for this repository.</div>
+
+<h2 id="wrong">If something goes wrong<a class="hash" href="#wrong" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><b>"No AI assistant set up yet".</b> Nothing is installed or chosen. Install Claude Code or Codex, or pick or type one in Settings, which the button opens for you.</li>
+<li><b>"Couldn't open a terminal. The prompt is saved in …".</b> Open the saved file and paste it into your assistant yourself.</li>
+<li><b>"macOS didn't let canopy open …".</b> Allow it in System Settings, Privacy &amp; Security, Automation: turn on Terminal (or iTerm) under canopy. Then try again. The prompt file is saved either way.</li>
+<li><b>The banner never appears.</b> It only shows when the latest run for exactly this commit, on this branch, failed. If you have pushed a newer commit, the run may still be going. It also needs GitHub connected.</li>
+<li><b>It passes on your computer and fails on GitHub.</b> A file that exists only on your machine, such as an ignored config or build output, is the usual cause. Check what git tracks (see <a href="ignore-files.html">Ignore files with .gitignore</a>).</li>
+<li><b>The re-run fails again.</b> It was a real failure, not a fluke. Read the failed log and fix the cause.</li>
+<li><b>You pushed a bad fix.</b> Take the commit back with <a href="undo.html">Undo a mistake</a>, then push again.</li>
+</ul>
+
+<h2 id="related">Related pages<a class="hash" href="#related" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><a href="github-flow.html">Working with GitHub</a></li>
+<li><a href="review-a-pr.html">Review a pull request</a></li>
+<li><a href="settings.html">Settings</a></li>
+<li><a href="commits.html">Write good commits</a></li>
+<li><a href="undo.html">Undo a mistake</a></li>
+</ul>
+<!-- /BODY -->
+<nav class="pager" aria-label="Pages"><a href="review-a-pr.html"><small>Previous</small>Review a pull request</a><a href="new-repo.html" class="next"><small>Next</small>Start a new repository</a></nav>
+    </article>
+  </main>
+  <aside class="wtoc" aria-label="On this page"><b>On this page</b><nav id="toc"></nav></aside>
+</div>
+<script src="../../assets/site.js"></script>
+<script src="../../assets/wiki.js"></script>
+</body>
+</html>

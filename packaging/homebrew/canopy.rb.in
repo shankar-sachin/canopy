@@ -36,7 +36,7 @@ class Canopy < Formula
   end
 
   def caveats
-    "Canopy needs git on your PATH (it runs your own git). GitHub pages also use the GitHub CLI (gh)."
+    "canopy needs git on your PATH (it runs your own git). GitHub pages also use the GitHub CLI (gh)."
   end
 
   test do

@@ -1,4 +1,4 @@
-/* Canopy wiki: a docs layout (top bar, sidebar, content, on-this-page). */
+/* canopy wiki: a docs layout (top bar, sidebar, content, on-this-page). */
 
 /* ---------- tokens: the site's theme tokens, so light/dark match everywhere ---------- */
 body.wiki {
@@ -22,6 +22,10 @@ body.wiki :focus-visible { outline: 2px solid var(--w-accent); outline-offset: 2
   padding: 26px 16px 48px 20px; border-right: 1px solid var(--w-line); background: var(--w-panel);
   scrollbar-width: thin; scrollbar-color: var(--w-line) transparent;
 }
+.wswitch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin: 0 0 16px; border: 1px solid var(--w-line); border-radius: 10px; background: var(--w-bg); }
+.wswitch a { text-align: center; padding: 8px 6px; border-radius: 7px; font-size: 14px; font-weight: 600; color: var(--w-muted) !important; text-decoration: none; }
+.wswitch a:hover { color: var(--w-text) !important; background: var(--w-hover); }
+.wswitch a[aria-current="true"] { background: var(--w-accent); color: var(--on-accent, #fff) !important; }
 .wside-nav details { margin-bottom: 10px; }
 .wside-nav summary {
   list-style: none; display: flex; align-items: center; justify-content: space-between; cursor: pointer;
@@ -75,6 +79,10 @@ body.wiki :focus-visible { outline: 2px solid var(--w-accent); outline-offset: 2
 .wprose .note b { color: var(--w-text); }
 .wprose table.ref td { color: color-mix(in srgb, var(--w-text) 88%, var(--w-muted)); border-color: var(--w-line); padding: 12px 14px; }
 .wprose table.ref tr:hover td { background: var(--w-panel); }
+.wprose figure.shot { margin: 22px 0 30px; }
+.wprose figure.shot img { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--w-line); box-shadow: 0 24px 60px -34px #000; }
+.wprose figure.shot figcaption { color: var(--w-faint); font-size: 14px; margin-top: 10px; }
+.wprose .keys-line { color: var(--w-muted); }
 .wprose ol.steps { gap: 18px; margin: 24px 0 30px; }
 .wprose ol.steps > li { color: color-mix(in srgb, var(--w-text) 88%, var(--w-muted)); }
 .wprose ol.steps > li::before { background: var(--w-accent); color: var(--w-bg); }

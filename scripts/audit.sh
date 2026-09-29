@@ -20,17 +20,20 @@ step() { printf '\n== %s\n' "$*"; }
 fail() { echo "AUDIT FAILED: $*"; exit 1; }
 
 if [ "$quick" = false ]; then
-  step "1/6 Rust: fmt, clippy, tests"
+  step "1/7 Rust: fmt, clippy, tests"
   scripts/check.sh || fail "scripts/check.sh"
 fi
 
-step "2/6 JavaScript"
+step "2/7 JavaScript"
 scripts/test-ui.sh || fail "scripts/test-ui.sh"
 
-step "3/6 website"
+step "3/7 website"
 node scripts/audit-site.mjs || fail "the website (node scripts/audit-site.mjs)"
 
-step "4/6 versions"
+step "4/7 third-party licenses"
+node scripts/third-party.mjs --check || fail "third-party licenses (node scripts/third-party.mjs)"
+
+step "5/7 versions"
 version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
 echo "Cargo.toml: $version"
 # Every workspace crate in Cargo.lock carries the same version.
@@ -42,11 +45,11 @@ echo "Cargo.lock: every canopy crate is $version"
 grep -q "<b>v$version</b>" docs/index.html || fail "the roadmap on docs/index.html doesn't show v$version"
 echo "docs/index.html roadmap: v$version"
 
-step "5/6 shell scripts"
+step "6/7 shell scripts"
 for f in scripts/*.sh; do sh -n "$f" || fail "syntax error in $f"; done
 echo "$(ls scripts/*.sh | wc -l | tr -d ' ') scripts parse"
 
-step "6/6 hygiene"
+step "7/7 hygiene"
 # Debug output left in shipped code (tests and the CLI's own println! are fine).
 if grep -rnE 'dbg!\(' crates --include='*.rs' | grep -v '/target/'; then fail "dbg!() left in"; fi
 if grep -nE 'console\.log\(' crates/canopy-gui/ui/*.js docs/assets/*.js; then fail "console.log left in shipped JavaScript"; fi

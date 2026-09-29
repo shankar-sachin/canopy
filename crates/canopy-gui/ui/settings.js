@@ -22,7 +22,7 @@ async function loadSettings() {
     setTimeout(async () => {
       setts.update = await invoke("check_update").catch((e) => ({ error: String(e) }));
       showUpdateDot();
-      if (setts.update.newer) toast(`Canopy ${setts.update.latest} is out. Open Settings → Updates to get it.`);
+      if (setts.update.newer) toast(`canopy ${setts.update.latest} is out. Open Settings → Updates to get it.`);
     }, 3000);
   }
 }
@@ -88,14 +88,14 @@ function updateHtml() {
   else if (u.error) status = `<p class="warn-text">Couldn't check: ${esc(u.error)}</p>`;
   else if (u.newer) {
     const how = u.command
-      ? `<p>Run this in a terminal (it updates Canopy in place):</p>
+      ? `<p>Run this in a terminal (it updates canopy in place):</p>
          <div class="cmd"><code class="selectable">${esc(u.command)}</code><button class="btn small" data-s2="copy" data-text="${esc(u.command)}">Copy</button></div>`
       : `<p>Download the new version from the release page${u.install === "manual" ? ", or pull and rebuild if you run it from source" : ""}.</p>`;
-    status = `<div class="update-card"><b>Canopy ${esc(u.latest)} is available.</b> You have ${esc(u.current)}.${how}
+    status = `<div class="update-card"><b>canopy ${esc(u.latest)} is available.</b> You have ${esc(u.current)}.${how}
       <div class="row-btns"><button class="btn small" data-s2="open" data-url="${esc(u.url)}">What's new</button></div></div>`;
-  } else status = `<p><span class="ck green">✓</span> You're up to date (Canopy ${esc(u.current)}).</p>`;
+  } else status = `<p><span class="ck green">✓</span> You're up to date (canopy ${esc(u.current)}).</p>`;
   return `<h3>Updates</h3>
-    ${row("Check automatically", "Once a day, when Canopy starts. It only asks GitHub for the latest version number.", toggle("check_updates", s.check_updates))}
+    ${row("Check automatically", "Once a day, when canopy starts. It only asks GitHub for the latest version number.", toggle("check_updates", s.check_updates))}
     <div class="srow2 col"><div class="grow-flex"><b>Version</b><p>${esc(INSTALL_TEXT[u?.install || setts.env?.install] || "")}</p></div>
       <button class="btn small" data-s2="check">Check now</button></div>
     ${status}`;
@@ -119,7 +119,7 @@ function aiRow(s) {
 
 // ---------------------------------------------------------------- themes
 
-const NATIVE_LABELS = { system: "Auto (follows your computer)", dark: "Canopy", light: "Canopy Light" };
+const NATIVE_LABELS = { system: "Auto (follows your computer)", dark: "canopy", light: "canopy light" };
 
 function themeLabel(name) {
   return NATIVE_LABELS[name] || name;
@@ -129,7 +129,7 @@ function themeByName(name) {
   return state.themes?.themes.find((t) => t.name === name);
 }
 
-/// The palette behind a choice ("dark" is the terminal app's canopy theme).
+/// The palette behind a choice ("dark" is canopy console's canopy theme).
 function paletteFor(name) {
   if (name === "system") name = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
   return themeByName(name === "dark" ? "canopy" : name);
@@ -160,13 +160,13 @@ function appearanceHtml() {
   return `<h3>Appearance</h3>
     <div class="tgrid">
       ${themeCard("system", "Auto")}
-      ${themeCard("dark", "Canopy", themeByName("canopy")?.colors)}
-      ${themeCard("light", "Canopy Light", themeByName("light")?.colors)}
+      ${themeCard("dark", "canopy", themeByName("canopy")?.colors)}
+      ${themeCard("light", "canopy light", themeByName("light")?.colors)}
       ${builtin.map((t) => themeCard(t.name, t.name, t.colors)).join("")}
     </div>
     <h3 class="sub">Your themes</h3>
     ${mine.length ? `<div class="tgrid">${mine.map((t) => themeCard(t.name, t.name, t.colors)).join("")}</div>`
-      : `<p class="faint small">None yet. Customize any theme to make one; it's saved where the terminal app finds it too.</p>`}
+      : `<p class="faint small">None yet. Customize any theme to make one; it's saved where canopy console finds it too.</p>`}
     <div class="row-btns tactions">
       <button class="btn small primary" data-s2="customize">${custom ? "Edit" : "Customize"} ${esc(themeLabel(state.settings.theme))}…</button>
       ${custom ? `<button class="btn small" data-s2="theme-json">Edit JSON</button>` : ""}
@@ -174,7 +174,7 @@ function appearanceHtml() {
       <button class="btn small" data-s2="theme-import">Import…</button>
       ${custom ? `<button class="btn small ghost" data-s2="theme-delete">Delete</button>` : ""}
     </div>
-    <p class="faint small">Themes are JSON files in <code class="selectable">${esc(ts.folder)}</code>. The terminal app uses the same ones: <code>canopy -t "name"</code>, or <code>theme = "name"</code> in its config. <a href="#" data-s2="open" data-url="https://shankar-sachin.github.io/canopy/wiki/themes.html#your-own">How the file works</a></p>`;
+    <p class="faint small">Themes are JSON files in <code class="selectable">${esc(ts.folder)}</code>. canopy console uses the same ones: <code>canopy -t "name"</code>, or <code>theme = "name"</code> in its config. <a href="#" data-s2="open" data-url="https://shankar-sachin.github.io/canopy/wiki/themes.html#your-own">How the file works</a></p>`;
 }
 
 const FIELD_GROUPS = [
@@ -206,7 +206,7 @@ function themeEditorHtml() {
   return `<h3>${e.existing ? "Edit" : "New"} theme</h3>
     <div class="tedit">
       <label class="field"><span>Name</span><input class="input" id="t-name" value="${esc(e.name)}" autocomplete="off" spellcheck="false"></label>
-      <p class="hint">Starts from <b>${esc(themeLabel(e.base === "canopy" ? "dark" : e.base))}</b>; the app changes as you pick colors. Some colors only show in the terminal app, so here's a preview of it too:</p>
+      <p class="hint">Starts from <b>${esc(themeLabel(e.base === "canopy" ? "dark" : e.base))}</b>; the app changes as you pick colors. Some colors only show in canopy console, so here's a preview of it too:</p>
       <div id="t-prev">${tuiPreview(e.colors)}</div>
       <div class="tgroups">${inputs}</div>
     </div>
@@ -252,7 +252,7 @@ async function saveEditing() {
     setts.editing = null;
     await loadThemes();
     await saveSettings({ theme: e.name });
-    toast(`Saved "${e.name}". The terminal app can use it too: canopy -t "${e.name}"`, { detail: path });
+    toast(`Saved "${e.name}". canopy console can use it too: canopy -t "${e.name}"`, { detail: path });
   } catch (err) {
     toast("Couldn't save the theme", { error: true, detail: String(err) });
   }
@@ -274,15 +274,15 @@ function editorRow(s) {
        <div class="sctl"><input class="input" id="editor-cmd" value="${esc(s.editor === "custom" ? "" : s.editor)}" placeholder="idea --line 1" spellcheck="false"></div></div>` : "");
 }
 
-// A pointer to the terminal app, for when you want more power.
+// A pointer to canopy console, for when you want more power.
 function terminalRow() {
   const env = setts.env;
   if (!env) return "";
   if (env.terminal_app) {
-    return row("Canopy for the terminal", `Installed (${esc(env.terminal_app)}). Run <code>canopy</code> in a repository for everything, from the keyboard: line staging, interactive rebase, bisect, worktrees and your own commands.`, "");
+    return row("canopy console", `Installed (${esc(env.terminal_app)}). Run <code>canopy</code> in a repository for everything, from the keyboard: line staging, interactive rebase, bisect, worktrees and your own commands.`, "");
   }
-  return `<div class="srow2 stack"><div><b>Canopy for the terminal</b>
-      <p>Want more power? The terminal app does everything this one does and more, from the keyboard: interactive rebase, bisect, worktrees, every repository at once, and your own commands. New power features land there first.</p></div>
+  return `<div class="srow2 stack"><div><b>canopy console</b>
+      <p>Want more power? canopy console does everything this one does and more, from the keyboard: interactive rebase, bisect, worktrees, every repository at once, and your own commands. New power features land there first.</p></div>
     <div class="cmd"><code class="selectable">${esc(env.terminal_install)}</code><button class="btn small" data-s2="copy" data-text="${esc(env.terminal_install)}">Copy</button></div></div>`;
 }
 
@@ -293,17 +293,17 @@ function settingsBody() {
       return `<h3>General</h3>
         ${row("Theme", `${esc(themeLabel(s.theme))}. Pick another or make your own in Appearance.`, `<button class="btn small" data-section="appearance">Appearance…</button>`)}
         ${editorRow(s)}
-        ${row("Show git commands", "After each action, show the git command Canopy ran, so you learn git as you go.", toggle("show_commands", s.show_commands))}
-        ${row("Refresh", "How often Canopy looks for changes made outside it. It also refreshes when you switch back to the window.", seg("refresh_secs", s.refresh_secs, [[2, "2s"], [5, "5s"], [15, "15s"], [60, "1m"], [0, "Off"]]))}
+        ${row("Show git commands", "After each action, show the git command canopy ran, so you learn git as you go.", toggle("show_commands", s.show_commands))}
+        ${row("Refresh", "How often canopy looks for changes made outside it. It also refreshes when you switch back to the window.", seg("refresh_secs", s.refresh_secs, [[2, "2s"], [5, "5s"], [15, "15s"], [60, "1m"], [0, "Off"]]))}
         ${row("Pull", "What Pull does when your branch and the remote both have new commits. Default follows your git config (pull.rebase).", seg("pull_mode", s.pull_mode, [["default", "Default"], ["merge", "Merge"], ["rebase", "Rebase"]]))}
         ${aiRow(s)}
         ${row("Recent repositories", "The list on the welcome screen.", `<button class="btn small" data-s2="clear-recent">Clear list</button>`)}
         ${row("New to git?", "The short introduction on Home: changes, staging, commits and pushing.", `<button class="btn small" data-s2="show-intro"${s.seen_intro ? "" : " disabled"}>${s.seen_intro ? "Show it again" : "Showing on Home"}</button>`)}
-        <h3 class="sub">Terminal app</h3>
+        <h3 class="sub">canopy console</h3>
         ${terminalRow()}
-        ${row("Suggest the terminal app", "Now and then, mention Canopy for the terminal (only if it isn't installed).", toggle("terminal_tip", s.terminal_tip))}
-        ${row("Share settings", "The theme, text editor, AI assistant and git-command setting can move between this app and the terminal app (<code>canopy</code>), which keeps them in <code>config.toml</code>. Only those settings change.",
-          `<div class="row-btns"><button class="btn small" data-s2="from-tui">Import from terminal app</button><button class="btn small" data-s2="to-tui">Send to terminal app</button></div>`)}
+        ${row("Suggest canopy console", "Now and then, mention canopy console (only if it isn't installed).", toggle("terminal_tip", s.terminal_tip))}
+        ${row("Share settings", "The theme, text editor, AI assistant and git-command setting can move between this app and canopy console (<code>canopy</code>), which keeps them in <code>config.toml</code>. Only those settings change.",
+          `<div class="row-btns"><button class="btn small" data-s2="from-tui">Import from canopy console</button><button class="btn small" data-s2="to-tui">Send to canopy console</button></div>`)}
         ${row("Settings file", "Save them as a JSON file (for another computer, or <code>canopy --import-settings</code>), or load one.",
           `<div class="row-btns"><button class="btn small" data-s2="export-settings">Export…</button><button class="btn small" data-s2="import-settings">Import…</button></div>`)}`;
     case "appearance":
@@ -392,7 +392,7 @@ async function openSettings(section) {
       case "theme-json": {
         const t = themeByName(state.settings.theme);
         return invoke("open_in_editor", { path: t.path })
-          .then((w) => toast(`Opened it in ${w}. Save the file and come back; Canopy picks up the change.`))
+          .then((w) => toast(`Opened it in ${w}. Save the file and come back; canopy picks up the change.`))
           .catch((err) => toast("Couldn't open the editor", { error: true, detail: String(err) }));
       }
       case "theme-export": {
@@ -415,7 +415,7 @@ async function openSettings(section) {
       }
       case "theme-delete": {
         const name = state.settings.theme;
-        const ok = await ask({ title: `Delete the theme "${name}"?`, text: "Its file is removed, so the terminal app loses it too.", buttons: [{ label: "Delete", value: true, kind: "danger" }] });
+        const ok = await ask({ title: `Delete the theme "${name}"?`, text: "Its file is removed, so canopy console loses it too.", buttons: [{ label: "Delete", value: true, kind: "danger" }] });
         if (!ok) return;
         await invoke("delete_theme", { name }).catch((err) => toast("Couldn't delete it", { error: true, detail: String(err) }));
         await loadThemes();
@@ -425,17 +425,17 @@ async function openSettings(section) {
       case "from-tui":
         try {
           await shared(await invoke("import_from_terminal"));
-          toast("Took the terminal app's theme, editor and AI settings");
+          toast("Took canopy console's theme, editor and AI settings");
         } catch (err) {
-          toast("Couldn't read the terminal app's settings", { error: true, detail: String(err) });
+          toast("Couldn't read canopy console's settings", { error: true, detail: String(err) });
         }
         return drawSettings();
       case "to-tui":
         try {
           const path = await invoke("send_to_terminal");
-          toast("The terminal app now uses these settings", { detail: path });
+          toast("canopy console now uses these settings", { detail: path });
         } catch (err) {
-          toast("Couldn't update the terminal app's config", { error: true, detail: String(err) });
+          toast("Couldn't update canopy console's config", { error: true, detail: String(err) });
         }
         return;
       case "export-settings": {
@@ -555,10 +555,10 @@ function accountHtml(a) {
        ${kv("Token stored in", a.auth.storage)}
        ${kv("Git protocol", a.auth.protocol)}
        ${a.auth.scopes.length ? `<div class="kv"><span>Permissions</span><span class="scopes">${a.auth.scopes.map((sc) => `<span class="scope">${esc(sc)}</span>`).join("")}</span></div>` : ""}
-       <p class="faint small">Canopy never sees your token: gh talks to GitHub for it. To use another account, or sign out, run in a terminal:</p>
+       <p class="faint small">canopy never sees your token: gh talks to GitHub for it. To use another account, or sign out, run in a terminal:</p>
        ${copyCmd("gh auth login")}${copyCmd("gh auth logout")}`
     : `<div class="acct-status"><span class="ck amber">●</span><span>${a.gh ? "The GitHub CLI isn't signed in." : "The GitHub CLI isn't installed."}</span></div>
-       <p class="faint small">Canopy uses the GitHub CLI with your own login for pull requests, issues and Actions. ${a.gh ? "Sign in" : "Install it, then sign in"} from a terminal:</p>
+       <p class="faint small">canopy uses the GitHub CLI with your own login for pull requests, issues and Actions. ${a.gh ? "Sign in" : "Install it, then sign in"} from a terminal:</p>
        ${a.gh ? "" : copyCmd(navigator.platform.includes("Mac") ? "brew install gh" : "https://cli.github.com")}${copyCmd("gh auth login")}`;
   const gitName = p.git_name, gitEmail = a.git_email;
   const identity = gitName || gitEmail
@@ -568,7 +568,7 @@ function accountHtml(a) {
   return `${head}
     <h4>GitHub</h4>${github}
     <h4>Git identity</h4>${identity}
-    <h4>Tools</h4>${kv("git", a.git) || `<p class="warn-text small">git wasn't found. Install git to use Canopy.</p>`}${kv("GitHub CLI", a.gh)}
+    <h4>Tools</h4>${kv("git", a.git) || `<p class="warn-text small">git wasn't found. Install git to use canopy.</p>`}${kv("GitHub CLI", a.gh)}
     <div class="row-btns"><button class="btn small" data-a="refresh">Check again</button></div>`;
 }
 
