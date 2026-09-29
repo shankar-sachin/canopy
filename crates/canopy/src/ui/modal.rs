@@ -507,7 +507,7 @@ fn welcome(f: &mut Frame, area: Rect, t: &Theme) {
     // The tree, with the title beside it.
     let beside = [
         Line::default(),
-        Line::styled("Welcome to Canopy", t.accent()),
+        Line::styled("Welcome to canopy", t.accent()),
         Line::styled("Git and GitHub, everything from the keyboard.", t.muted()),
         Line::default(),
     ];

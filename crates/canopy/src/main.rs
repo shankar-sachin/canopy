@@ -1,4 +1,4 @@
-//! Canopy for the terminal: git and GitHub, everything from the keyboard.
+//! canopy console: git and GitHub, everything from the keyboard.
 
 mod app;
 mod config;
@@ -27,7 +27,7 @@ use crate::app::{App, Level};
 use crate::config::Config;
 
 #[derive(Parser, Debug)]
-#[command(name = "canopy", version, about = "Canopy for the terminal: git and GitHub, everything from the keyboard")]
+#[command(name = "canopy", version, about = "canopy console: git and GitHub, everything from the keyboard")]
 struct Cli {
     /// Repository to open (defaults to the current directory).
     path: Option<PathBuf>,
@@ -50,13 +50,13 @@ struct Cli {
     #[arg(long, value_name = "THEME")]
     export_theme: Option<String>,
 
-    /// Print the settings Canopy Desktop can import (theme, editor, AI
+    /// Print the settings canopy desktop can import (theme, editor, AI
     /// assistant, teach mode) as JSON, then exit.
     #[arg(long)]
     export_settings: bool,
 
     /// Take theme, editor, AI assistant and teach mode from a settings file
-    /// exported by Canopy Desktop (or --export-settings), then exit.
+    /// exported by canopy desktop (or --export-settings), then exit.
     #[arg(long, value_name = "FILE")]
     import_settings: Option<PathBuf>,
 
@@ -84,7 +84,7 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
     // Started without a terminal (a script, an installer's check): say what
-    // Canopy is instead of failing to draw.
+    // canopy is instead of failing to draw.
     {
         use std::io::IsTerminal;
         if !std::io::stdout().is_terminal() || !std::io::stdin().is_terminal() {

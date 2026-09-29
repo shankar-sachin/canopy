@@ -1,4 +1,4 @@
-# Install Canopy on Windows from a GitHub release.
+# Install canopy on Windows from a GitHub release.
 #
 #   irm https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts/install.ps1 | iex
 #
@@ -71,7 +71,7 @@ try {
     } else {
         Write-Host "canopy: run: canopy"
     }
-    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Write-Host "canopy: note: Canopy needs git (winget install --id Git.Git -e)" }
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Write-Host "canopy: note: canopy needs git (winget install --id Git.Git -e)" }
 } finally {
     Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
 }

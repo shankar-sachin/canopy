@@ -50,7 +50,7 @@ jobs:
         run: |
           name=canopy-${{ github.ref_name }}-${{ matrix.target }}
           mkdir "$name"
-          cp target/${{ matrix.target }}/release/canopy README.md LICENSE "$name/"
+          cp target/${{ matrix.target }}/release/canopy README.md LICENSE THIRD-PARTY-LICENSES.txt "$name/"
           tar czf "$name.tar.gz" "$name"
           shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256"
       - name: Package (Windows)
@@ -59,7 +59,7 @@ jobs:
         run: |
           $name = "canopy-${{ github.ref_name }}-${{ matrix.target }}"
           New-Item -ItemType Directory $name | Out-Null
-          Copy-Item "target/${{ matrix.target }}/release/canopy.exe", README.md, LICENSE $name
+          Copy-Item "target/${{ matrix.target }}/release/canopy.exe", README.md, LICENSE, THIRD-PARTY-LICENSES.txt $name
           Compress-Archive -Path $name -DestinationPath "$name.zip"
           $hash = (Get-FileHash "$name.zip" -Algorithm SHA256).Hash.ToLower()
           "$hash  $name.zip" | Out-File -Encoding ascii "$name.zip.sha256"
@@ -70,7 +70,7 @@ jobs:
             canopy-*.tar.gz*
             canopy-*.zip*
 
-  # Canopy Desktop: a .dmg per Mac architecture, and a .deb and an AppImage
+  # canopy desktop: a .dmg per Mac architecture, and a .deb and an AppImage
   # for Linux. Not public yet: releases include it only once the repository
   # variable DESKTOP_PUBLIC is "true" (after the Mac app is notarized).
   # Running this workflow by hand always builds it, as a dry run.
@@ -145,7 +145,7 @@ jobs:
         with:
           merge-multiple: true
       # The release is normally created by the maintainer right after pushing
-      # the tag (`gh release create vX.Y.Z --generate-notes --title "Canopy
+      # the tag (`gh release create vX.Y.Z --generate-notes --title "canopy
       # vX.Y.Z"`), so it's credited to them rather than github-actions. This
       # step then just attaches the builds, or creates the release if nobody
       # did.
@@ -160,7 +160,7 @@ jobs:
           if gh release view "$tag" --repo "$repo" >/dev/null 2>&1; then
             gh release upload "$tag" "${files[@]}" --repo "$repo" --clobber
           else
-            gh release create "$tag" "${files[@]}" --repo "$repo" --generate-notes --title "Canopy $tag"
+            gh release create "$tag" "${files[@]}" --repo "$repo" --generate-notes --title "canopy $tag"
           fi
 
   homebrew:

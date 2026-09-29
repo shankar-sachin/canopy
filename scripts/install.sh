@@ -1,5 +1,5 @@
 #!/bin/sh
-# Install Canopy from a GitHub release, without Homebrew.
+# Install canopy from a GitHub release, without Homebrew.
 #
 #   curl -fsSL https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts/install.sh | sh
 #   curl -fsSL .../install.sh | sh -s -- v1.0.0       # a specific version
@@ -73,4 +73,4 @@ case ":$PATH:" in
   *) say "$DIR isn't on your PATH yet; add this to your shell profile:"
      printf '\n    export PATH="%s:$PATH"\n\n' "$DIR" ;;
 esac
-command -v git >/dev/null 2>&1 || say "note: Canopy needs git"
+command -v git >/dev/null 2>&1 || say "note: canopy needs git"

@@ -1,6 +1,6 @@
-//! Settings and themes shared by the Canopy terminal app and Canopy Desktop.
+//! Settings and themes shared by canopy console and canopy desktop.
 //!
-//! Both apps keep their own settings (`config.toml` for the terminal app,
+//! Both apps keep their own settings (`config.toml` for canopy console,
 //! `desktop.json` for the desktop app, both in `~/.canopy/`), and trade the
 //! settings they have in common through [`settings::Shared`]. Custom themes
 //! are JSON files in `~/.canopy/themes/` that both read.
@@ -15,7 +15,7 @@ fn home() -> Option<PathBuf> {
     std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")).map(PathBuf::from)
 }
 
-/// Canopy's folder: `~/.canopy` on every platform, or `$CANOPY_HOME`.
+/// canopy's folder: `~/.canopy` on every platform, or `$CANOPY_HOME`.
 ///
 /// Before 1.0.7 it was `~/.canopy` (or `$XDG_CONFIG_HOME/canopy`);
 /// the first time this runs, whatever is there is copied over (and the old

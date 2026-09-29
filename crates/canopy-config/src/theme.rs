@@ -1,4 +1,4 @@
-//! Colors shared by the terminal app and the desktop app: the built-in
+//! Colors shared by canopy console and the desktop app: the built-in
 //! palettes, and custom themes as JSON files in `~/.canopy/themes/`.
 //!
 //! A theme file names a base palette and overrides any of its colors:
@@ -266,7 +266,7 @@ impl ThemeFile {
     }
 
     pub fn parse(json: &str) -> Result<ThemeFile, String> {
-        let t: ThemeFile = serde_json::from_str(json).map_err(|e| format!("not a Canopy theme: {e}"))?;
+        let t: ThemeFile = serde_json::from_str(json).map_err(|e| format!("not a canopy theme: {e}"))?;
         if t.name.trim().is_empty() {
             return Err("the theme needs a \"name\"".into());
         }

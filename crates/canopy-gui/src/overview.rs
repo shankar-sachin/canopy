@@ -334,10 +334,25 @@ mod tests {
             }
             None => serde_json::Value::Null,
         };
-        let history = serde_json::json!({ "commits": commits, "graph": graph, "more": true });
-        let refs = serde_json::json!({ "tags": git.tags().await.unwrap_or_default(), "stashes": git.stashes().await.unwrap_or_default() });
-        let all =
-            serde_json::json!({ "overview": o, "diffs": diffs, "history": history, "details": details, "refs": refs });
+        // Every commit's details too, keyed by oid (for scripts/desktop-shots.sh).
+        let mut all_details = serde_json::Map::new();
+        for c in commits.iter().take(30) {
+            let (header, files) = git.show(&c.oid).await.unwrap();
+            all_details
+                .insert(c.oid.clone(), serde_json::json!({ "header": header, "files": crate::highlight::show(files) }));
+        }
+        let history = serde_json::json!({ "commits": commits, "graph": graph, "more": false });
+        let stashes = git.stashes().await.unwrap_or_default();
+        let mut stash_diffs = serde_json::Map::new();
+        for s in &stashes {
+            if let Ok(o) = git.run(&["stash", "show", "-p", "--include-untracked", "--no-ext-diff", &s.name]).await {
+                let shown = crate::highlight::show(canopy_git::parse::diff::parse(&o.stdout));
+                stash_diffs.insert(s.name.clone(), serde_json::to_value(shown).unwrap());
+            }
+        }
+        let refs = serde_json::json!({ "tags": git.tags().await.unwrap_or_default(), "stashes": stashes });
+        let all = serde_json::json!({ "overview": o, "diffs": diffs, "history": history, "details": details,
+            "all_details": all_details, "stash_diffs": stash_diffs, "refs": refs });
         std::fs::write(out, serde_json::to_string_pretty(&all).unwrap()).unwrap();
     }
 }

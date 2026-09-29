@@ -1,4 +1,4 @@
-// Canopy wiki: "On this page" and the phone "Wiki pages" button.
+// canopy wiki: "On this page" and the phone "Wiki pages" button.
 (() => {
   // ------------------------------------------------------- on this page
   const toc = document.getElementById("toc");

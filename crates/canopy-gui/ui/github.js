@@ -23,7 +23,7 @@ async function aiStatus() {
   return gh.ai;
 }
 
-/// A popup with everything Canopy knows about why run `id` failed: the same
+/// A popup with everything canopy knows about why run `id` failed: the same
 /// text the AI assistant gets, saved in .git/canopy/fix-ci.md.
 async function showDetails(id) {
   const wrap = document.createElement("div");
@@ -120,7 +120,7 @@ function setupCard() {
   if (!s) return `<div class="diff-empty">Checking GitHub…</div>`;
   const mac = navigator.platform.includes("Mac");
   const body = {
-    not_installed: `<h3>Connect GitHub</h3><p>Canopy uses the GitHub CLI (<code>gh</code>) with your own login. Install it, then log in:</p>
+    not_installed: `<h3>Connect GitHub</h3><p>canopy uses the GitHub CLI (<code>gh</code>) with your own login. Install it, then log in:</p>
       <pre class="codeblock selectable">${mac ? "brew install gh" : /Win/.test(navigator.platform) ? "winget install --id GitHub.cli -e" : "# see https://cli.github.com for your distribution"}
 gh auth login</pre>`,
     not_logged_in: `<h3>Log in to GitHub</h3><p>The GitHub CLI is installed but not logged in. In a terminal, run:</p><pre class="codeblock selectable">gh auth login</pre>`,
@@ -422,7 +422,7 @@ function notifDetailHtml() {
       <span class="mono">${esc(n.repo)}</span><span class="faint">${ago(n.updated_at)}</span></div>
     <p class="notif-why">You got this because <b>${esc(n.why)}</b>.</p>
     <div class="cactions">
-      ${inCanopy ? `<button class="btn small primary" data-g="notif-show">Open in Canopy</button>` : ""}
+      ${inCanopy ? `<button class="btn small primary" data-g="notif-show">Open in canopy</button>` : ""}
       <button class="btn small${inCanopy ? "" : " primary"}" data-g="notif-open">${brand("github")}View in GitHub</button>
       ${n.unread ? `<button class="btn small" data-g="notif-read">Mark as read</button>` : ""}
     </div>
@@ -694,7 +694,7 @@ addPage("notifs", { ...ghPage("notifs", "Notifications", "bell"), badge: notifBa
 
 // ---------------------------------------------------------------- Home card
 
-/// "Canopy found an error in your latest commit": shown on Home when CI failed
+/// "canopy found an error in your latest commit": shown on Home when CI failed
 /// for the commit you're on. Checked when HEAD moves, and every minute.
 function ghFailureBanner() {
   const head = state.overview?.status.branch.oid || "";
@@ -717,7 +717,7 @@ function ghFailureBanner() {
   const who = gh.ai?.chosen;
   return `<div class="card span-12 fail-banner">
     <div class="fail-icon">✗</div>
-    <div class="fail-text"><b>Canopy found an error in your latest commit.</b><p>${esc(f.headline)} <span class="faint">(${esc(f.workflow)})</span></p></div>
+    <div class="fail-text"><b>canopy found an error in your latest commit.</b><p>${esc(f.headline)} <span class="faint">(${esc(f.workflow)})</span></p></div>
     <div class="fail-actions">
       <button class="btn small" data-fail="details">Details</button>
       <button class="btn small" data-fail="open" data-url="${esc(f.url)}">${brand("github")}View in GitHub</button>

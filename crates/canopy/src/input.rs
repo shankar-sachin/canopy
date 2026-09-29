@@ -766,7 +766,7 @@ fn repo_action(app: &mut App, action: Action) {
                 return;
             }
             if app.git.as_ref().is_some_and(|g| g.repo.root == w.path) {
-                app.toast(Level::Warn, "Canopy has this worktree open; open another one first");
+                app.toast(Level::Warn, "canopy has this worktree open; open another one first");
                 return;
             }
             let path = w.path.display().to_string();
@@ -2292,7 +2292,7 @@ pub fn short_rev(rev: &str) -> &str {
     }
 }
 
-/// Open `file` in $VISUAL / $EDITOR (vi, or Notepad on Windows); Canopy
+/// Open `file` in $VISUAL / $EDITOR (vi, or Notepad on Windows); canopy
 /// steps aside until the editor exits.
 pub fn open_in_editor(app: &mut App, file: &std::path::Path) {
     let fallback = if cfg!(windows) { "notepad" } else { "vi" };

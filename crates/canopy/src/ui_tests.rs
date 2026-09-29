@@ -299,7 +299,7 @@ async fn fix_a_failed_run_with_ai() {
     press(&mut app, KeyCode::Char('A')).await;
     app.settle().await;
     let toast = app.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
-    assert!(toast.starts_with("would run: my-ai --task Canopy found an error"), "{toast}");
+    assert!(toast.starts_with("would run: my-ai --task canopy found an error"), "{toast}");
     assert!(toast.contains(".git/canopy/fix-ci.md"), "{toast}");
     let prompt = std::fs::read_to_string(dir.path().join(".git/canopy/fix-ci.md")).unwrap();
     assert!(prompt.contains("# Fix a failing CI run") && prompt.contains("Don't commit or push"), "{prompt}");
@@ -579,7 +579,7 @@ async fn worktrees_view() {
     let s = render(&mut app, 130, 24);
     assert!(s.contains("fix/login"), "{s}");
 
-    // Open it in Canopy, then back to the main one.
+    // Open it in canopy, then back to the main one.
     app.set_selected(Screen::Branches, 1);
     press(&mut app, KeyCode::Enter).await;
     assert_eq!(app.git.as_ref().unwrap().repo.root.canonicalize().unwrap(), wt.canonicalize().unwrap());
@@ -672,7 +672,7 @@ async fn submodules_view() {
     let s = render(&mut app, 130, 24);
     assert!(s.contains("✓ in sync"), "{s}");
 
-    // Open it in Canopy.
+    // Open it in canopy.
     press(&mut app, KeyCode::Enter).await;
     assert!(app.git.as_ref().unwrap().repo.root.ends_with("vendor/lib"));
 }
@@ -1169,7 +1169,7 @@ async fn export_ai_frames() {
     std::fs::write(out.join("tui-ai-launched.html"), page(&frame_html(&mut app, 118, 30))).unwrap();
 }
 
-/// A custom theme (from a JSON file, as Canopy Desktop saves them) as HTML
+/// A custom theme (from a JSON file, as canopy desktop saves them) as HTML
 /// pages, for previews:
 /// `CANOPY_SHOT_DIR=/tmp/t cargo test -p canopy-git-tui export_theme_frames -- --ignored`
 #[tokio::test]
@@ -1306,6 +1306,7 @@ async fn export_site_screens() {
     demo_repo_at(&dir);
     sh(&bare, "git init -q --bare -b main");
     sh(&dir, &format!("git remote add origin {} && git push -q -u origin main 2>/dev/null; git -c user.name='Grace Hopper' -c user.email=g@h.io commit -q --allow-empty -m 'Document the parser API'", bare.display()));
+    sh(&dir, "printf '# Demo\\n\\nUsage: run it.\\n' > README.md && git stash push -q -m 'Usage section for the README' README.md");
     let bin = TempDir::new().unwrap();
     let gh = fake_gh(bin.path(), true);
     let mut app = github_app(&dir, &gh).await;
@@ -1336,6 +1337,12 @@ async fn export_site_screens() {
 
     press(&mut app, KeyCode::Char('4')).await;
     shots.insert("refs", ("Branches", frame_html(&mut app, w, h)));
+
+    press(&mut app, KeyCode::Char('5')).await;
+    shots.insert("stash", ("Stash", frame_html(&mut app, w, h)));
+
+    press(&mut app, KeyCode::Char('7')).await;
+    shots.insert("reflog", ("Reflog", frame_html(&mut app, w, h)));
 
     press(&mut app, KeyCode::Char('6')).await;
     app.settle().await;
@@ -1379,10 +1386,8 @@ git merge polite >/dev/null 2>&1 || true
     let keys = keys_html();
     let mut filled = 0;
     let themes = themes_html();
-    let wiki = format!("{docs}/wiki");
-    let pages = std::fs::read_dir(docs).unwrap().chain(std::fs::read_dir(&wiki).unwrap());
-    for entry in pages {
-        let path = entry.unwrap().path();
+    let pages = html_files(std::path::Path::new(docs));
+    for path in pages {
         if path.extension().is_none_or(|e| e != "html") {
             continue;
         }
@@ -1391,7 +1396,7 @@ git merge polite >/dev/null 2>&1 || true
             let (open, close) = (format!("<!-- SCREEN:{name} -->"), format!("<!-- /SCREEN:{name} -->"));
             while let (Some(a), Some(b)) = (page.find(&open), page.find(&close)) {
                 let pre = format!(
-                    "<pre class=\"frame\" id=\"shot-{name}\" data-label=\"{label}\" role=\"img\" aria-label=\"Canopy: {label}\">{frame}</pre>"
+                    "<pre class=\"frame\" id=\"shot-{name}\" data-label=\"{label}\" role=\"img\" aria-label=\"canopy console: {label}\">{frame}</pre>"
                 );
                 // Temporarily mark as filled so the loop moves past it.
                 page = format!(
@@ -1426,6 +1431,20 @@ git merge polite >/dev/null 2>&1 || true
     }
     let _ = std::fs::remove_dir_all(base);
     println!("filled {filled} screenshots and the key reference");
+}
+
+/// Every .html file under a folder, however deep (the wiki has a folder per guide).
+fn html_files(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let mut out = Vec::new();
+    for entry in std::fs::read_dir(dir).unwrap() {
+        let path = entry.unwrap().path();
+        if path.is_dir() {
+            out.extend(html_files(&path));
+        } else if path.extension().is_some_and(|e| e == "html") {
+            out.push(path);
+        }
+    }
+    out
 }
 
 /// Theme swatches for the wiki, from the real theme definitions.
@@ -1490,7 +1509,7 @@ fn every_config_option_is_documented() {
         .filter(|f| !f.contains(' '))
         .collect();
     assert!(fields.len() >= 10, "{fields:?}");
-    let doc = include_str!("../../../docs/wiki/config.html");
+    let doc = include_str!("../../../docs/wiki/console/config.html");
     for f in fields {
         let shown = if f == "keys" {
             "[keys]".to_string()
@@ -1499,14 +1518,104 @@ fn every_config_option_is_documented() {
         } else {
             f.to_string()
         };
-        assert!(doc.contains(&format!("<code>{shown}</code>")), "config option `{f}` isn't on docs/wiki/config.html");
+        assert!(
+            doc.contains(&format!("<code>{shown}</code>")),
+            "config option `{f}` isn't on docs/wiki/console/config.html"
+        );
     }
+}
+
+/// Every terminal key written as <kbd>x</kbd> in the wiki's prose is a key the
+/// app really has (desktop shortcuts are <kbd class="d">, which are skipped).
+#[test]
+fn wiki_prose_keys_exist() {
+    use crate::keymap::{defaults, pretty_key_with, Ctx, Screen as S};
+    let ctxs = [
+        Ctx::Global,
+        Ctx::Diff,
+        Ctx::Tags,
+        Ctx::Remotes,
+        Ctx::Worktrees,
+        Ctx::Submodules,
+        Ctx::Notifications,
+        Ctx::Releases,
+        Ctx::Conflict,
+        Ctx::Screen(S::Home),
+        Ctx::Screen(S::Status),
+        Ctx::Screen(S::Log),
+        Ctx::Screen(S::Branches),
+        Ctx::Screen(S::Stash),
+        Ctx::Screen(S::Workspace),
+        Ctx::Screen(S::Reflog),
+        Ctx::Screen(S::Pulls),
+        Ctx::Screen(S::Issues),
+        Ctx::Screen(S::Runs),
+    ];
+    let mut known: std::collections::HashSet<String> = [
+        "esc",
+        "tab",
+        "⇧tab",
+        "shift-tab",
+        "space",
+        "↵",
+        "↑",
+        "↓",
+        "←",
+        "→",
+        "pgup",
+        "pgdn",
+        "home",
+        "end",
+        "backspace",
+        "del",
+        "⌃",
+        "⌥",
+        "⌘",
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
+    for ctx in ctxs {
+        for b in defaults(ctx) {
+            for k in b.keys {
+                known.insert(k.to_string());
+                known.insert(pretty_key_with(k, true));
+                known.insert(pretty_key_with(k, false));
+            }
+        }
+    }
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/wiki");
+    let mut bad = Vec::new();
+    for path in html_files(&dir) {
+        let html = std::fs::read_to_string(&path).unwrap();
+        let (Some(a), Some(z)) = (html.find("<!-- BODY -->"), html.find("<!-- /BODY -->")) else { continue };
+        let mut body = html[a..z].to_string();
+        while let Some(i) = body.find("<!-- SCREEN:") {
+            let end = body[i..].find("<!-- /SCREEN:").map(|j| i + j).unwrap_or(body.len());
+            body.replace_range(i..end, "");
+        }
+        let mut rest = body.as_str();
+        while let Some(i) = rest.find("<kbd>") {
+            let after = &rest[i + 5..];
+            let Some(j) = after.find("</kbd>") else { break };
+            let key = after[..j].replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">");
+            if !known.contains(&key) {
+                bad.push(format!("{}: <kbd>{key}</kbd>", path.strip_prefix(&dir).unwrap_or(&path).display()));
+            }
+            rest = &after[j..];
+        }
+    }
+    assert!(
+        bad.is_empty(),
+        "keys in wiki prose that the app doesn't have (desktop shortcuts need <kbd class=\"d\">):\n{}",
+        bad.join("\n")
+    );
 }
 
 /// The key reference, one table per context, from the real key tables.
 fn keys_html() -> String {
     use crate::keymap::{defaults, pretty_key, Ctx, Screen as S};
-    let sections: [(&str, &str, Ctx); 16] = [
+    let sections: [(&str, &str, Ctx); 18] = [
         ("k-global", "Everywhere", Ctx::Global),
         ("k-status", "Changes", Ctx::Screen(S::Status)),
         ("k-diff", "Diff panel (after ↵)", Ctx::Diff),
@@ -1523,6 +1632,8 @@ fn keys_html() -> String {
         ("k-pulls", "Pull requests", Ctx::Screen(S::Pulls)),
         ("k-issues", "Issues", Ctx::Screen(S::Issues)),
         ("k-runs", "Actions", Ctx::Screen(S::Runs)),
+        ("k-releases", "Releases", Ctx::Releases),
+        ("k-notifications", "Notifications", Ctx::Notifications),
     ];
     let esc = |s: &str| s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
     let mut out = String::from("\n");
@@ -1542,7 +1653,7 @@ fn keys_html() -> String {
     out
 }
 
-/// Every glyph Canopy draws must be one column wide in every monospace font,
+/// Every glyph canopy draws must be one column wide in every monospace font,
 /// or borders drift out of line. Allowed: ASCII, box drawing, block
 /// elements (sparklines) and a short list of widely supported symbols.
 #[tokio::test]
@@ -1625,8 +1736,8 @@ async fn logo_on_welcome_and_no_repo() {
     let mut app = app_for(dir.path()).await;
     app.modal = Modal::Welcome;
     let s = render(&mut app, 100, 30);
-    assert!(s.contains("▄") && s.contains("Welcome to Canopy"), "{s}");
-    let line = s.lines().find(|l| l.contains("Welcome to Canopy")).unwrap();
+    assert!(s.contains("▄") && s.contains("Welcome to canopy"), "{s}");
+    let line = s.lines().find(|l| l.contains("Welcome to canopy")).unwrap();
     assert!(line.contains('█') || line.contains('▀'), "tree beside the title: {line}");
 
     let mut app = App::new(None, Config::default(), dir.path().to_path_buf());

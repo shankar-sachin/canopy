@@ -32,9 +32,9 @@ printf 'Release %s? [y/N] ' "$tag"
 read -r answer
 [ "$answer" = y ] || [ "$answer" = Y ] || die "cancelled"
 
-git tag -a "$tag" -m "Canopy $tag"
+git tag -a "$tag" -m "canopy $tag"
 git push -q origin "$tag"
-gh release create "$tag" --verify-tag --title "Canopy $tag" --generate-notes
+gh release create "$tag" --verify-tag --title "canopy $tag" --generate-notes
 echo "release: created $tag as $(gh api user -q .login)"
 
 echo "release: waiting for the Release workflow..."

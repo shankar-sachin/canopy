@@ -4,7 +4,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-/// Settings the terminal app and the desktop app share. Missing fields are
+/// Settings canopy console and the desktop app share. Missing fields are
 /// left alone when importing.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Shared {
@@ -32,9 +32,9 @@ pub const KIND: &str = "canopy-settings";
 
 impl Shared {
     pub fn parse(json: &str) -> Result<Shared, String> {
-        let s: Shared = serde_json::from_str(json).map_err(|e| format!("not a Canopy settings file: {e}"))?;
+        let s: Shared = serde_json::from_str(json).map_err(|e| format!("not a canopy settings file: {e}"))?;
         if s.kind != KIND {
-            return Err(format!("not a Canopy settings file (\"kind\" should be \"{KIND}\")"));
+            return Err(format!("not a canopy settings file (\"kind\" should be \"{KIND}\")"));
         }
         if let Some(t) = &s.theme_file {
             t.resolve()?;
@@ -48,7 +48,7 @@ impl Shared {
         serde_json::to_string_pretty(&s).unwrap_or_default() + "\n"
     }
 
-    /// The shared settings in the terminal app's config.toml text.
+    /// The shared settings in canopy console's config.toml text.
     pub fn from_toml(text: &str) -> Result<Shared, String> {
         let v: toml::Table = toml::from_str(text).map_err(|e| format!("config.toml: {e}"))?;
         let s = |k: &str| v.get(k).and_then(|x| x.as_str()).map(String::from);

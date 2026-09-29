@@ -155,7 +155,7 @@ impl Failure {
         let run = self.run.as_ref();
         p.push_str("# Fix a failing CI run\n\n");
         p.push_str(&format!(
-            "Canopy found an error in CI for the latest commit on branch `{}` of `{}`.\n\n",
+            "canopy found an error in CI for the latest commit on branch `{}` of `{}`.\n\n",
             self.branch, self.repo
         ));
         if let Some(r) = run {
@@ -318,7 +318,7 @@ pub fn write_prompt(git_dir: &Path, prompt: &str) -> std::io::Result<PathBuf> {
 pub fn kickoff(prompt_file: &Path, repo_root: &Path) -> String {
     let shown = prompt_file.strip_prefix(repo_root).unwrap_or(prompt_file);
     format!(
-        "Canopy found an error in this repository's CI. The details are in {}. Read that file, then find and fix the problem as it describes. Don't commit or push.",
+        "canopy found an error in this repository's CI. The details are in {}. Read that file, then find and fix the problem as it describes. Don't commit or push.",
         shown.display()
     )
 }
@@ -355,10 +355,10 @@ pub enum Launched {
     Blocked(&'static str),
 }
 
-/// What to do when macOS blocks Canopy from controlling a terminal app.
+/// What to do when macOS blocks canopy from controlling a terminal app.
 pub fn blocked_help(app: &str) -> String {
     format!(
-        "macOS didn't let Canopy open {app}. Allow it in System Settings → Privacy & Security → Automation \
+        "macOS didn't let canopy open {app}. Allow it in System Settings → Privacy & Security → Automation \
          (turn on {app} under canopy), then try again."
     )
 }

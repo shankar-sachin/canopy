@@ -21,7 +21,7 @@ pub struct Config {
     pub workspace_depth: usize,
     /// User-defined commands bound to keys.
     pub custom_commands: Vec<CustomCommand>,
-    /// Play the short tree animation when Canopy starts.
+    /// Play the short tree animation when canopy starts.
     pub splash: bool,
     /// Refresh the moment files or git change (off: check every few seconds).
     pub watch: bool,
@@ -130,13 +130,13 @@ impl Config {
         Self::path().map(|p| !p.exists()).unwrap_or(false)
     }
 
-    pub const EXAMPLE: &'static str = r#"# Canopy configuration
+    pub const EXAMPLE: &'static str = r#"# canopy configuration
 theme = "canopy"            # canopy | catppuccin | gruvbox | nord | light
 nerd_font = false           # true if your terminal font has Nerd Font glyphs
 teach_mode = true           # show the git command behind every action
 confirm_destructive = true
 compact = false             # true: tighter layout, no gaps between panels
-splash = true               # the tree animation when Canopy starts
+splash = true               # the tree animation when canopy starts
 watch = true                # refresh as soon as files change (false: every few seconds)
 syntax = true               # color code in diffs by language
 ai = "auto"                 # Fix with AI (A on a failed run): auto | claude | codex | off | "my-ai {prompt}"
@@ -146,7 +146,7 @@ workspace_dirs = ["~/code"] # scanned by the Workspace view (tab 6)
 workspace_depth = 3
 
 # Remap any action. Names are snake_case: toggle_stage, commit, push,
-# goto_history, stage_line, ... (press ? in Canopy to see actions).
+# goto_history, stage_line, ... (press ? in canopy to see actions).
 # [keys]
 # toggle_stage = "s"
 # commit = ["c", "ctrl-s"]

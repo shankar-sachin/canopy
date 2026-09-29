@@ -1,4 +1,4 @@
-// Canopy site: screenshot gallery, frame scaling, copy buttons, active nav.
+// canopy site: screenshot gallery, frame scaling, copy buttons, active nav.
 
 // Gallery (home page): one tab per frame inside #screen.
 const screen = document.getElementById("screen");
@@ -88,7 +88,7 @@ function visitorOS() {
   return "";
 }
 
-/// Canopy's releases from GitHub (newest first), kept for an hour so moving
+/// canopy's releases from GitHub (newest first), kept for an hour so moving
 /// between pages doesn't ask again. Each: { tag, date, url, assets: [{ name, url, size }] }.
 let releasesPromise = null;
 function canopyReleases() {
@@ -157,7 +157,7 @@ if (heroCmd && heroNote && heroSwitches) {
       return asset("-x86_64-setup.exe").then((a) => [`irm ${a.url} -OutFile ${a.name}; .\\${a.name}`, "PowerShell: downloads the installer and runs it (x64)."]);
     }
     if (os === "linux") {
-      if (!script) return ["# Canopy Desktop isn't on Homebrew for Linux: pick Curl", "Homebrew on Linux has no apps (casks). Curl gets the .deb; Downloads has the AppImage."];
+      if (!script) return ["# canopy desktop isn't on Homebrew for Linux: pick Curl", "Homebrew on Linux has no apps (casks). Curl gets the .deb; Downloads has the AppImage."];
       return asset("-amd64.deb").then((a) => [`curl -LO ${a.url} && sudo apt install ./${a.name}`, "For Debian and Ubuntu (x86_64)."]);
     }
     if (!script) return ["brew install --cask shankar-sachin/canopy/canopy-desktop", "For macOS, with Homebrew."];
@@ -357,7 +357,7 @@ document.querySelectorAll("nav.top .links a").forEach(a => {
     dialog.hidden = true;
     dialog.setAttribute("role", "dialog");
     dialog.setAttribute("aria-modal", "true");
-    dialog.setAttribute("aria-label", "Search Canopy");
+    dialog.setAttribute("aria-label", "Search canopy");
     dialog.innerHTML = `<div class="search-box">
       <div class="search-input"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="site-search" type="search" placeholder="Search the site and the wiki" autocomplete="off" spellcheck="false"><kbd>esc</kbd></div>

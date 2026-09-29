@@ -1,4 +1,4 @@
-// Canopy Desktop front end. Plain JS, no build step: talks to the Rust side
+// canopy desktop front end. Plain JS, no build step: talks to the Rust side
 // through window.__TAURI__.core.invoke (see src/main.rs for the commands).
 "use strict";
 
@@ -90,7 +90,7 @@ function luma(hex) {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 }
 
-/// A palette's colors (the 20 the terminal app uses) as this app's tokens.
+/// A palette's colors (the 20 canopy console uses) as this app's tokens.
 function paletteVars(c) {
   const dark = luma(c.bg) < 0.5;
   return {
@@ -213,7 +213,7 @@ function introCard() {
   return `<div class="card span-12 intro">
     <div class="card-h"><h3>New to git? Four ideas</h3><button class="btn icon ghost" type="button" data-intro="dismiss" title="Got it">${icon("x", 14)}</button></div>
     <ol class="intro-steps">
-      <li><b>Change</b><span>Edit files like you always do. Canopy lists them under <em>Changed</em>.</span></li>
+      <li><b>Change</b><span>Edit files like you always do. canopy lists them under <em>Changed</em>.</span></li>
       <li><b>Stage</b><span>Pick what goes into your next save point. It moves to <em>Staged</em>.</span></li>
       <li><b>Commit</b><span>Save a snapshot with a short message. You can always get back to it.</span></li>
       <li><b>Push</b><span>Send your commits to GitHub, as a backup and to share them.</span></li>
@@ -716,7 +716,7 @@ async function start() {
   setTimeout(terminalTip, 20000);
 }
 
-// macOS: ask right away whether Canopy may open Terminal windows (Fix with
+// macOS: ask right away whether canopy may open Terminal windows (Fix with
 // AI and terminal editors need it), instead of the first time it matters.
 // macOS only asks while Terminal is running, so try again on later launches
 // until it has asked.
@@ -726,12 +726,12 @@ async function askAutomation() {
   if (answer === "later") return;
   await saveSettings({ automation_asked: true });
   if (answer === "denied") {
-    toast("Canopy can't open Terminal windows, so Fix with AI will save its prompt for you to run. Allow it any time in System Settings → Privacy & Security → Automation.");
+    toast("canopy can't open Terminal windows, so Fix with AI will save its prompt for you to run. Allow it any time in System Settings → Privacy & Security → Automation.");
   }
 }
 
 // Now and then (at most every two weeks, never in the first week), suggest
-// Canopy for the terminal to people who don't have it. Off in Settings.
+// canopy console to people who don't have it. Off in Settings.
 async function terminalTip() {
   const s = state.settings;
   if (!s.terminal_tip || !state.overview) return;
@@ -741,7 +741,7 @@ async function terminalTip() {
   const env = await invoke("environment").catch(() => null);
   await saveSettings({ last_terminal_tip: now });
   if (!env || env.terminal_app) return;
-  toast("Want more power? Canopy for the terminal does everything from the keyboard: interactive rebase, bisect, worktrees and more.", {
+  toast("Want more power? canopy console does everything from the keyboard: interactive rebase, bisect, worktrees and more.", {
     action: { label: "Get it", run: () => openSettings("general") },
   });
 }

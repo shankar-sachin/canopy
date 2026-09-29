@@ -1,6 +1,6 @@
-<p align="center"><img src="docs/assets/logo.svg" alt="Canopy logo" width="96" height="96"></p>
+<p align="center"><img src="docs/assets/logo.svg" alt="canopy logo" width="96" height="96"></p>
 
-<h1 align="center">Canopy</h1>
+<h1 align="center">canopy</h1>
 
 <p align="center">
   <a href="https://github.com/shankar-sachin/canopy/actions/workflows/ci.yml"><img src="https://github.com/shankar-sachin/canopy/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
@@ -13,24 +13,30 @@
   <a href="https://shankar-sachin.github.io/canopy/"><img src="https://img.shields.io/badge/website-canopy-2ea043" alt="Website"></a>
 </p>
 
-**Git, at a glance.** One Canopy, two ways to use it:
+**Git, at a glance.** One canopy, two ways to use it:
 
-- **Canopy Desktop: start here.** A friendly app for macOS, Windows and Linux. It shows
+- **canopy desktop: start here.** A friendly app for macOS, Windows and Linux. It shows
   your whole repository, explains every term in plain words, gives you a button for the
   next step, asks before anything destructive, and undoes the last commit, reset or checkout.
-- **Canopy for the terminal: everything, from the keyboard.** The power tool: line-level
+- **canopy console: everything, from the keyboard.** The power tool: line-level
   staging, interactive rebase, bisect, worktrees, every repository at once, remappable keys
   and your own commands. New power features land here first.
 
 Both run the real `git` and GitHub CLI on your machine and share themes and settings in `~/.canopy`.
 
-**Website:** [shankar-sachin.github.io/canopy](https://shankar-sachin.github.io/canopy/), with a feature tour, the GitHub guide, and the full key reference.
+**Website:** [shankar-sachin.github.io/canopy](https://shankar-sachin.github.io/canopy/), with a feature tour, the GitHub guide, the full key reference, and a [wiki](https://shankar-sachin.github.io/canopy/wiki/) with a guide for each app.
 
-![Canopy Desktop: Home, with branch and sync status, next steps, the GitHub card, recent commits and branches](docs/assets/desktop/home.png)
+**canopy desktop**
+
+![canopy desktop: Home, with branch and sync status, next steps, the GitHub card, recent commits and branches](docs/assets/desktop/home.png)
+
+**canopy console**
+
+![canopy console: Home, with the repository summary, next steps, GitHub status and the git command behind each action](docs/assets/terminal/home.png)
 
 ## Install
 
-### Canopy Desktop (start here)
+### canopy desktop (start here)
 
 A release preview for macOS, Windows and Linux:
 
@@ -43,7 +49,7 @@ Or get a `.dmg`, installer, `.deb` or AppImage from
 [Releases](https://github.com/shankar-sachin/canopy/releases). It isn't notarized by Apple yet, so macOS asks you to
 confirm the first time you open it. [More →](https://shankar-sachin.github.io/canopy/desktop.html)
 
-### Canopy for the terminal
+### canopy console
 
 ```sh
 brew install shankar-sachin/canopy/canopy
@@ -61,7 +67,7 @@ Or build from source (stable Rust):
 cargo install --locked --path crates/canopy
 ```
 
-Canopy needs `git` on your `PATH`.
+canopy needs `git` on your `PATH`.
 
 **On Windows** (x64 and Arm), with winget (installs git too):
 
@@ -81,16 +87,16 @@ or download `canopy-<version>-x86_64-pc-windows-msvc.zip` (or `aarch64-…` for 
 Windows Terminal is recommended. Full steps are on the
 [website](https://shankar-sachin.github.io/canopy/get-started.html#windows).
 
-## Use the terminal app
+## Use canopy console
 
 <!-- Recorded with vhs from demo.tape (in a throwaway demo repository): vhs demo.tape -->
-![Canopy for the terminal: a syntax-highlighted diff, staging and committing, History and the command palette](demo.gif)
+![canopy console: a syntax-highlighted diff, staging and committing, History and the command palette](demo.gif)
 
 ```sh
 canopy                 # open the repo you're in
 canopy ~/code/project  # open a specific repo
 canopy -w ~/code       # workspace view: every repo under ~/code
-canopy ~/code/new-app  # not a repository yet? Canopy offers to create one (and connect GitHub)
+canopy ~/code/new-app  # not a repository yet? canopy offers to create one (and connect GitHub)
 ```
 
 | Tab | What it shows |
@@ -125,7 +131,7 @@ Press `?` on any screen for its keys, or `:` to search every action by name.
 | `⌃Q` / `⌥Q` | quit, from anywhere (even in a dialog) | | `⌥1`…`⌥0` | jump to a tab |
 | `⌥←` / `⌥→` | previous / next tab | | `⌥C` `⌥P` `⌥⇧P` | commit, pull, push |
 
-⌃ is Control and ⌥ is Option (Alt on other keyboards). On macOS Canopy shows
+⌃ is Control and ⌥ is Option (Alt on other keyboards). On macOS canopy shows
 keys this way; on Linux it shows `ctrl-q` / `alt-q` (set `mac_key_symbols` to choose).
 
 ### Made for learning git
@@ -149,12 +155,12 @@ nerd_font = false
 teach_mode = true
 confirm_destructive = true
 compact = false             # true: tighter layout, no gaps between panels
-splash = true               # the tree animation when Canopy starts (any key skips)
+splash = true               # the tree animation when canopy starts (any key skips)
 workspace_dirs = ["~/code"]
 workspace_depth = 3
 
 # Remap any action by its snake_case name (see the full list with `?`).
-# A remapped key is taken away from whatever used it before, and Canopy
+# A remapped key is taken away from whatever used it before, and canopy
 # warns you if that leaves an action without a key.
 [keys]
 toggle_stage = "s"
@@ -169,7 +175,7 @@ confirm = true
 
 ## How it works
 
-Canopy runs the real `git` binary and parses its machine-readable output
+canopy runs the real `git` binary and parses its machine-readable output
 (`status --porcelain=v2 -z`, `for-each-ref`, custom `log` formats). Your hooks,
 config, credential helpers, and signing all behave exactly as they do on the
 command line. Line staging builds a minimal patch and applies it to the index
@@ -179,8 +185,8 @@ with `git apply --cached`.
 crates/canopy-git     git runner, parsers, typed operations (no UI)
 crates/canopy-gh      GitHub through the gh CLI
 crates/canopy-config  themes and settings shared by both apps
-crates/canopy         the terminal app (Ratatui): app loop, screens, keymap, themes
-crates/canopy-gui     Canopy Desktop (Tauri; plain HTML/CSS/JS front end)
+crates/canopy         canopy console (Ratatui): app loop, screens, keymap, themes
+crates/canopy-gui     canopy desktop (Tauri; plain HTML/CSS/JS front end)
 ```
 
 ## Roadmap
@@ -188,13 +194,14 @@ crates/canopy-gui     Canopy Desktop (Tauri; plain HTML/CSS/JS front end)
 - [x] Full git dashboard (v1)
 - [x] GitHub pull requests and issues via `gh`
 - [x] GitHub Actions runs
-- [x] The Canopy wiki, the logo, a startup animation, and a roomier layout (v0.4)
+- [x] The canopy wiki, the logo, a startup animation, and a roomier layout (v0.4)
 - [x] More GitHub: notifications, releases, inline review comments, a CI log viewer, and Windows builds (v1.0)
-- [x] Canopy Desktop for macOS, Windows and Linux (v1.0.2–1.0.3)
+- [x] canopy desktop for macOS, Windows and Linux (v1.0.2–1.0.3)
 - [x] Start a new repository, Fix with AI, your own themes (v1.0.4–1.0.7)
 - [x] Desktop to start, the terminal for power: plain-language help in the desktop app (v1.0.8)
 - [x] Notifications in both apps, bug fixes and a full audit with many more tests (v1.0.10–1.0.12)
 - [x] Syntax-highlighted diffs and live refresh (v1.0.13)
+- [x] The wiki, rewritten as two guides (canopy desktop, canopy console), with new pages on syncing, the stash, ignoring files and tags; the terminal app is now called canopy console (v1.0.14)
 - [x] Conflict editor with per-conflict ours/theirs
 - [x] File history and blame
 - [x] Worktrees
@@ -243,4 +250,5 @@ Found a security problem? Please report it privately, not in an issue: see
 
 ## License
 
-MIT
+MIT. The open source packages canopy is built from, and their licenses, are listed in
+[THIRD-PARTY-LICENSES.txt](THIRD-PARTY-LICENSES.txt) (also inside every download).

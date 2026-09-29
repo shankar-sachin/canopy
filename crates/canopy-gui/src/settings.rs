@@ -29,11 +29,11 @@ pub struct Settings {
     pub editor: String,
     /// The "New to git?" card on Home was dismissed.
     pub seen_intro: bool,
-    /// macOS has asked whether Canopy may open Terminal windows.
+    /// macOS has asked whether canopy may open Terminal windows.
     pub automation_asked: bool,
-    /// Now and then, suggest the terminal app (when it isn't installed).
+    /// Now and then, suggest canopy console (when it isn't installed).
     pub terminal_tip: bool,
-    /// Unix time the terminal app was last suggested.
+    /// Unix time canopy console was last suggested.
     pub last_terminal_tip: i64,
 }
 
@@ -251,13 +251,13 @@ pub struct Environment {
     pub gh_user: Option<String>,
     pub install: Install,
     pub config_file: Option<String>,
-    /// `canopy --version`, if the terminal app is installed.
+    /// `canopy --version`, if canopy console is installed.
     pub terminal_app: Option<String>,
-    /// How to install the terminal app on this system.
+    /// How to install canopy console on this system.
     pub terminal_install: &'static str,
 }
 
-/// The command that installs the terminal app (`canopy`) on `os`.
+/// The command that installs canopy console (`canopy`) on `os`.
 pub fn terminal_install_command(os: &str) -> &'static str {
     match os {
         "windows" => "winget install shankars.canopy",
@@ -299,7 +299,7 @@ pub async fn environment() -> Environment {
 
 // ------------------------------------------------------------------ automation
 
-/// Get macOS to ask, early, whether Canopy may control Terminal (Fix with AI
+/// Get macOS to ask, early, whether canopy may control Terminal (Fix with AI
 /// and terminal editors need it). macOS only asks when an app actually sends
 /// Terminal an Apple Event, so send a harmless one, and only if Terminal is
 /// already running (so this never opens it). Returns "asked" once macOS has
@@ -340,7 +340,7 @@ fn automation_answer(out: Option<(bool, String, String)>) -> &'static str {
 
 // ------------------------------------------------------------------ profile
 
-/// Who's using Canopy: the GitHub account (from gh) and the git name.
+/// Who's using canopy: the GitHub account (from gh) and the git name.
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct Profile {
     pub login: Option<String>,

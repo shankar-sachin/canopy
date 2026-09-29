@@ -1119,13 +1119,13 @@ fn github_setup(f: &mut Frame, area: Rect, app: &App, title: &str) -> bool {
         Some(GhStatus::Ready(_)) => return false,
         Some(GhStatus::NotInstalled) => vec![
             "GitHub features need the GitHub CLI (gh)",
-            "Canopy never installs anything for you. To set it up, run in a terminal:",
+            "canopy never installs anything for you. To set it up, run in a terminal:",
             "brew install gh",
             "then: gh auth login",
-            "and reopen Canopy.",
+            "and reopen canopy.",
         ],
         Some(GhStatus::NotLoggedIn) => {
-            vec!["You're not logged in to GitHub", "Run this in a terminal, then reopen Canopy:", "gh auth login"]
+            vec!["You're not logged in to GitHub", "Run this in a terminal, then reopen canopy:", "gh auth login"]
         }
         Some(GhStatus::NotGitHub) => vec![
             "This repository isn't on GitHub",

@@ -1,4 +1,4 @@
-//! Notice changes made outside Canopy (an editor saving a file, git in
+//! Notice changes made outside canopy (an editor saving a file, git in
 //! another terminal) the moment they happen, instead of on the next poll.
 //!
 //! Events are gathered for a moment (a save or a commit touches several
@@ -105,7 +105,7 @@ fn classify(root: &Path, git_dir: &Path, paths: Vec<PathBuf>) -> Change {
     change
 }
 
-/// Whether a path inside the git dir is state Canopy shows (as opposed to
+/// Whether a path inside the git dir is state canopy shows (as opposed to
 /// objects, logs, hooks and lock files).
 pub fn git_state_file(rel: &Path) -> bool {
     let s = rel.to_string_lossy().replace('\\', "/");

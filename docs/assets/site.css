@@ -292,9 +292,9 @@
   .wiki-cards .card { color: var(--text); }
   .wiki-cards .card h3 { margin: 0 0 6px; }
   ol.steps { counter-reset: step; list-style: none; padding-left: 0; display: grid; gap: 14px; margin: 18px 0 24px; }
-  ol.steps > li { counter-increment: step; display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start; margin: 0; }
+  ol.steps > li { counter-increment: step; position: relative; padding-left: 46px; min-height: 28px; margin: 0; }
   ol.steps > li::before {
-    content: counter(step); display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+    content: counter(step); position: absolute; left: 0; top: 0; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
     font: 700 13px var(--mono); color: var(--on-accent); background: var(--green);
   }
   ol.steps ul { margin: 8px 0 0; }

@@ -1,6 +1,6 @@
 [package]
 name = "canopy-gh"
-description = "GitHub (via the gh CLI) backend for the Canopy TUI"
+description = "GitHub (via the gh CLI) backend for the canopy TUI"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

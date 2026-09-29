@@ -229,7 +229,7 @@ pub struct App {
     inflight: Arc<AtomicUsize>,
     pub needs_redraw_full: bool,
     last_status_poll: Instant,
-    /// Watches the open repository for changes made outside Canopy.
+    /// Watches the open repository for changes made outside canopy.
     watcher: Option<canopy_git::watch::RepoWatcher>,
     /// A change was seen while busy or in a dialog: refresh when that ends.
     fs_dirty: bool,
@@ -605,7 +605,7 @@ impl App {
     }
 
     /// Open the AI assistant: a new tab or window when the terminal can,
-    /// else right here (Canopy steps aside until it exits).
+    /// else right here (canopy steps aside until it exits).
     pub fn launch_ai(&mut self, l: AiLaunch) {
         use canopy_gh::assist::{launch, Launched, OpenIn};
         // Tests check what would open instead of opening terminals.
@@ -727,7 +727,7 @@ impl App {
                     Err(e) => self.toast(Level::Error, e),
                 }
             }
-            // A file or git's state changed outside Canopy. Refresh now, or
+            // A file or git's state changed outside canopy. Refresh now, or
             // once the running action or open dialog is done.
             Msg::RepoChanged(root) => {
                 if self.git.as_ref().is_some_and(|g| g.repo.root == root) {
@@ -738,7 +738,7 @@ impl App {
             Msg::StatusOnly(status, state) => {
                 let changed = status != self.data.status || Some(state) != self.data.state;
                 if changed {
-                    // Something changed outside Canopy: do a full reload.
+                    // Something changed outside canopy: do a full reload.
                     self.refresh();
                 }
             }

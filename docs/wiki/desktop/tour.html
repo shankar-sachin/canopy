@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A tour of canopy desktop · canopy desktop wiki</title>
+<meta name="description" content="Every page of the desktop app, what it shows, and what you can do there.">
+<meta property="og:title" content="A tour of canopy desktop · canopy desktop wiki">
+<meta property="og:image" content="https://shankar-sachin.github.io/canopy/assets/og.png">
+<meta name="theme-color" content="#0b100c">
+<script>try{const t=localStorage.getItem("canopy-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;}catch(e){}</script>
+<link rel="icon" href="../../assets/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- Box-drawing and symbol glyphs for the terminal screenshots (not in the default subsets). -->
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap&text=%E2%94%80%E2%94%81%E2%94%82%E2%94%83%E2%94%84%E2%94%85%E2%94%86%E2%94%87%E2%94%88%E2%94%89%E2%94%8A%E2%94%8B%E2%94%8C%E2%94%8D%E2%94%8E%E2%94%8F%E2%94%90%E2%94%91%E2%94%92%E2%94%93%E2%94%94%E2%94%95%E2%94%96%E2%94%97%E2%94%98%E2%94%99%E2%94%9A%E2%94%9B%E2%94%9C%E2%94%9D%E2%94%9E%E2%94%9F%E2%94%A0%E2%94%A1%E2%94%A2%E2%94%A3%E2%94%A4%E2%94%A5%E2%94%A6%E2%94%A7%E2%94%A8%E2%94%A9%E2%94%AA%E2%94%AB%E2%94%AC%E2%94%AD%E2%94%AE%E2%94%AF%E2%94%B0%E2%94%B1%E2%94%B2%E2%94%B3%E2%94%B4%E2%94%B5%E2%94%B6%E2%94%B7%E2%94%B8%E2%94%B9%E2%94%BA%E2%94%BB%E2%94%BC%E2%94%BD%E2%94%BE%E2%94%BF%E2%95%80%E2%95%81%E2%95%82%E2%95%83%E2%95%84%E2%95%85%E2%95%86%E2%95%87%E2%95%88%E2%95%89%E2%95%8A%E2%95%8B%E2%95%8C%E2%95%8D%E2%95%8E%E2%95%8F%E2%95%90%E2%95%91%E2%95%92%E2%95%93%E2%95%94%E2%95%95%E2%95%96%E2%95%97%E2%95%98%E2%95%99%E2%95%9A%E2%95%9B%E2%95%9C%E2%95%9D%E2%95%9E%E2%95%9F%E2%95%A0%E2%95%A1%E2%95%A2%E2%95%A3%E2%95%A4%E2%95%A5%E2%95%A6%E2%95%A7%E2%95%A8%E2%95%A9%E2%95%AA%E2%95%AB%E2%95%AC%E2%95%AD%E2%95%AE%E2%95%AF%E2%95%B0%E2%95%B1%E2%95%B2%E2%95%B3%E2%95%B4%E2%95%B5%E2%95%B6%E2%95%B7%E2%95%B8%E2%95%B9%E2%95%BA%E2%95%BB%E2%95%BC%E2%95%BD%E2%95%BE%E2%95%BF%E2%96%80%E2%96%81%E2%96%82%E2%96%83%E2%96%84%E2%96%85%E2%96%86%E2%96%87%E2%96%88%E2%96%89%E2%96%8A%E2%96%8B%E2%96%8C%E2%96%8D%E2%96%8E%E2%96%8F%E2%96%90%E2%96%91%E2%96%92%E2%96%93%E2%96%94%E2%96%95%E2%96%96%E2%96%97%E2%96%98%E2%96%99%E2%96%9A%E2%96%9B%E2%96%9C%E2%96%9D%E2%96%9E%E2%96%9F%C2%B7%E2%80%A6%E2%9C%93%E2%9C%97%E2%97%8F%E2%97%8B%E2%80%A2%E2%86%91%E2%86%93%E2%86%90%E2%86%92%E2%86%B5%E2%80%B9%E2%80%BA%E2%80%94%E2%8C%83%E2%8C%A5%E2%87%A7" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/site.css">
+<link rel="stylesheet" href="../../assets/wiki.css">
+</head>
+<body class="wiki">
+<a class="skip" href="#content">Skip to content</a>
+<header class="topbar" data-root="../../">
+  <div class="topbar-in">
+    <a class="brand" href="../../index.html"><img class="mark" src="../../assets/logo.svg" alt="" width="28" height="28"><span>canopy</span></a>
+    <nav class="menus" id="menus" aria-label="Main"><div class="menu"><button type="button" aria-expanded="false" aria-controls="menu-0">Product<svg class="caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="dropdown" id="menu-0"><a href="../../desktop.html"><b>canopy desktop</b><span>Start here: Mac, Windows and Linux</span></a><a href="../../features.html"><b>canopy console</b><span>Everything, from the keyboard in a terminal</span></a><a href="../../download.html"><b>Downloads</b><span>Every installer, every version</span></a><a href="../../github.html"><b>GitHub</b><span>Pull requests, issues and CI</span></a><a href="../../changelog.html"><b>Changelog</b><span>What's new in each release</span></a></div></div><div class="menu active"><button type="button" aria-expanded="false" aria-controls="menu-1">Docs<svg class="caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="dropdown" id="menu-1"><a href="../../get-started.html"><b>Get started</b><span>Install and first run</span></a><a href="../../wiki/index.html" aria-current="page"><b>Wiki</b><span>Two guides, and the git basics</span></a><a href="../../wiki/desktop/index.html"><b>canopy desktop guide</b><span>Every page and recipe, with screenshots</span></a><a href="../../wiki/console/index.html"><b>canopy console guide</b><span>Every screen and recipe, by key</span></a><a href="../../keys.html"><b>Console keys</b><span>Every key, generated from the app</span></a><a href="../../wiki/console/config.html"><b>Console configuration</b><span>Every setting in config.toml</span></a></div></div><div class="menu"><button type="button" aria-expanded="false" aria-controls="menu-2">Learn<svg class="caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="dropdown" id="menu-2"><a href="../../wiki/git-basics.html"><b>Git in ten minutes</b><span>The ideas that make git click</span></a><a href="../../wiki/desktop/daily-workflow.html"><b>Daily workflow: desktop</b><span>Edit, stage, commit, push, PR</span></a><a href="../../wiki/console/daily-workflow.html"><b>Daily workflow: console</b><span>The same loop, from the keyboard</span></a><a href="../../wiki/desktop/undo.html"><b>Undo a mistake: desktop</b><span>Get back anything with Undo</span></a><a href="../../wiki/console/undo.html"><b>Undo a mistake: console</b><span>Get back anything with z and the reflog</span></a></div></div></nav>
+    <div class="top-actions">
+      <button class="search-btn" type="button" aria-haspopup="dialog" aria-label="Search the site">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span class="search-label">Search</span><kbd class="kbd-shortcut" data-mac="⌘ K" data-other="Ctrl K">Ctrl K</kbd>
+      </button>
+      <a class="icon-btn" href="https://github.com/shankar-sachin/canopy" aria-label="canopy on GitHub"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+      <button class="theme-btn" type="button" aria-label="Color theme"><span class="theme-icon" aria-hidden="true"></span><span class="theme-label">System</span></button>
+      <button class="menu-btn" type="button" aria-label="Open menu" aria-controls="menus" aria-expanded="false"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+<div class="wlayout">
+  <aside class="wside" id="wside"><nav class="wside-nav" aria-label="Wiki">
+<div class="wswitch" role="group" aria-label="Choose an app"><a href="index.html" aria-current="true">canopy desktop</a><a href="../console/index.html">canopy console</a></div>
+<details open><summary>Both apps<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="../index.html">Wiki home</a>
+<a href="../git-basics.html">Git in ten minutes</a>
+<a href="../themes.html">Themes</a>
+</div></details>
+<details open><summary>Start here<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="tour.html" aria-current="page">A tour of canopy desktop</a>
+</div></details>
+<details open><summary>Guides<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="daily-workflow.html">Your daily workflow</a>
+<a href="commits.html">Write good commits</a>
+<a href="branches.html">Branches, merging and rebasing</a>
+<a href="syncing.html">Sync with a remote</a>
+<a href="github-flow.html">Working with GitHub</a>
+</div></details>
+<details open><summary>Recipes<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="fix-last-commit.html">Fix your last commit</a>
+<a href="undo.html">Undo a mistake</a>
+<a href="conflicts.html">Resolve a merge conflict</a>
+<a href="stash.html">Put work aside with the stash</a>
+<a href="ignore-files.html">Ignore files with .gitignore</a>
+<a href="tags-releases.html">Tag a version and publish a release</a>
+<a href="review-a-pr.html">Review a pull request</a>
+<a href="fix-ci.html">Fix a failing CI run</a>
+<a href="new-repo.html">Start a new repository</a>
+</div></details>
+<details><summary>Reference<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary><div class="wgroup">
+<a href="keys.html">Keyboard shortcuts</a>
+<a href="settings.html">Settings</a>
+<a href="highlighting.html">Syntax highlighting and live refresh</a>
+<a href="troubleshooting.html">Troubleshooting</a>
+<a href="faq.html">FAQ</a>
+</div></details>
+</nav></aside>
+  <main class="wmain" id="content">
+    <div class="wbanner">This is the <b>canopy desktop</b> guide. Prefer the keyboard? <a href="../console/index.html">Switch to the canopy console guide</a>. Spot something wrong? <a href="https://github.com/shankar-sachin/canopy/edit/main/docs/wiki/desktop/tour.html">Suggest an edit</a>.</div>
+    <article class="wprose">
+      <div class="crumbs"><a href="../index.html">Wiki</a><span>/</span><a href="index.html">canopy desktop</a><span>/</span>Start here</div>
+      <h1>A tour of canopy desktop</h1>
+      <p class="wlede">Every page of the desktop app, what it shows, and what you can do there.</p>
+<!-- BODY -->
+<p>canopy desktop is a window with a sidebar on the left and one page on the right. The sidebar lists the pages you use on the open repository, and the toolbar above every page has the buttons you use most: <b>Fetch</b>, <b>Pull</b>, <b>Push</b>, undo and refresh.</p>
+<p>This page walks through the app in the order you meet it: the welcome screen, the window, then each sidebar page. Everything canopy does is a normal git command. With <b>Show git commands</b> on (Settings, General), a notice shows the command it ran after each action.</p>
+
+<h2 id="welcome">The welcome screen<a class="hash" href="#welcome" aria-label="Link to this section">#</a></h2>
+<p>Until a repository is open, canopy shows the welcome screen.</p>
+<figure class="shot"><img src="../../assets/desktop/welcome.png" alt="The welcome screen: the canopy logo, the buttons Open a repository and Start a new one, a Recent list with three repositories, and a Settings button" width="1280" height="800" loading="lazy"><figcaption>The welcome screen, with the repositories you opened recently.</figcaption></figure>
+<ul>
+<li><b>Open a repository…</b> (<kbd class="d">⌘O</kbd> (Ctrl+O on Windows and Linux)) picks a folder that is already a git repository.</li>
+<li><b>Start a new one…</b> turns a folder into a repository and can put it on GitHub. See <a href="new-repo.html">Start a new repository</a>.</li>
+<li><b>Recent</b> lists the repositories you opened before. Click one to open it. The small x on a row removes it from the list, and <b>Settings</b> opens the settings.</li>
+</ul>
+
+<h2 id="layout">The window<a class="hash" href="#layout" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><b>Repository switcher</b> (top of the sidebar): shows the repository name and the branch you are on. Click it to close this repository and return to the welcome screen.</li>
+<li><b>Sidebar pages</b>: Home, Changes, History, Branches and Stash, then a <b>GitHub</b> group with Pull requests, Issues, Actions and Notifications. A number beside a page is a count: changed files or conflicts, branches (shown when you have more than one), stashes, and unread notifications.</li>
+<li><b>Toolbar</b>: the page title, then pills for commits to push (<b>↑N</b>) or pull (<b>↓N</b>), the <b>Fetch</b>, <b>Pull</b> and <b>Push</b> buttons, an undo button and a refresh button.</li>
+<li><b>Bottom of the sidebar</b>: your GitHub account (click it to see your account, your git name and email, and whether git and the GitHub CLI are found), the gear for Settings, and the canopy version.</li>
+</ul>
+<p>The first nine pages have shortcuts: <kbd class="d">⌘1</kbd> to <kbd class="d">⌘9</kbd> (Ctrl+1 to Ctrl+9 on Windows and Linux) go to them in sidebar order, so <kbd class="d">⌘1</kbd> is Home and <kbd class="d">⌘9</kbd> is Notifications. <kbd class="d">⌘R</kbd> refreshes by hand, though canopy also notices changes on its own. See <a href="keys.html">keyboard shortcuts</a> for the full list.</p>
+
+<h2 id="home">Home<a class="hash" href="#home" aria-label="Link to this section">#</a></h2>
+<p>The starting point. It shows where you are and what to do next.</p>
+<figure class="shot"><img src="../../assets/desktop/home.png" alt="The Home page for the repository acme-app: a summary card, tiles for staged and changed files, a Next steps list, a GitHub card and the recent commits" width="1280" height="800" loading="lazy"><figcaption>Home: the repository, its counts, and the next thing to do.</figcaption></figure>
+<ul>
+<li>A card with the repository name, its folder, the branch you are on (<b>on main</b>), the branch it follows (<b>tracks origin/main</b>) and how far ahead or behind you are. During a merge or rebase it also shows a badge saying so.</li>
+<li>Tiles for <b>Staged</b>, <b>Changed</b>, <b>Conflicts</b>, <b>Stashes</b>, <b>Branches</b> and <b>Remotes</b>. Each has a small <b>?</b> that explains the word in plain language.</li>
+<li><b>Next steps</b>: plain sentences such as "1 changed file(s). Stage what you want, then commit." with a button that does it, such as <b>Open Changes</b>, <b>Commit</b>, <b>Push</b>, <b>Pull</b>, <b>Open History</b> or <b>Open Branches</b>.</li>
+<li>A <b>GitHub</b> card when the repository is on GitHub and you are set up: the pull request for your branch, reviews waiting for you and unread notifications. If the latest CI run failed, a banner offers <b>Details</b>, <b>View in GitHub</b> and <b>Fix with</b> your AI assistant.</li>
+<li><b>Recent commits</b> (the latest 12) and <b>Branches</b> (up to 10).</li>
+</ul>
+<h3 id="new-to-git">The "New to git?" card<a class="hash" href="#new-to-git" aria-label="Link to this section">#</a></h3>
+<p>The first time, Home also shows a short card, "New to git? Four ideas": change, stage, commit and push. Dismiss it when you are done. <b>Show it again</b> in Settings, General brings it back.</p>
+<figure class="shot"><img src="../../assets/desktop/learning.png" alt="Home with the New to git card open and the Staged tile expanded to explain what staging means" width="1280" height="800" loading="lazy"><figcaption>The intro card, and the explanation that opens from a tile's question mark.</figcaption></figure>
+
+<h2 id="changes">Changes<a class="hash" href="#changes" aria-label="Link to this section">#</a></h2>
+<p>Where you stage and commit. Files are listed on the left in groups, and the diff of the selected file is on the right. The groups are <b>Conflicts</b> (only during a merge or rebase), <b>Staged</b> and <b>Changes</b>. A letter beside each file says what happened to it: M changed, A added, D deleted, R renamed.</p>
+<figure class="shot"><img src="../../assets/desktop/changes.png" alt="The Changes page: the changed files, a diff with three lines picked and a Stage 3 lines button, and the commit box" width="1280" height="800" loading="lazy"><figcaption>Changes: pick lines in the diff, stage them, and commit.</figcaption></figure>
+<ul>
+<li>Click the <b>+</b> beside a file to stage it, or <b>&minus;</b> to unstage it. <b>Stage all</b> and <b>Unstage all</b> do every file. With the file list focused, <kbd class="d">↑</kbd> and <kbd class="d">↓</kbd> (or <kbd class="d">j</kbd> and <kbd class="d">k</kbd>) move the selection and <kbd class="d">space</kbd> stages or unstages the selected file.</li>
+<li>Above the diff: <b>Open in editor</b>, <b>Stage file</b> (or <b>Unstage file</b>) and <b>Discard…</b>. Discard throws away your edits to the file, and for a new file deletes it. It asks first, because git cannot bring them back.</li>
+<li>Each block of changes has <b>Stage hunk</b> (or <b>Unstage hunk</b>). To stage single lines, click a <b>+</b> or <b>&minus;</b> line to pick it (shift-click for a range), then press <b>Stage N lines</b>.</li>
+<li>The commit box has a <b>Summary</b>, a <b>Description</b>, an <b>Amend last commit</b> checkbox and the commit button. The button says <b>Commit N files</b> when something is staged, <b>Stage all &amp; commit</b> when nothing is, <b>Amend</b> when the checkbox is ticked, and is greyed out with <b>Nothing to commit</b> when the folder is clean. <kbd class="d">⌘↵</kbd> (Ctrl+Enter on Windows and Linux) commits from either text box.</li>
+<li>During a merge, rebase, cherry-pick or revert, a banner says so and offers <b>Abort</b> and a continue button. Conflicted files come first, with <b>Keep mine (ours)</b>, <b>Take theirs</b> and <b>Mark resolved</b>.</li>
+<li>When there is nothing to show, the page says "Working tree clean".</li>
+</ul>
+<p>The pages <a href="commits.html">Write good commits</a>, <a href="fix-last-commit.html">Fix your last commit</a> and <a href="conflicts.html">Resolve a merge conflict</a> use this page.</p>
+
+<h2 id="history">History<a class="hash" href="#history" aria-label="Link to this section">#</a></h2>
+<p>The commits on your branch, newest first, drawn as a graph. Click a commit to see its title and message, who made it and when, its full id, its parents and its diff. <kbd class="d">↑</kbd> and <kbd class="d">↓</kbd> (or <kbd class="d">j</kbd> and <kbd class="d">k</kbd>) move through the list.</p>
+<figure class="shot"><img src="../../assets/desktop/history.png" alt="The History page: a search box and the commit graph on the left, and the selected commit's details, action buttons and diff on the right" width="1280" height="800" loading="lazy"><figcaption>History: the graph, and the selected commit with its actions.</figcaption></figure>
+<ul>
+<li>The search box finds commits by message, or by author with <b>@name</b>. <kbd class="d">/</kbd> jumps to it. Tick <b>All branches</b> to include every branch, not only this one. <b>Load more</b> at the bottom shows 200 more.</li>
+<li>Buttons on the selected commit: <b>Check out</b>, <b>New branch here…</b>, <b>Tag…</b>, <b>Cherry-pick</b>, <b>Revert</b> and <b>Reset to here…</b>. The ones that can lose work explain what they will do first.</li>
+<li>A commit's parents are links; click one to jump to it.</li>
+</ul>
+<figure class="shot"><img src="../../assets/desktop/reset.png" alt="The Reset dialog on the History page with the choices Soft, Mixed and Hard" width="1280" height="800" loading="lazy"><figcaption>Reset to here…: Soft keeps changes staged, Mixed keeps them unstaged, Hard discards them.</figcaption></figure>
+
+<h2 id="branches">Branches<a class="hash" href="#branches" aria-label="Link to this section">#</a></h2>
+<p>Four tabs, each with a count: <b>Local</b> branches, <b>Remote</b> branches, <b>Tags</b> and <b>Remotes</b> (the servers you push to, with their addresses). <b>New branch…</b> starts one from where you are.</p>
+<figure class="shot"><img src="../../assets/desktop/branches.png" alt="The Branches page on the Local tab, listing the branches with how far ahead or behind each is" width="1280" height="800" loading="lazy"><figcaption>Branches: switch, merge, rebase, rename or delete.</figcaption></figure>
+<p>On a local branch you can <b>Check out</b>, <b>Merge into</b> the current branch, <b>Rebase onto</b> it, <b>Rename</b> or <b>Delete</b>. The branch you are on shows only <b>Rename</b>. Each of these asks first and says what it will do. The <b>Remote</b> tab can check a branch out as a local one, merge it, or delete it on the server. See <a href="branches.html">Branches, merging and rebasing</a>.</p>
+<p>The <b>Tags</b> tab lists tags with <b>Check out</b>, <b>Push</b> and <b>Delete</b>. Make a tag from History with <b>Tag…</b>. See <a href="tags-releases.html">Tag a version and publish a release</a>.</p>
+<figure class="shot"><img src="../../assets/desktop/tags.png" alt="The Branches page on the Tags tab, listing the tag v0.1.0 with its buttons" width="1280" height="800" loading="lazy"><figcaption>The Tags tab.</figcaption></figure>
+
+<h2 id="stash">Stash<a class="hash" href="#stash" aria-label="Link to this section">#</a></h2>
+<p>A shelf for half-done work. <b>Stash changes…</b> puts your uncommitted changes aside (you can name it, and tick <b>Include new (untracked) files</b>) and leaves a clean folder. Pick a stash in the list to see what is in it, then <b>Apply</b> it (bring the changes back and keep the stash), <b>Pop</b> it (bring them back and remove it) or <b>Drop…</b> it. Dropping deletes it for good, so it asks first. See <a href="stash.html">Put work aside with the stash</a>.</p>
+<figure class="shot"><img src="../../assets/desktop/stash.png" alt="The Stash page: the list of stashes and the diff of the selected stash with Drop, Apply and Pop buttons" width="1280" height="800" loading="lazy"><figcaption>Stash: what is on the shelf, and what is in each item.</figcaption></figure>
+
+<h2 id="github">The GitHub pages<a class="hash" href="#github" aria-label="Link to this section">#</a></h2>
+<p>These use the GitHub CLI (<code>gh</code>) with your own login; canopy never asks for a password or stores a token. If <code>gh</code> is not installed or you are not logged in, the page says so and shows the commands to run, with a <b>Try again</b> button. In a repository with no GitHub remote they say that instead. The git pages work either way. See <a href="github-flow.html">Working with GitHub</a>.</p>
+<h3 id="prs">Pull requests<a class="hash" href="#prs" aria-label="Link to this section">#</a></h3>
+<p>Filter by <b>Open</b>, <b>Mine</b>, <b>To review</b> or <b>All</b>. Each row shows the author, the branches, whether checks passed and the review state. Pick one for its description, checks, reviews and comments. Buttons: <b>View in GitHub</b>, <b>Check out</b>, <b>Comment…</b>, <b>Review…</b>, <b>Close…</b> and <b>Merge…</b>. <b>New PR…</b> opens one from your branch. See <a href="review-a-pr.html">Review a pull request</a>.</p>
+<figure class="shot"><img src="../../assets/desktop/prs.png" alt="The Pull requests page: the list of pull requests and the selected pull request's checks, reviews and comments" width="1280" height="800" loading="lazy"><figcaption>Pull requests: the list, and everything about the selected one.</figcaption></figure>
+<h3 id="issues">Issues<a class="hash" href="#issues" aria-label="Link to this section">#</a></h3>
+<p>Filter by <b>Open</b>, <b>Assigned to me</b> or <b>All</b>. On the selected issue: <b>Comment…</b>, and <b>Close</b> or <b>Reopen</b>. <b>New issue…</b> is at the top.</p>
+<h3 id="actions">Actions<a class="hash" href="#actions" aria-label="Link to this section">#</a></h3>
+<p>Recent CI runs for <b>This branch</b> or <b>All branches</b>, refreshed every 15 seconds while you look. Pick a run to see its jobs and steps. For a failed run you also get the end of its log, <b>Details</b>, <b>Re-run failed jobs</b> and <b>Fix with</b> your AI assistant, which writes a prompt from the failure and opens the assistant with it. See <a href="fix-ci.html">Fix a failing CI run</a>.</p>
+<figure class="shot"><img src="../../assets/desktop/runs.png" alt="The Actions page: a list of CI runs and the failed log of the selected run" width="1280" height="800" loading="lazy"><figcaption>Actions: the runs, and why one failed.</figcaption></figure>
+<h3 id="notifications">Notifications<a class="hash" href="#notifications" aria-label="Link to this section">#</a></h3>
+<p>Your GitHub notifications, from <b>All repositories</b> (the default) or just <b>This repository</b>. Tick <b>Read too</b> to include the ones you have read. On one, <b>Open in canopy</b> jumps to the pull request or issue (when it belongs to the open repository), <b>View in GitHub</b> opens the browser and <b>Mark as read</b> clears it. <b>Mark all read</b> clears the lot after asking.</p>
+<figure class="shot"><img src="../../assets/desktop/notifications.png" alt="The Notifications page: unread notifications for a pull request, an issue and a failed CI run, with the pull request selected" width="1280" height="800" loading="lazy"><figcaption>Notifications: what needs you, with a button to jump to it.</figcaption></figure>
+
+<h2 id="undo">Undo<a class="hash" href="#undo" aria-label="Link to this section">#</a></h2>
+<p>The undo button in the toolbar (or <kbd class="d">⌘Z</kbd>, Ctrl+Z on Windows and Linux) takes back the last commit, reset or checkout. It shows what it will change before it does anything, and your uncommitted changes are kept. See <a href="undo.html">Undo a mistake</a>.</p>
+<figure class="shot"><img src="../../assets/desktop/undo.png" alt="The Undo dialog: it names the last action and says what will change, with Cancel and Undo buttons" width="1280" height="800" loading="lazy"><figcaption>The undo dialog explains before it acts.</figcaption></figure>
+
+<h2 id="settings">Settings<a class="hash" href="#settings" aria-label="Link to this section">#</a></h2>
+<p>The gear at the bottom of the sidebar (or <kbd class="d">⌘,</kbd>, Ctrl+, on Windows and Linux) opens Settings, with four sections. <b>General</b> has the theme shortcut, your text editor, <b>Show git commands</b>, <b>Refresh</b> (how often canopy looks for outside changes), <b>Pull</b> (Default, Merge or Rebase), the AI assistant, and the recent list. <b>Appearance</b> picks and edits themes. <b>Updates</b> checks for a new version. <b>About</b> has the version and links. See <a href="settings.html">Settings</a> for every option.</p>
+<figure class="shot"><img src="../../assets/desktop/settings-general.png" alt="The General section of Settings, with rows for the text editor, Show git commands, Refresh, Pull and the AI assistant" width="1280" height="800" loading="lazy"><figcaption>Settings, General.</figcaption></figure>
+
+<h2 id="related">Related pages<a class="hash" href="#related" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><a href="keys.html">Keyboard shortcuts</a></li>
+<li><a href="daily-workflow.html">Your daily workflow</a></li>
+<li><a href="../git-basics.html">Git in ten minutes</a></li>
+<li><a href="highlighting.html">Syntax highlighting and live refresh</a></li>
+<li><a href="troubleshooting.html">Troubleshooting</a></li>
+</ul>
+<!-- /BODY -->
+<nav class="pager" aria-label="Pages"><a href="index.html"><small>Previous</small>The canopy desktop guide</a><a href="daily-workflow.html" class="next"><small>Next</small>Your daily workflow</a></nav>
+    </article>
+  </main>
+  <aside class="wtoc" aria-label="On this page"><b>On this page</b><nav id="toc"></nav></aside>
+</div>
+<script src="../../assets/site.js"></script>
+<script src="../../assets/wiki.js"></script>
+</body>
+</html>

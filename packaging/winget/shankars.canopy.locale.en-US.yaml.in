@@ -7,18 +7,18 @@ Publisher: Sachin Shankar
 PublisherUrl: https://github.com/shankar-sachin
 PublisherSupportUrl: https://github.com/shankar-sachin/canopy/issues
 Author: Sachin Shankar
-PackageName: Canopy
+PackageName: canopy
 PackageUrl: https://shankar-sachin.github.io/canopy/
 License: MIT
 LicenseUrl: https://github.com/shankar-sachin/canopy/blob/main/LICENSE
-ShortDescription: Canopy for the terminal. Git and GitHub, everything from the keyboard.
+ShortDescription: canopy console. Git and GitHub, everything from the keyboard.
 Description: |-
-  Canopy for the terminal puts your whole repository on one screen and every git
+  canopy console puts your whole repository on one screen and every git
   and GitHub action one key away: line-level staging, interactive rebase, bisect,
   worktrees, every repository at once, a command palette, remappable keys and your
   own commands. With the GitHub CLI it also shows pull requests, issues, Actions
   runs, releases and notifications. Teach mode and next steps still explain
-  everything. New to git? Try Canopy Desktop (shankars.canopy-desktop).
+  everything. New to git? Try canopy desktop (shankars.canopy-desktop).
 Moniker: canopy
 Tags:
 - git
