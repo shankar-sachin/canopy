@@ -8,10 +8,18 @@ Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## The one rule: everything goes through a pull request
 
-**Want to add or change something? Open a pull request.** Nobody pushes
-straight to `main`, and that includes the maintainer. Every change, even a
-one-word typo fix, gets its own branch and a PR so CI can check it and
-someone can review it.
+**Want to add or change something? Open a pull request.** Every change, even
+a one-word typo fix, gets its own branch and a PR so CI can check it and
+someone can review it. Only the maintainer, who is the author of canopy, may
+push a tiny change straight to `main`; everyone else goes through a PR.
+
+> **Note: pushing straight to `main` will result in a report to GitHub and
+> removal of your access to commit to canopy.**
+
+**The maintainer is the only reviewer.** Every PR is reviewed and merged by
+the maintainer ([@shankar-sachin](https://github.com/shankar-sachin)), and
+nobody else needs to approve it. Don't wait on anyone else, and don't ask
+other contributors to review for you.
 
 1. Fork the repository (or make a branch, if you have write access).
 2. Make a branch from an up-to-date `main`:
