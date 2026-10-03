@@ -4,6 +4,8 @@ Thanks for helping. There are two apps here, canopy desktop (`canopy-desktop`)
 and canopy console (`canopy`), plus the website and wiki in `docs/`.
 Fixes, features, docs and wiki edits are all welcome.
 
+Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## The one rule: everything goes through a pull request
 
 **Want to add or change something? Open a pull request.** Nobody pushes
