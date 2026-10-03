@@ -125,7 +125,7 @@
         .join("")}</ul></details>`;
     }
     if (product === "desktop" && here === "mac") {
-      body.innerHTML += `<p class="dl-note dl-mac-note">The Mac app is a release preview and isn't notarized by Apple yet: the first time, open <b>System Settings → Privacy &amp; Security</b> and click <b>Open Anyway</b>.</p>`;
+      body.innerHTML += `<p class="dl-note dl-mac-note">The Mac app isn't notarized by Apple, and won't be: the first time, open <b>System Settings → Privacy &amp; Security</b> and click <b>Open Anyway</b>.</p>`;
     }
   }
 

@@ -83,7 +83,7 @@
 
 <h2 id="opening">Opening the app<a class="hash" href="#opening" aria-label="Link to this section">#</a></h2>
 <h3 id="unsigned">macOS says the app can't be opened<a class="hash" href="#unsigned" aria-label="Link to this section">#</a></h3>
-<p>canopy desktop isn't signed with an Apple developer certificate yet, so macOS asks you to confirm it the first time. Open <b>System Settings</b>, go to <b>Privacy &amp; Security</b>, scroll down and press <b>Open Anyway</b> next to the message about canopy, then open the app again. Or remove the quarantine flag from a terminal:</p>
+<p>canopy desktop isn't signed or notarized by Apple (and won't be), so macOS asks you to confirm it the first time. Open <b>System Settings</b>, go to <b>Privacy &amp; Security</b>, scroll down and press <b>Open Anyway</b> next to the message about canopy, then open the app again. Or remove the quarantine flag from a terminal:</p>
 <pre class="code"><span class="p">$ </span>xattr -dr com.apple.quarantine /Applications/canopy.app</pre>
 <h3 id="smartscreen">Windows shows a blue SmartScreen warning<a class="hash" href="#smartscreen" aria-label="Link to this section">#</a></h3>
 <p>Same reason. Choose <b>More info</b>, then <b>Run anyway</b>. On Linux there is no such prompt.</p>

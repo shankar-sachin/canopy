@@ -46,6 +46,10 @@ pub fn shell_command(cmd: &str) -> tokio::process::Command {
 
 /// Open a URL in the default browser (never blocks the UI).
 pub fn open_url(url: &str) -> bool {
+    // Web links only: `open` and `xdg-open` would act on a path or option too.
+    if !url.starts_with("https://") && !url.starts_with("http://") {
+        return false;
+    }
     let mut cmd = if cfg!(target_os = "macos") {
         std::process::Command::new("open")
     } else if cfg!(windows) {
@@ -113,5 +117,12 @@ mod tests {
         assert_eq!(super::base64(b"abc"), "YWJj");
         assert_eq!(super::base64(b"ab"), "YWI=");
         assert_eq!(super::base64(b"a"), "YQ==");
+    }
+
+    #[test]
+    fn only_web_links_open() {
+        assert!(!super::open_url("-a Calculator"));
+        assert!(!super::open_url("/etc/passwd"));
+        assert!(!super::open_url("file:///etc/passwd"));
     }
 }

@@ -46,7 +46,7 @@ winget install shankars.canopy-desktop                     # Windows 11
 ```
 
 Or get a `.dmg`, installer, `.deb` or AppImage from
-[Releases](https://github.com/shankar-sachin/canopy/releases). It isn't notarized by Apple yet, so macOS asks you to
+[Releases](https://github.com/shankar-sachin/canopy/releases). It isn't notarized by Apple, and won't be, so macOS asks you to
 confirm the first time you open it. [More →](https://shankar-sachin.github.io/canopy/desktop.html)
 
 ### canopy console
@@ -55,7 +55,7 @@ confirm the first time you open it. [More →](https://shankar-sachin.github.io/
 brew install shankar-sachin/canopy/canopy
 ```
 
-Or, without Homebrew (macOS and Linux x86_64; installs to `~/.local/bin` and verifies the checksum):
+Or, without Homebrew (macOS and Linux, x86_64 and ARM64; installs to `~/.local/bin` and verifies the checksum):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts/install.sh | sh
@@ -202,6 +202,7 @@ crates/canopy-gui     canopy desktop (Tauri; plain HTML/CSS/JS front end)
 - [x] Notifications in both apps, bug fixes and a full audit with many more tests (v1.0.10–1.0.12)
 - [x] Syntax-highlighted diffs and live refresh (v1.0.13)
 - [x] The wiki, rewritten as two guides (canopy desktop, canopy console), with new pages on syncing, the stash, ignoring files and tags; the terminal app is now called canopy console (v1.0.14)
+- [x] An audit, safer links in canopy console, and plain words that the Mac app is not notarized (v1.0.15)
 - [x] Conflict editor with per-conflict ours/theirs
 - [x] File history and blame
 - [x] Worktrees

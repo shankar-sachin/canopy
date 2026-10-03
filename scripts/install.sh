@@ -6,7 +6,7 @@
 #   curl -fsSL .../install.sh | sh -s -- --uninstall
 #
 # Installs to ~/.local/bin (override with CANOPY_INSTALL_DIR). No sudo.
-# macOS (Apple silicon and Intel) and Linux x86_64. On Windows use install.ps1.
+# macOS (Apple silicon and Intel) and Linux (x86_64 and ARM64). On Windows use install.ps1.
 set -eu
 
 REPO="shankar-sachin/canopy"
