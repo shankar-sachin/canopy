@@ -56,7 +56,9 @@ pub fn draw(f: &mut Frame, area: Rect, app: &mut App) {
     if view.files.is_empty() {
         view.cursor = view.cursor.min(view.meta.len().saturating_sub(1));
         let lines: Vec<Line> = view.meta.iter().map(|m| meta_line(m, &theme)).collect();
-        let para = Paragraph::new(lines).wrap(Wrap { trim: false }).scroll((view.cursor as u16, 0));
+        let para = Paragraph::new(lines)
+            .wrap(Wrap { trim: false })
+            .scroll((u16::try_from(view.cursor).unwrap_or(u16::MAX), 0));
         f.render_widget(para, inner);
         return;
     }

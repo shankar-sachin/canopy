@@ -72,7 +72,7 @@ jobs:
 
   # canopy desktop: a .dmg per Mac architecture, and a .deb and an AppImage
   # for Linux. Not public yet: releases include it only once the repository
-  # variable DESKTOP_PUBLIC is "true" (after the Mac app is notarized).
+  # variable DESKTOP_PUBLIC is "true" (the Mac app will never be notarized, so this is a switch you flip).
   # Running this workflow by hand always builds it, as a dry run.
   desktop:
     if: ${{ vars.DESKTOP_PUBLIC == 'true' || github.event_name == 'workflow_dispatch' }}

@@ -49,7 +49,7 @@
   <article class="prose">
 
 <h2 id="preview">A release preview</h2>
-<div class="note"><b>Not notarized by Apple yet.</b> canopy desktop is a release preview: the Mac app isn't signed with an Apple Developer ID and notarized yet (that's coming). The first time you open it, macOS asks you to confirm: open <b>System Settings → Privacy &amp; Security</b> and click <b>Open Anyway</b>, or run <code>xattr -dr com.apple.quarantine /Applications/canopy.app</code>. Linux builds don't need any of this.</div>
+<div class="note"><b>Not notarized by Apple.</b> The Mac app isn't signed with an Apple Developer ID or notarized, and it won't be. The first time you open it, macOS asks you to confirm: open <b>System Settings → Privacy &amp; Security</b> and click <b>Open Anyway</b>, or run <code>xattr -dr com.apple.quarantine /Applications/canopy.app</code>. Linux builds don't need any of this.</div>
 <p>The desktop app runs the real <code>git</code> and GitHub CLI on your machine, exactly like canopy console. It never sends your code anywhere; the only thing it asks the internet for is the latest version number, once a day (you can turn that off).</p>
 
 <h2 id="install">Install</h2>
