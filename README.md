@@ -244,6 +244,10 @@ Release: bump `version` in `Cargo.toml` in a PR, merge it, then run
 `scripts/release.sh` on main. CI builds the binaries, attaches them to the
 release, and updates the Homebrew tap.
 
+## Code of conduct
+
+Be kind. Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## Security
 
 Found a security problem? Please report it privately, not in an issue: see
