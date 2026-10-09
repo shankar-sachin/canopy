@@ -37,16 +37,16 @@ pub fn parse(out: &str) -> Vec<FileDiff> {
                 // Still in the file header.
                 if let Some(p) = line.strip_prefix("--- ") {
                     if p != "/dev/null" {
-                        file.old_path = strip_ab(p);
+                        file.old_path = strip_ab(&git_path(p));
                     }
                 } else if let Some(p) = line.strip_prefix("+++ ") {
                     if p != "/dev/null" {
-                        file.new_path = strip_ab(p);
+                        file.new_path = strip_ab(&git_path(p));
                     }
                 } else if let Some(p) = line.strip_prefix("rename from ") {
-                    file.old_path = p.to_string();
+                    file.old_path = git_path(p);
                 } else if let Some(p) = line.strip_prefix("rename to ") {
-                    file.new_path = p.to_string();
+                    file.new_path = git_path(p);
                 } else if line.starts_with("Binary files") || line == "GIT binary patch" {
                     file.binary = true;
                 }
@@ -87,6 +87,51 @@ pub fn parse(out: &str) -> Vec<FileDiff> {
 
 fn strip_ab(p: &str) -> String {
     p.strip_prefix("a/").or_else(|| p.strip_prefix("b/")).unwrap_or(p).to_string()
+}
+
+/// A path as git writes it after `--- `, `+++ `, `rename from` or `rename to`.
+/// Git adds a trailing tab when the name has a space, and C-quotes names that
+/// contain tabs, quotes, backslashes or control characters.
+fn git_path(p: &str) -> String {
+    let p = p.strip_suffix('\t').unwrap_or(p);
+    let Some(inner) = p.strip_prefix('"').and_then(|s| s.strip_suffix('"')) else {
+        return p.to_string();
+    };
+    let b = inner.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] != b'\\' || i + 1 >= b.len() {
+            out.push(b[i]);
+            i += 1;
+            continue;
+        }
+        let esc = b[i + 1];
+        let plain = match esc {
+            b'a' => Some(7),
+            b'b' => Some(8),
+            b'f' => Some(12),
+            b'n' => Some(b'\n'),
+            b'r' => Some(b'\r'),
+            b't' => Some(b'\t'),
+            b'v' => Some(11),
+            b'\\' | b'"' => Some(esc),
+            _ => None,
+        };
+        if let Some(c) = plain {
+            out.push(c);
+            i += 2;
+        } else if i + 3 < b.len() && b[i + 1..i + 4].iter().all(|d| (b'0'..=b'7').contains(d)) {
+            // Octal byte escape, e.g. `\303\251` for "é".
+            let v = b[i + 1..i + 4].iter().fold(0u32, |acc, d| acc * 8 + u32::from(d - b'0'));
+            out.push(v as u8);
+            i += 4;
+        } else {
+            out.push(b[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
 }
 
 fn split_git_paths(s: &str) -> (String, String) {
@@ -246,6 +291,36 @@ index 000..333
         assert_eq!(f.hunks[1].lines[2].kind, DiffLineKind::NoNewline);
         assert_eq!(files[1].new_path, "new.txt");
         assert_eq!(files[1].hunks[0].lines[0].content, "hello");
+    }
+
+    #[test]
+    fn paths_with_spaces_tabs_and_unicode() {
+        // Git adds a trailing tab to ---/+++ when the name has a space, and
+        // C-quotes names with tabs; accents come out as octal bytes.
+        let out = "\
+diff --git a/file with spaces.txt b/file with spaces.txt
+--- a/file with spaces.txt\t
++++ b/file with spaces.txt\t
+@@ -1 +1 @@
+-a
++b
+diff --git \"a/b/tab\\there.txt\" \"b/b/tab\\there.txt\"
+--- \"a/b/tab\\there.txt\"
++++ \"b/b/tab\\there.txt\"
+@@ -1 +1 @@
+-a
++b
+diff --git \"a/caf\\303\\251.txt\" \"b/caf\\303\\251.txt\"
+rename from \"caf\\303\\251.txt\"
+rename to \"caf\\303\\251 2.txt\"
+";
+        let files = parse(out);
+        assert_eq!(files[0].new_path, "file with spaces.txt");
+        assert_eq!(files[0].old_path, "file with spaces.txt");
+        assert_eq!(files[1].new_path, "b/tab\there.txt");
+        assert_eq!(files[1].old_path, "b/tab\there.txt");
+        assert_eq!(files[2].old_path, "café.txt");
+        assert_eq!(files[2].new_path, "café 2.txt");
     }
 
     #[test]
