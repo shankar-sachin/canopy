@@ -203,6 +203,7 @@ crates/canopy-gui     canopy desktop (Tauri; plain HTML/CSS/JS front end)
 - [x] Syntax-highlighted diffs and live refresh (v1.0.13)
 - [x] The wiki, rewritten as two guides (canopy desktop, canopy console), with new pages on syncing, the stash, ignoring files and tags; the terminal app is now called canopy console (v1.0.14)
 - [x] An audit, safer links in canopy console, and plain words that the Mac app is not notarized (v1.0.15)
+- [x] Diff file names fixed (spaces, tabs, accents), a Code of Conduct, and a wiki mirror script (v1.0.16)
 - [x] Conflict editor with per-conflict ours/theirs
 - [x] File history and blame
 - [x] Worktrees

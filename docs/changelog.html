@@ -45,10 +45,19 @@
   </div>
 </header>
 <main class="wrap doc">
-  <aside class="toc"><b>On this page</b><a href="#v1-0-15">v1.0.15</a><a href="#v1-0-14">v1.0.14</a><a href="#v1-0-13">v1.0.13</a><a href="#v1-0-12">v1.0.12</a><a href="#v1-0-11">v1.0.11</a><a href="#v1-0-10">v1.0.10</a><a href="#v1-0-9">v1.0.9</a><a href="#v1-0-8">v1.0.8</a><a href="#v1-0-7">v1.0.7</a><a href="#v1-0-6">v1.0.6</a><a href="#v1-0-5">v1.0.5</a><a href="#v1-0-4">v1.0.4</a><a href="#v1-0-3">v1.0.3</a><a href="#v1-0-2">v1.0.2</a><a href="#v1-0-1">v1.0.1</a><a href="#v1-0-0">v1.0.0</a><a href="#v0-4-0">v0.4.0</a><a href="#v0-3-0">v0.3.0</a><a href="#v0-2-0">v0.2.0</a><a href="#v0-1-0">v0.1.0</a><a href="#next">What's next</a></aside>
+  <aside class="toc"><b>On this page</b><a href="#v1-0-16">v1.0.16</a><a href="#v1-0-15">v1.0.15</a><a href="#v1-0-14">v1.0.14</a><a href="#v1-0-13">v1.0.13</a><a href="#v1-0-12">v1.0.12</a><a href="#v1-0-11">v1.0.11</a><a href="#v1-0-10">v1.0.10</a><a href="#v1-0-9">v1.0.9</a><a href="#v1-0-8">v1.0.8</a><a href="#v1-0-7">v1.0.7</a><a href="#v1-0-6">v1.0.6</a><a href="#v1-0-5">v1.0.5</a><a href="#v1-0-4">v1.0.4</a><a href="#v1-0-3">v1.0.3</a><a href="#v1-0-2">v1.0.2</a><a href="#v1-0-1">v1.0.1</a><a href="#v1-0-0">v1.0.0</a><a href="#v0-4-0">v0.4.0</a><a href="#v0-3-0">v0.3.0</a><a href="#v0-2-0">v0.2.0</a><a href="#v0-1-0">v0.1.0</a><a href="#next">What's next</a></aside>
   <article class="prose">
 
-<div class="release" id="v1-0-15"><h2>v1.0.15 <span class="tag-new">Latest</span></h2><div class="date">October 2026</div>
+<div class="release" id="v1-0-16"><h2>v1.0.16 <span class="tag-new">Latest</span></h2><div class="date">October 2026</div>
+<p><b>Diff file names, fixed; a Code of Conduct.</b></p>
+<ul>
+  <li><b>Diff file names are clean.</b> Names with spaces no longer carry a stray trailing tab in the diff view. Names with tabs or accents now show as the real name, not as C-quoted text or octal escapes.</li>
+  <li>Added a Code of Conduct (Contributor Covenant 2.1).</li>
+  <li>Added <code>scripts/wiki-to-github.mjs</code>, which mirrors the wiki to the GitHub wiki.</li>
+  <li>CONTRIBUTING now warns about pushing to <code>main</code> and says the maintainer is the only reviewer.</li>
+</ul></div>
+
+<div class="release" id="v1-0-15"><h2>v1.0.15</h2><div class="date">October 2026</div>
 <p><b>An audit, and straight talk about the Mac app.</b></p>
 <ul>
   <li><b>The Mac app will not be notarized by Apple.</b> The docs used to say &ldquo;yet&rdquo;; now they say it plainly. Opening it the first time still takes one confirmation (<b>Open Anyway</b>, or <code>xattr -dr com.apple.quarantine /Applications/canopy.app</code>).</li>
