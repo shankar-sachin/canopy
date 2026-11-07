@@ -68,6 +68,11 @@
   }
   .install .prompt { color: var(--green); user-select: none; }
   .install code { overflow-x: auto; white-space: nowrap; min-width: 0; }
+  /* Slim, quiet scrollbars on scrolling code (the default one is chunky and bright). */
+  .install code, .code, .teach, .screen, .theme-sample { scrollbar-width: thin; scrollbar-color: var(--border-2) transparent; }
+  .install code::-webkit-scrollbar, .code::-webkit-scrollbar, .teach::-webkit-scrollbar, .screen::-webkit-scrollbar, .theme-sample::-webkit-scrollbar { height: 6px; }
+  .install code::-webkit-scrollbar-thumb, .code::-webkit-scrollbar-thumb, .teach::-webkit-scrollbar-thumb, .screen::-webkit-scrollbar-thumb, .theme-sample::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
+  .install code::-webkit-scrollbar-track, .code::-webkit-scrollbar-track, .teach::-webkit-scrollbar-track, .screen::-webkit-scrollbar-track, .theme-sample::-webkit-scrollbar-track { background: transparent; }
   .hero .install { max-width: min(100%, 720px); }
   .copy {
     flex: none; display: inline-grid; place-items: center; width: 32px; height: 30px; padding: 0;
