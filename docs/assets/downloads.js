@@ -10,7 +10,7 @@
   if (!body || !pick) return;
 
   const REPO = "https://github.com/shankar-sachin/canopy";
-  const RAW = "https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts";
+  const RAW = "https://gitcanopy.netlify.app";
   const OS_NAME = { mac: "macOS", windows: "Windows", linux: "Linux" };
   const here = visitorOS();
   const params = new URLSearchParams(location.search);
@@ -52,10 +52,13 @@
     const tool = os === "mac" ? "Homebrew installs" : "winget installs";
     const pinned = latest ? "" : `${tool} the latest version; for ${esc(v)}, download a file below.`;
     if (prod === "desktop") {
-      if (os === "mac") return latest ? cmd("brew install --cask shankar-sachin/canopy/canopy-desktop", "With Homebrew. Update later with <code>brew upgrade --cask canopy-desktop</code>.") : `<p class="dl-note">${pinned}</p>`;
-      if (os === "windows") return latest ? cmd("winget install shankars.canopy-desktop", "With winget. New versions can take a few days to reach winget; the installer below is always current.") : `<p class="dl-note">${pinned}</p>`;
-      const deb = files.find((f) => f.name.endsWith(".deb"));
-      return deb ? cmd(`curl -LO ${deb.url} && sudo apt install ./${deb.name}`, "Debian, Ubuntu and friends. Anywhere else, use the AppImage.") : "";
+      const sh = cmd(`curl -fsSL ${RAW}/install-desktop.sh | sh${latest ? "" : " -s -- " + v}`, "Or the install script: it checks the download and installs it, no sudo.");
+      if (os === "mac") return (latest ? cmd("brew install --cask shankar-sachin/canopy/canopy-desktop", "With Homebrew. Update later with <code>brew upgrade --cask canopy-desktop</code>.") : `<p class="dl-note">${pinned}</p>`) + sh;
+      if (os === "windows") {
+        const ps = latest ? `irm ${RAW}/install-desktop.ps1 | iex` : `& ([scriptblock]::Create((irm ${RAW}/install-desktop.ps1))) -Version ${v}`;
+        return (latest ? cmd("winget install shankars.canopy-desktop", "With winget. New versions can take a few days to reach winget; the installer below is always current.") : `<p class="dl-note">${pinned}</p>`) + cmd(ps, "Or in PowerShell, with the install script (it checks the download, then runs the installer).");
+      }
+      return cmd(`curl -fsSL ${RAW}/install-desktop.sh | sh${latest ? "" : " -s -- " + v}`, "Puts the AppImage in <code>~/.local/bin</code> (x86_64), no sudo. Prefer a <code>.deb</code>? Use the files below.");
     }
     if (os === "mac") {
       const brew = latest ? cmd("brew install shankar-sachin/canopy/canopy", "With Homebrew (a prebuilt binary, nothing to compile).") : "";

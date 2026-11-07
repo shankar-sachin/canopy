@@ -3,3 +3,10 @@
 .DS_Store
 /crates/canopy-gui/gen
 /.claude/
+/docs/install.sh
+/docs/install.ps1
+
+# Local Netlify folder
+.netlify
+/docs/install-desktop.sh
+/docs/install-desktop.ps1
