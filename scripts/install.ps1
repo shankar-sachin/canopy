@@ -1,6 +1,6 @@
 # Install canopy on Windows from a GitHub release.
 #
-#   irm https://gitcanopy.netlify.app/install.ps1 | iex
+#   irm https://gitcanopy.vercel.app/install.ps1 | iex
 #
 # To pick a version or uninstall, download the script and run it:
 #   .\install.ps1 -Version v1.0.0

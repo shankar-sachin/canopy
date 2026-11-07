@@ -48,11 +48,11 @@ winget install shankars.canopy-desktop                     # Windows 11
 Or with the install script (macOS and Linux x86_64, checks the download):
 
 ```sh
-curl -fsSL https://gitcanopy.netlify.app/install-desktop.sh | sh
+curl -fsSL https://gitcanopy.vercel.app/install-desktop.sh | sh
 ```
 
 ```powershell
-irm https://gitcanopy.netlify.app/install-desktop.ps1 | iex   # Windows
+irm https://gitcanopy.vercel.app/install-desktop.ps1 | iex   # Windows
 ```
 
 Or get a `.dmg`, installer, `.deb` or AppImage from
@@ -68,7 +68,7 @@ brew install shankar-sachin/canopy/canopy
 Or, without Homebrew (macOS and Linux, x86_64 and ARM64; installs to `~/.local/bin` and verifies the checksum):
 
 ```sh
-curl -fsSL https://gitcanopy.netlify.app/install.sh | sh
+curl -fsSL https://gitcanopy.vercel.app/install.sh | sh
 ```
 
 Or build from source (stable Rust):
@@ -88,7 +88,7 @@ winget install shankars.canopy
 or with the install script, in PowerShell:
 
 ```powershell
-irm https://gitcanopy.netlify.app/install.ps1 | iex
+irm https://gitcanopy.vercel.app/install.ps1 | iex
 ```
 
 or download `canopy-<version>-x86_64-pc-windows-msvc.zip` (or `aarch64-…` for Arm) from

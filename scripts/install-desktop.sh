@@ -1,9 +1,9 @@
 #!/bin/sh
 # Install canopy desktop from a GitHub release, without Homebrew or a browser.
 #
-#   curl -fsSL https://gitcanopy.netlify.app/install-desktop.sh | sh
-#   curl -fsSL https://gitcanopy.netlify.app/install-desktop.sh | sh -s -- v1.0.0   # a specific version
-#   curl -fsSL https://gitcanopy.netlify.app/install-desktop.sh | sh -s -- --uninstall
+#   curl -fsSL https://gitcanopy.vercel.app/install-desktop.sh | sh
+#   curl -fsSL https://gitcanopy.vercel.app/install-desktop.sh | sh -s -- v1.0.0   # a specific version
+#   curl -fsSL https://gitcanopy.vercel.app/install-desktop.sh | sh -s -- --uninstall
 #
 # macOS (Apple silicon and Intel): puts canopy.app in /Applications, or ~/Applications
 # if that isn't writable (override with CANOPY_APP_DIR).
