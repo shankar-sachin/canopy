@@ -24,7 +24,7 @@
 
 Both run the real `git` and GitHub CLI on your machine and share themes and settings in `~/.canopy`.
 
-**Website:** [shankar-sachin.github.io/canopy](https://shankar-sachin.github.io/canopy/), with a feature tour, the GitHub guide, the full key reference, and a [wiki](https://shankar-sachin.github.io/canopy/wiki/) with a guide for each app.
+**Website:** [gitcanopy.vercel.app](https://gitcanopy.vercel.app/), with a feature tour, the GitHub guide, the full key reference, and a [wiki](https://shankar-sachin.github.io/canopy/wiki/) with a guide for each app.
 
 **canopy desktop**
 
