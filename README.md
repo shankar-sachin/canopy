@@ -58,7 +58,7 @@ brew install shankar-sachin/canopy/canopy
 Or, without Homebrew (macOS and Linux, x86_64 and ARM64; installs to `~/.local/bin` and verifies the checksum):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts/install.sh | sh
+curl -fsSL https://gitcanopy.netlify.app/install.sh | sh
 ```
 
 Or build from source (stable Rust):
@@ -78,7 +78,7 @@ winget install shankars.canopy
 or with the install script, in PowerShell:
 
 ```powershell
-irm https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts/install.ps1 | iex
+irm https://gitcanopy.netlify.app/install.ps1 | iex
 ```
 
 or download `canopy-<version>-x86_64-pc-windows-msvc.zip` (or `aarch64-…` for Arm) from

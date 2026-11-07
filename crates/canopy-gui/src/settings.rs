@@ -262,7 +262,7 @@ pub fn terminal_install_command(os: &str) -> &'static str {
     match os {
         "windows" => "winget install shankars.canopy",
         "macos" => "brew install shankar-sachin/canopy/canopy",
-        _ => "curl -fsSL https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts/install.sh | sh",
+        _ => "curl -fsSL https://gitcanopy.netlify.app/install.sh | sh",
     }
 }
 
@@ -528,6 +528,6 @@ mod tests {
     fn terminal_install_commands() {
         assert_eq!(terminal_install_command("macos"), "brew install shankar-sachin/canopy/canopy");
         assert_eq!(terminal_install_command("windows"), "winget install shankars.canopy");
-        assert!(terminal_install_command("linux").contains("scripts/install.sh"));
+        assert!(terminal_install_command("linux").contains("/install.sh"));
     }
 }

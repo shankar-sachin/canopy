@@ -124,7 +124,7 @@ const heroNote = document.getElementById("hero-os");
 const heroSwitches = document.getElementById("install-switches");
 if (heroCmd && heroNote && heroSwitches) {
   const os = visitorOS() || "mac";
-  const RAW = "https://raw.githubusercontent.com/shankar-sachin/canopy/main/scripts";
+  const RAW = "https://gitcanopy.netlify.app";
   const LATEST = "https://github.com/shankar-sachin/canopy/releases/latest";
   const win = os === "windows";
   const viaBtn = (v) => heroSwitches.querySelector(`[data-via="${v}"]`);
