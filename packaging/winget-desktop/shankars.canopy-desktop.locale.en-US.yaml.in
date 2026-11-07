@@ -8,7 +8,7 @@ PublisherUrl: https://github.com/shankar-sachin
 PublisherSupportUrl: https://github.com/shankar-sachin/canopy/issues
 Author: Sachin Shankar
 PackageName: canopy (desktop)
-PackageUrl: https://shankar-sachin.github.io/canopy/
+PackageUrl: https://gitcanopy.vercel.app/
 License: MIT
 LicenseUrl: https://github.com/shankar-sachin/canopy/blob/main/LICENSE
 ShortDescription: Git, at a glance. A friendly desktop app for git and GitHub (release preview).
@@ -29,6 +29,6 @@ Tags:
 ReleaseNotesUrl: https://github.com/shankar-sachin/canopy/releases/tag/v@VERSION@
 Documentations:
 - DocumentLabel: Wiki
-  DocumentUrl: https://shankar-sachin.github.io/canopy/wiki/
+  DocumentUrl: https://gitcanopy.vercel.app/wiki/
 ManifestType: defaultLocale
 ManifestVersion: 1.9.0

@@ -209,7 +209,7 @@ function undoKey() {
 // The "New to git?" card, shown on Home until it's dismissed.
 function introCard() {
   if (state.settings?.seen_intro !== false) return "";
-  const site = "https://shankar-sachin.github.io/canopy/wiki/";
+  const site = "https://gitcanopy.vercel.app/wiki/";
   return `<div class="card span-12 intro">
     <div class="card-h"><h3>New to git? Four ideas</h3><button class="btn icon ghost" type="button" data-intro="dismiss" title="Got it">${icon("x", 14)}</button></div>
     <ol class="intro-steps">

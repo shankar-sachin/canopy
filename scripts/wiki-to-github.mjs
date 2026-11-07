@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { GUIDES, PAGES } from "./wiki-pages.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const SITE = "https://shankar-sachin.github.io/canopy/";
+const SITE = "https://gitcanopy.vercel.app/";
 const out = process.argv[2];
 if (!out) { console.error("usage: node scripts/wiki-to-github.mjs <out-dir>"); process.exit(2); }
 

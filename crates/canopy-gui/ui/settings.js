@@ -174,7 +174,7 @@ function appearanceHtml() {
       <button class="btn small" data-s2="theme-import">Import…</button>
       ${custom ? `<button class="btn small ghost" data-s2="theme-delete">Delete</button>` : ""}
     </div>
-    <p class="faint small">Themes are JSON files in <code class="selectable">${esc(ts.folder)}</code>. canopy console uses the same ones: <code>canopy -t "name"</code>, or <code>theme = "name"</code> in its config. <a href="#" data-s2="open" data-url="https://shankar-sachin.github.io/canopy/wiki/themes.html#your-own">How the file works</a></p>`;
+    <p class="faint small">Themes are JSON files in <code class="selectable">${esc(ts.folder)}</code>. canopy console uses the same ones: <code>canopy -t "name"</code>, or <code>theme = "name"</code> in its config. <a href="#" data-s2="open" data-url="https://gitcanopy.vercel.app/wiki/themes.html#your-own">How the file works</a></p>`;
 }
 
 const FIELD_GROUPS = [
@@ -314,8 +314,8 @@ function settingsBody() {
       return `<div class="about"><img src="logo.svg" alt="" width="64" height="64"><h3>canopy ${esc(setts.env?.version || "")}</h3>
         <p>Git, at a glance: a friendly desktop app for git and GitHub. MIT licensed.</p>
         <div class="row-btns">
-          <button class="btn small" data-s2="open" data-url="https://shankar-sachin.github.io/canopy/">Website</button>
-          <button class="btn small" data-s2="open" data-url="https://shankar-sachin.github.io/canopy/wiki/">Wiki</button>
+          <button class="btn small" data-s2="open" data-url="https://gitcanopy.vercel.app/">Website</button>
+          <button class="btn small" data-s2="open" data-url="https://gitcanopy.vercel.app/wiki/">Wiki</button>
           <button class="btn small" data-s2="open" data-url="https://github.com/shankar-sachin/canopy">Source code</button>
           <button class="btn small" data-s2="open" data-url="https://github.com/shankar-sachin/canopy/issues/new">Report a problem</button>
         </div>
