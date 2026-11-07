@@ -171,7 +171,7 @@ function page(p) {
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(p.lede)}">
 <meta property="og:title" content="${esc(title)}">
-<meta property="og:image" content="https://shankar-sachin.github.io/canopy/assets/og.png">
+<meta property="og:image" content="https://gitcanopy.vercel.app/assets/og.png">
 <meta name="theme-color" content="#0b100c">
 <script>try{const t=localStorage.getItem("canopy-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;}catch(e){}</script>
 <link rel="icon" href="${u}assets/logo.svg" type="image/svg+xml">
@@ -225,7 +225,7 @@ function moved(file, targets) {
 <meta name="description" content="This wiki page now has one version for each app.">
 <meta name="robots" content="noindex">
 <meta http-equiv="refresh" content="4; url=${first}">
-<link rel="canonical" href="https://shankar-sachin.github.io/canopy/wiki/${first}">
+<link rel="canonical" href="https://gitcanopy.vercel.app/wiki/${first}">
 <link rel="icon" href="${u}assets/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="${u}assets/site.css">
 </head>

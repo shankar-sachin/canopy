@@ -5,7 +5,7 @@
 # compiled (Homebrew on Linux needs no C compiler or Rust).
 class Canopy < Formula
   desc "Git and GitHub in your terminal, everything from the keyboard"
-  homepage "https://shankar-sachin.github.io/canopy/"
+  homepage "https://gitcanopy.vercel.app/"
   version "@VERSION@"
   license "MIT"
 

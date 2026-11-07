@@ -1,9 +1,9 @@
 #!/bin/sh
 # Install canopy from a GitHub release, without Homebrew.
 #
-#   curl -fsSL https://gitcanopy.netlify.app/install.sh | sh
-#   curl -fsSL https://gitcanopy.netlify.app/install.sh | sh -s -- v1.0.0       # a specific version
-#   curl -fsSL https://gitcanopy.netlify.app/install.sh | sh -s -- --uninstall
+#   curl -fsSL https://gitcanopy.vercel.app/install.sh | sh
+#   curl -fsSL https://gitcanopy.vercel.app/install.sh | sh -s -- v1.0.0       # a specific version
+#   curl -fsSL https://gitcanopy.vercel.app/install.sh | sh -s -- --uninstall
 #
 # Installs to ~/.local/bin (override with CANOPY_INSTALL_DIR). No sudo.
 # macOS (Apple silicon and Intel) and Linux (x86_64 and ARM64). On Windows use install.ps1.

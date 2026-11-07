@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-blue" alt="macOS, Windows and Linux">
   <img src="https://img.shields.io/badge/built%20with-Rust-dea584?logo=rust&logoColor=white" alt="Built with Rust">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/shankar-sachin/canopy" alt="MIT license"></a>
-  <a href="https://shankar-sachin.github.io/canopy/"><img src="https://img.shields.io/badge/website-canopy-2ea043" alt="Website"></a>
+  <a href="https://gitcanopy.vercel.app/"><img src="https://img.shields.io/badge/website-canopy-2ea043" alt="Website"></a>
 </p>
 
 **Git, at a glance.** One canopy, two ways to use it:
@@ -24,7 +24,7 @@
 
 Both run the real `git` and GitHub CLI on your machine and share themes and settings in `~/.canopy`.
 
-**Website:** [gitcanopy.vercel.app](https://gitcanopy.vercel.app/), with a feature tour, the GitHub guide, the full key reference, and a [wiki](https://shankar-sachin.github.io/canopy/wiki/) with a guide for each app.
+**Website:** [gitcanopy.vercel.app](https://gitcanopy.vercel.app/), with a feature tour, the GitHub guide, the full key reference, and a [wiki](https://gitcanopy.vercel.app/wiki/) with a guide for each app.
 
 **canopy desktop**
 
@@ -48,16 +48,16 @@ winget install shankars.canopy-desktop                     # Windows 11
 Or with the install script (macOS and Linux x86_64, checks the download):
 
 ```sh
-curl -fsSL https://gitcanopy.netlify.app/install-desktop.sh | sh
+curl -fsSL https://gitcanopy.vercel.app/install-desktop.sh | sh
 ```
 
 ```powershell
-irm https://gitcanopy.netlify.app/install-desktop.ps1 | iex   # Windows
+irm https://gitcanopy.vercel.app/install-desktop.ps1 | iex   # Windows
 ```
 
 Or get a `.dmg`, installer, `.deb` or AppImage from
 [Releases](https://github.com/shankar-sachin/canopy/releases). It isn't notarized by Apple, and won't be, so macOS asks you to
-confirm the first time you open it. [More →](https://shankar-sachin.github.io/canopy/desktop.html)
+confirm the first time you open it. [More →](https://gitcanopy.vercel.app/desktop.html)
 
 ### canopy console
 
@@ -68,7 +68,7 @@ brew install shankar-sachin/canopy/canopy
 Or, without Homebrew (macOS and Linux, x86_64 and ARM64; installs to `~/.local/bin` and verifies the checksum):
 
 ```sh
-curl -fsSL https://gitcanopy.netlify.app/install.sh | sh
+curl -fsSL https://gitcanopy.vercel.app/install.sh | sh
 ```
 
 Or build from source (stable Rust):
@@ -88,14 +88,14 @@ winget install shankars.canopy
 or with the install script, in PowerShell:
 
 ```powershell
-irm https://gitcanopy.netlify.app/install.ps1 | iex
+irm https://gitcanopy.vercel.app/install.ps1 | iex
 ```
 
 or download `canopy-<version>-x86_64-pc-windows-msvc.zip` (or `aarch64-…` for Arm) from
 [Releases](https://github.com/shankar-sachin/canopy/releases) and put
 `canopy.exe` on your `PATH`.
 Windows Terminal is recommended. Full steps are on the
-[website](https://shankar-sachin.github.io/canopy/get-started.html#windows).
+[website](https://gitcanopy.vercel.app/get-started.html#windows).
 
 ## Use canopy console
 

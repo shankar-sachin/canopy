@@ -1,6 +1,6 @@
 # Install canopy desktop on Windows from a GitHub release.
 #
-#   irm https://gitcanopy.netlify.app/install-desktop.ps1 | iex
+#   irm https://gitcanopy.vercel.app/install-desktop.ps1 | iex
 #
 # To pick a version, download the script and run it:
 #   .\install-desktop.ps1 -Version v1.0.0

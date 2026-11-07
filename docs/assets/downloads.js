@@ -10,7 +10,7 @@
   if (!body || !pick) return;
 
   const REPO = "https://github.com/shankar-sachin/canopy";
-  const RAW = "https://gitcanopy.netlify.app";
+  const RAW = "https://gitcanopy.vercel.app";
   const OS_NAME = { mac: "macOS", windows: "Windows", linux: "Linux" };
   const here = visitorOS();
   const params = new URLSearchParams(location.search);
