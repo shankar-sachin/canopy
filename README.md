@@ -45,6 +45,16 @@ brew install --cask shankar-sachin/canopy/canopy-desktop   # macOS
 winget install shankars.canopy-desktop                     # Windows 11
 ```
 
+Or with the install script (macOS and Linux x86_64, checks the download):
+
+```sh
+curl -fsSL https://gitcanopy.netlify.app/install-desktop.sh | sh
+```
+
+```powershell
+irm https://gitcanopy.netlify.app/install-desktop.ps1 | iex   # Windows
+```
+
 Or get a `.dmg`, installer, `.deb` or AppImage from
 [Releases](https://github.com/shankar-sachin/canopy/releases). It isn't notarized by Apple, and won't be, so macOS asks you to
 confirm the first time you open it. [More →](https://shankar-sachin.github.io/canopy/desktop.html)
@@ -234,6 +244,7 @@ CANOPY_PRINT=1 cargo test -p canopy-git-tui ui_tests -- --nocapture   # print re
 | --- | --- |
 | `scripts/install.sh` | Install a release on macOS/Linux (`… \| sh -s -- v1.0.0` for a version, `--uninstall` to remove) |
 | `scripts/install.ps1` | The same for Windows (`-Version`, `-Uninstall`) |
+| `scripts/install-desktop.sh`, `install-desktop.ps1` | The same for canopy desktop |
 | `scripts/check.sh` | Formatting, clippy with warnings as errors, and all Rust tests |
 | `scripts/test-ui.sh` | Syntax-check every script, then run the desktop UI tests in `crates/canopy-gui/ui-tests` (Node 20+) |
 | `scripts/audit-site.mjs` | Audit the website: links and anchors, page titles and descriptions, alt text, the search index, the changelog's version |

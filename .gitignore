@@ -8,3 +8,5 @@
 
 # Local Netlify folder
 .netlify
+/docs/install-desktop.sh
+/docs/install-desktop.ps1

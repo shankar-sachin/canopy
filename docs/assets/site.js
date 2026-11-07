@@ -154,14 +154,14 @@ if (heroCmd && heroNote && heroSwitches) {
     }
     if (win) {
       if (!script) return ["winget install shankars.canopy-desktop", "For Windows 11, with winget."];
-      return asset("-x86_64-setup.exe").then((a) => [`irm ${a.url} -OutFile ${a.name}; .\\${a.name}`, "PowerShell: downloads the installer and runs it (x64)."]);
+      return [`irm ${RAW}/install-desktop.ps1 | iex`, "PowerShell: downloads the installer, checks it and runs it."];
     }
     if (os === "linux") {
-      if (!script) return ["# canopy desktop isn't on Homebrew for Linux: pick Curl", "Homebrew on Linux has no apps (casks). Curl gets the .deb; Downloads has the AppImage."];
-      return asset("-amd64.deb").then((a) => [`curl -LO ${a.url} && sudo apt install ./${a.name}`, "For Debian and Ubuntu (x86_64)."]);
+      if (!script) return ["# canopy desktop isn't on Homebrew for Linux: pick Curl", "Homebrew on Linux has no apps (casks). Curl installs the AppImage; Downloads has the .deb."];
+      return [`curl -fsSL ${RAW}/install-desktop.sh | sh`, "Puts the AppImage in ~/.local/bin (x86_64), no sudo."];
     }
     if (!script) return ["brew install --cask shankar-sachin/canopy/canopy-desktop", "For macOS, with Homebrew."];
-    return asset("-aarch64-apple-darwin.dmg").then((a) => [`curl -LO ${a.url} && open ${a.name}`, "For Macs with Apple silicon. Intel Mac? Use Homebrew, or Downloads."]);
+    return [`curl -fsSL ${RAW}/install-desktop.sh | sh`, "Checks the download and puts canopy.app in /Applications. Apple silicon and Intel."];
   }
 
   let shown = 0;

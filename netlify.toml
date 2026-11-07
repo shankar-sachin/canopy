@@ -7,16 +7,16 @@
 # they're served from its root. (docs/install.* are generated, not committed.)
 [build]
   publish = "docs"
-  command = "cp scripts/install.sh scripts/install.ps1 docs/"
+  command = "cp scripts/install.sh scripts/install.ps1 scripts/install-desktop.sh scripts/install-desktop.ps1 docs/"
 
 [[headers]]
-  for = "/install.sh"
+  for = "/install*.sh"
   [headers.values]
     Content-Type = "text/x-shellscript; charset=utf-8"
     Cache-Control = "public, max-age=300"
 
 [[headers]]
-  for = "/install.ps1"
+  for = "/install*.ps1"
   [headers.values]
     Content-Type = "text/plain; charset=utf-8"
     Cache-Control = "public, max-age=300"
